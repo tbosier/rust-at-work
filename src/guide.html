@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rust at work</title>
+<meta name="description" content="Learn Rust by doing a job: a manager at a parts distributor emails you work, each request needs a little more Rust and computer science than the last, and a senior engineer reviews your code.">
+<style>
+{{include:base.css}}
+</style>
+<style>
+{{include:extra.css}}
+</style>
+</head>
+<body>
+<main>
+
+<header class="top">
+  <p class="kicker">Rust at work, part 1 of 4</p>
+  <h1>Your first two weeks at Kettle Creek Supply</h1>
+  <p class="lede">You have just started at Kettle Creek Supply, a distributor of bearings, bolts, hoses and other industrial parts. Your title says analyst. The job is writing software. Your manager will email you work, and each request needs a little more Rust than the last. This page teaches exactly that much, just before you need it. You write all the code yourself, in your own editor. When a ticket is done, a senior engineer reviews it the way a pull request is reviewed at a well-run company: what is wrong, what is unclear, and what will hurt in six months.</p>
+  <div class="status">
+    <p><strong>What you need.</strong> Rust 1.89 or newer (<code>cargo --version</code>), git, Neovim with the Rust setup you already have, an internet connection for the first build, and the practice database <code>learning/data/kettle_creek.db</code> from this folder.</p>
+    <p><strong>What you have at the end of part 1.</strong> A tested Rust codebase of five or six hundred lines, split into modules, that you wrote and can defend line by line. It reads the warehouse database, reconciles invoices against purchase orders, parses dirty data without crashing, and produces the monthly Excel pack for finance. Every program, output and compiler error on this page was run before it was written down.</p>
+  </div>
+  <div class="howto">
+    <p><strong>How to work a ticket.</strong></p>
+    <ol>
+      <li>Read the email. Before scrolling, write three lines in your journal: what you think the program needs to do, and what you don't know how to do yet.</li>
+      <li>Read the wiki page under it. That is the "just enough Rust" for this ticket. Type the examples, don't paste them: your fingers learn shapes that your eyes skim over.</li>
+      <li>Do the warm-up drills. They take about fifteen minutes and use the real database.</li>
+      <li>Build the ticket. Open a hint only after twenty minutes of being properly stuck.</li>
+      <li>Run the sanity checks, commit, and ask for a review.</li>
+      <li>Fix what the review finds, yourself. Then read "Under the hood" and "Go deeper" when you want more.</li>
+    </ol>
+  </div>
+  <nav class="toc" aria-label="Contents">
+    <ol>
+      <li><a href="#how">How this works</a></li>
+      <li><a href="#setup">Day one: set up</a></li>
+      <li><a href="#reviews">How reviews work</a></li>
+      <li><a href="#t1">Ticket 1: open purchase orders</a></li>
+      <li><a href="#t2">Ticket 2: spend by supplier</a></li>
+      <li><a href="#t3">Ticket 3: invoices that don't match</a></li>
+      <li><a href="#t4">Ticket 4: the Millbrook data</a></li>
+      <li><a href="#t5">Ticket 5: the monthly pack</a></li>
+      <li><a href="#next">What comes after part 1</a></li>
+      <li><a href="#books">The bookshelf</a></li>
+      <li><a href="#exam">Part 1 exam</a></li>
+    </ol>
+  </nav>
+</header>
+
+{{include:sections/intro.html}}
+{{include:sections/t1.html}}
+{{include:sections/t2.html}}
+{{include:sections/t3.html}}
+{{include:sections/t4.html}}
+{{include:sections/t5.html}}
+{{include:sections/end.html}}
+
+</main>
+<script>
+const QUIZZES = {};
+{{quizzes}}
+{{include:engine.js}}
+</script>
+</body>
+</html>

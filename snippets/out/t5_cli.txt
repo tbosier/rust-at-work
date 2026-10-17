@@ -1,0 +1,30 @@
+Cli { shelf: "B12", member: Some("Grace"), out: "out/fines.xlsx" }
+---
+error: invalid value 'b12' for '--shelf <SHELF>': "b12" should start with a capital letter
+
+For more information, try '--help'.
+(exit code 2)
+
+error: invalid value 'B123' for '--shelf <SHELF>': "B123" needs one or two digits after the letter
+
+For more information, try '--help'.
+(exit code 2)
+
+error: the following required arguments were not provided:
+  --shelf <SHELF>
+
+Usage: fines --shelf <SHELF> --member <MEMBER>
+
+For more information, try '--help'.
+(exit code 2)
+
+---
+Fines report for the lending library
+
+Usage: fines [OPTIONS] --shelf <SHELF>
+
+Options:
+      --shelf <SHELF>    Shelf to report on: one capital letter and one or two digits, like B12
+      --member <MEMBER>  Only this member's fines
+      --out <OUT>        Where to write the workbook [default: out/fines.xlsx]
+  -h, --help             Print help

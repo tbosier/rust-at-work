@@ -1,0 +1,9 @@
+Grace borrowed on 2026-08-11
+Loan { loan_id: 2, member: "Grace", loaned_on: "2026-08-11", returned_on: None, status: "out" }
+Loan {
+    loan_id: 2,
+    member: "Grace",
+    loaned_on: "2026-08-11",
+    returned_on: None,
+    status: "out",
+}

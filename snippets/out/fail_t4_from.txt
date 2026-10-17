@@ -1,0 +1,20 @@
+error[E0277]: `?` couldn't convert the error to `SlipError`
+  --> src/main.rs:10:31
+   |
+6  | fn days(raw: &str) -> Result<u32, SlipError> {
+   |                       ---------------------- expected `SlipError` because of this
+...
+10 |     let n = raw.parse::<u32>()?;
+   |                 --------------^ the trait `From<ParseIntError>` is not implemented for `SlipError`
+   |                 |
+   |                 this can't be annotated with `?` because it has type `Result<_, ParseIntError>`
+   |
+note: `SlipError` needs to implement `From<ParseIntError>`
+  --> src/main.rs:2:1
+   |
+2  | enum SlipError {
+   | ^^^^^^^^^^^^^^
+   = note: the question mark operation (`?`) implicitly performs a conversion on the error value using the `From` trait
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `kettle_creek` (bin "kettle_creek") due to 1 previous error

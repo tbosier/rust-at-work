@@ -1,0 +1,13 @@
+176 descriptions
+inch           55
+metric thread  32
+millimeters    32
+no size        57
+---
+3/8in  Ok(Inch { num: 3, den: 8 })
+M10    Ok(MetricThread(10))
+25mm   Ok(Millimeters(25))
+1/0in  Err(ZeroDenominator)
+M      Err(NotASize("M"))
+duty   Err(NotASize("duty"))
+1/2    Err(NotASize("1/2"))

@@ -1,0 +1,5 @@
+"14d" -> 14 days
+" 3 weeks " -> 21 days
+"fortnight" -> error: "fortnight" doesn't start with a number
+"3 months" -> error: unknown unit "months"
+"" -> error: nothing written

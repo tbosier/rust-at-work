@@ -1,0 +1,6 @@
+Lost                       bill the replacement
+Overdue { days: 3 }        3 days late: send a reminder
+Overdue { days: 40 }       40 days late: send a letter
+Out                        nothing yet
+Returned                   nothing
+2 overdue

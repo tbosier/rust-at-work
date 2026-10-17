@@ -1,0 +1,3 @@
+Some(CardNumber(42))
+None
+Some(42)

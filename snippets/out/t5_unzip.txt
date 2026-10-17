@@ -1,0 +1,14 @@
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+     1167  (date)             [Content_Types].xml
+      587  (date)             _rels/.rels
+      697  (date)             xl/_rels/workbook.xml.rels
+     6995  (date)             xl/theme/theme1.xml
+     1029  (date)             xl/styles.xml
+      549  (date)             xl/workbook.xml
+      636  (date)             xl/worksheets/sheet1.xml
+      201  (date)             xl/sharedStrings.xml
+      592  (date)             docProps/core.xml
+      783  (date)             docProps/app.xml
+---------                     -------
+    13236                     10 files

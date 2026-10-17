@@ -1,0 +1,23 @@
+error[E0004]: non-exhaustive patterns: `Standing::Out` not covered
+ --> src/main.rs:9:11
+  |
+9 |     match standing {
+  |           ^^^^^^^^ pattern `Standing::Out` not covered
+  |
+note: `Standing` defined here
+ --> src/main.rs:1:6
+  |
+1 | enum Standing {
+  |      ^^^^^^^^
+...
+4 |     Out,
+  |     --- not covered
+  = note: the matched value is of type `Standing`
+help: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern or an explicit pattern as shown
+  |
+12~         Standing::Returned => "nothing".to_string(),
+13~         Standing::Out => todo!(),
+  |
+
+For more information about this error, try `rustc --explain E0004`.
+error: could not compile `kettle_creek` (bin "kettle_creek") due to 1 previous error

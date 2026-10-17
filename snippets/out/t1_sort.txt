@@ -1,0 +1,4 @@
+["fig", "pear", "kiwi", "apple"]
+["fig", "kiwi", "pear", "apple"]
+["apple", "fig", "kiwi", "pear"]
+["pear", "kiwi", "fig", "apple"]

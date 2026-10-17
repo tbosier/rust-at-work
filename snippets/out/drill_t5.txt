@@ -1,0 +1,17 @@
+12 products in Bearings
+NCP-2976  Tapered roller bearing 40mm
+NCP-4180  Needle bearing 25mm
+NCP-6478  Tapered roller bearing heavy duty
+---
+id  name                      state
+1   Quarrow Bearing Co.       MO
+2   Vellmont Fasteners        OH
+3   Ostrand Hydraulics        KS
+4   Brannoch Electric Supply  WA
+
+sku       description                        price
+NCP-2976  Tapered roller bearing 40mm        37.47
+NCP-4180  Needle bearing 25mm                83.55
+NCP-6478  Tapered roller bearing heavy duty  15.52
+---
+wrote suppliers.xlsx: 1 sheet, 24 suppliers

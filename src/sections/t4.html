@@ -1,0 +1,313 @@
+<!-- ===================================================== -->
+<h2 id="t4">Ticket 4: the Millbrook data</h2>
+
+<article class="email" aria-label="Email from Dana Whitlock: Millbrook invoices">
+  <dl class="email-head">
+    <div><dt>From</dt><dd>Dana Whitlock, Operations Manager</dd></div>
+    <div><dt>To</dt><dd>You</dd></div>
+    <div><dt>Cc</dt><dd>Priya Raman, Accounts Payable</dd></div>
+    <div><dt>Date</dt><dd>Thursday, October 15, 2026, 9:40 AM</dd></div>
+    <div class="subj"><dt>Subject</dt><dd>Millbrook invoices</dd></div>
+  </dl>
+  <div class="email-body">
+    <p>The reconciliation went over well. Priya found two of the overbilled suppliers already, and both have agreed to credit us.</p>
+    <p>Next. As you've probably heard, we took over the Millbrook branch in June. Their old system has finally exported its supplier invoices, and IT loaded them into a new table, <code>branch_invoices</code>. Fair warning: every column is text, all of it was typed by hand, and it shows.</p>
+    <p>Priya needs these in the reconciliation before month-end. Here is what we agreed with the Millbrook clerks about each column:</p>
+    <ul>
+      <li><strong>ref</strong> is their invoice reference. It has to be there, and each one should appear once. The rows are in the order they were keyed, which SQLite keeps in its built-in <code>rowid</code> column (you can <code>SELECT rowid, ...</code> like any other column). If a ref shows up again, the copy with the higher <code>rowid</code> is the duplicate.</li>
+      <li><strong>vendor</strong> is the supplier's name, typed however the clerk felt like it. Match it to our supplier list ignoring capital letters, extra spaces and a period at the end, and treat "and" the same as "&amp;". Nothing looser than that. "Old Varrow" is not good enough to pay.</li>
+      <li><strong>po_ref</strong> is our PO number, written <code>104233</code>, <code>PO-104233</code> or <code>PO 104233</code>, sometimes with stray spaces around it. It has to be a PO we actually have, for that same supplier.</li>
+      <li><strong>inv_date</strong>: Millbrook writes dates the US way, month first (<code>10/15/2026</code>, or <code>1/5/2026</code>). A few came through as <code>2026-10-15</code>. Anything that isn't a real day on the calendar is wrong.</li>
+      <li><strong>amount</strong> is in dollars, with or without a <code>$</code>. Ignore commas wherever they are. Credits are in parentheses, <code>(45.00)</code>, or have a minus sign. Cents only: anything past two decimal places means somebody mistyped.</li>
+    </ul>
+    <p>Check them in that order, and when a row fails, report only the first problem. Send me <code>out/rejects.csv</code> with <code>ref</code>, <code>field</code>, <code>value</code> (exactly as typed) and <code>reason</code> (a short phrase in your own words), one line per rejected row in the order they were keyed, so Millbrook can fix them at the source. Then rerun last week's reconciliation with both branches, everything that passed included, in the same <code>discrepancies.csv</code> format.</p>
+    <p>Two more things, and they matter more than the numbers:</p>
+    <ol>
+      <li><strong>Never crash on their data.</strong> A bad row is a row in rejects, not a stopped program. The month-end run cannot fall over at 11 PM because someone typed TBD.</li>
+      <li><strong>This runs every month from now on,</strong> and someday somebody other than you will maintain it. I want tests on the parsing, and I want it split into files a second person could find their way around.</li>
+    </ol>
+    <p class="sig">Thanks, Dana</p>
+  </div>
+</article>
+<p class="teaches"><strong>This ticket teaches</strong> panics versus errors, error enums with <code>Display</code> and <code>Error</code>, <code>From</code> and <code>?</code>, parsing text, unit and integration tests, and modules. <strong>Under the hood:</strong> formats as tiny languages, "parse, don't validate", leap years, and what a passing test suite does and doesn't prove. <strong>Crates allowed:</strong> rusqlite, csv.</p>
+
+<p class="wiki-crumb" id="t4-wiki">Engineering wiki / Rust / Errors, parsing and tests</p>
+<h3>When the data fights back</h3>
+
+<p>Until now the data has been well behaved: integers were integers and dates were ISO. Data from another system is never like that. This page is about writing code that meets bad input calmly: it says exactly what was wrong, keeps going, and comes with tests that prove the rules hold. The examples parse loan lengths and library card numbers typed on paper slips, not Millbrook's columns.</p>
+
+<h4>Two kinds of failure</h4>
+<p>Rust separates two things that Python lumps together as exceptions. A <em>panic</em> means the program itself is wrong: something that could never happen just did, so it stops. An <em>error</em> is a <code>Result</code>: something in the world was wrong, such as a missing file or a bad value, and the caller decides what to do. Here is a panic:</p>
+<pre>{{code:t4_panic#panic}}</pre>
+<pre class="out">{{out:t4_panic}}</pre>
+<p><code>.unwrap()</code> means "I promise this is <code>Ok</code>, and if I'm wrong, panic". The program stops with exit code 101 and everything after that line is lost. For Dana's month-end run, that is the exact failure the email rules out.</p>
+<p>The policy most Rust teams follow:</p>
+<ul>
+  <li><strong>Input from outside is never unwrapped.</strong> Files, databases, user arguments and other systems' data can be anything. They get a <code>Result</code>, and bad values become messages.</li>
+  <li><strong><code>unwrap</code> is fine in tests</strong>, where a panic is how a test fails, and in throwaway code like your drills.</li>
+  <li><strong>When you've proved a value can't fail,</strong> use <code>.expect("why this can't fail")</code> or a comment saying why. If you've just checked that a string is four ASCII digits, parsing it as a <code>u32</code> can't fail. Write the reason down, because the next person won't know it.</li>
+  <li><strong>Indexing panics too.</strong> <code>parts[2]</code> panics if there are only two parts, and <code>&amp;s[..4]</code> panics if <code>s</code> is shorter than four bytes. On untrusted text, prefer <code>.get(2)</code>, <code>split_once</code> and <code>strip_prefix</code>, which return an <code>Option</code>.</li>
+</ul>
+
+<h4>An error type that says what went wrong</h4>
+<p>A parser's error should tell the caller which kind of wrong it was, and carry the evidence. An enum does both:</p>
+<pre>{{code:t4_duration#error}}</pre>
+<ul>
+  <li>Each variant is one way the input can be wrong. <code>NoNumber(String)</code> carries the offending text, so the message can quote it.</li>
+  <li><code>Display</code> is the message for people: what <code>{}</code> and <code>.to_string()</code> print. <code>Debug</code>, from the derive, is the version for programmers: what <code>{:?}</code> prints.</li>
+  <li><code>impl std::error::Error for DurationError {}</code> has an empty body, and that's normal. It marks the type as a proper error, which lets it go into a <code>Box&lt;dyn Error&gt;</code> and work with other libraries' error handling. Its methods all have sensible defaults.</li>
+  <li><code>PartialEq</code> lets tests compare errors with <code>assert_eq!</code>, which you'll want in a minute.</li>
+</ul>
+
+<h4>The parsing toolkit</h4>
+<p>Most text parsing in Rust is done with a handful of <code>str</code> methods. None of them panic. They return an <code>Option</code> when something might not be there.</p>
+<pre>{{code:t4_toolkit#tools}}</pre>
+<pre class="out">{{out:t4_toolkit#1}}</pre>
+<ul>
+  <li><code>trim</code> removes whitespace from both ends and gives back a view of the same text, without copying.</li>
+  <li><code>strip_prefix</code> and <code>strip_suffix</code> return the rest if the text starts (or ends) with that piece, and <code>None</code> if it doesn't. They are case-sensitive.</li>
+  <li><code>split_once</code> splits at the first match into a pair, or <code>None</code> if there is no match. It is the safe way to say "the part before the dash and the part after".</li>
+  <li><code>bytes().all(...)</code> checks every byte. <code>parse::&lt;u32&gt;()</code> turns text into a number, returning a <code>Result</code>.</li>
+</ul>
+<p>And the traps, each of which has bitten someone in production:</p>
+<pre>{{code:t4_toolkit#traps}}</pre>
+<pre class="out">{{out:t4_toolkit#2}}</pre>
+<ul>
+  <li><code>"+42"</code> parses. A leading plus is legal for Rust's number parser, so <code>parse</code> alone is not proof that the text was only digits.</li>
+  <li><code>" 42"</code> doesn't. <code>parse</code> never trims for you.</li>
+  <li><code>"1_000"</code> fails. Underscores are allowed in numbers written in Rust source code, not in text being parsed.</li>
+  <li><code>'٤'</code> is the Arabic-Indic digit four. <code>is_numeric</code> says yes, because it means "any numeric character in any script", which also takes in fractions like ½ and Roman numerals. <code>is_ascii_digit</code> means 0 to 9, which is almost always what a parser wants.</li>
+  <li><code>"".bytes().all(...)</code> is <code>true</code>. "Every byte is a digit" is true when there are no bytes. Logicians call this <em>vacuous truth</em>. It's why every digit check in a parser needs an emptiness check next to it.</li>
+</ul>
+
+<h4>A parser, start to finish</h4>
+<pre>{{code:t4_duration#parse}}</pre>
+<pre>{{code:t4_duration#demo}}</pre>
+<pre class="out">{{out:t4_duration}}</pre>
+<ul>
+  <li>The shape is the shape of most parsers: clean the input, peel off one piece at a time, and return early with a specific error the moment something is wrong. When the function reaches the end, the value is known to be good.</li>
+  <li><code>take_while</code> counts the leading digits and <code>split_at</code> cuts there. Splitting at a byte position is safe here because ASCII digits are one byte each. Splitting through the middle of a multi-byte character would panic.</li>
+  <li><code>.map_err(...)</code> turns the standard library's <code>ParseIntError</code> into our own error, and <code>?</code> returns it. Since we already checked the text is all digits, the only way <code>parse</code> can fail is overflow, hence <code>TooBig</code>.</li>
+  <li><code>checked_mul</code> returns <code>None</code> on overflow instead of wrapping around. A debug build panics on overflow and a release build silently wraps, so anything multiplying untrusted numbers should be checked.</li>
+</ul>
+
+<h4>Money: from text to cents, never through a float</h4>
+<p>Ticket 3 kept money in integer cents once it was in the program. Text is where money usually enters, and the obvious route goes through a float:</p>
+<pre>{{code:t4_toolkit#floats}}</pre>
+<pre class="out">{{out:t4_toolkit#3}}</pre>
+<p><code>0.29</code> has no exact binary form, so it is stored as a hair under 0.29. Multiplying by 100 gives a hair under 29, and <code>as i64</code> <em>truncates</em> toward zero: 28 cents. <code>.round()</code> rescues this case, but the honest fix is not to go through a float at all. The text already holds the digits of the dollars and of the cents. Read them as integers:</p>
+<pre>{{code:t4_cents#cents}}</pre>
+<pre>{{code:t4_cents#run}}</pre>
+<pre class="out">{{out:t4_cents}}</pre>
+<p>This one is deliberately strict: exactly two decimals, no commas, no sign. Millbrook's rules are wider than this, so take the idea and write your own parser to Dana's rules. Notice that it returns <code>Option</code>, so the caller only learns "no". Yours should return a <code>Result</code> that says which rule failed, because that goes in the reason column.</p>
+
+<h4>Errors made from other errors: <code>From</code> and <code>?</code></h4>
+<p>A function that reads the database and parses text can fail in two unrelated ways. Its error type has to cover both, and <code>?</code> needs to know how to turn one into the other. Without that:</p>
+<pre>{{fail:t4_from}}</pre>
+<pre class="out">{{failout:t4_from}}</pre>
+<p>The last note is the whole mechanism. When <code>?</code> meets an <code>Err(e)</code>, it returns <code>Err(From::from(e))</code>, converting the error into the function's own error type. Implement <code>From</code> and the conversion happens on its own:</p>
+<pre>{{code:t4_from#apperror}}</pre>
+<pre>{{code:t4_from#uses}}</pre>
+<pre>{{code:t4_from#run}}</pre>
+<pre class="out">{{out:t4_from}}</pre>
+<ul>
+  <li>Every <code>?</code> on a rusqlite call now converts automatically, through <code>From&lt;rusqlite::Error&gt;</code>.</li>
+  <li>The parse error goes through <code>map_err</code> instead, because the error needs something <code>From</code> can't know: which slip it came from. Use <code>From</code> for "this kind of error always becomes that variant", and <code>map_err</code> to add context.</li>
+  <li>Three runs, three outcomes, each with a message a person can act on.</li>
+</ul>
+<p>Real projects often use the <code>thiserror</code> crate to write the <code>Display</code> and <code>From</code> code for them. Write it by hand this time, so you know what the crate writes for you.</p>
+
+<h4>Types that can only hold good values</h4>
+<p>A parser's result should be a type that can't hold a bad value. Then no code downstream needs to check again. Put the field behind a module wall so the only way in is the parser:</p>
+<pre>{{code:t4_newtype#newtype}}</pre>
+<pre>{{code:t4_newtype#use}}</pre>
+<pre class="out">{{out:t4_newtype}}</pre>
+<p>The field <code>u32</code> has no <code>pub</code>, so code outside the <code>card</code> module can't build a <code>CardNumber</code> directly:</p>
+<pre>{{fail:t4_newtype}}</pre>
+<pre class="out">{{failout:t4_newtype}}</pre>
+<p>This is a case where the compiler's help is wrong for you. Making the field public would compile, and it would throw away the guarantee. The error is the design doing its job. A date type with private year, month and day fields and a constructor that checks the calendar works the same way.</p>
+
+<h4>Unit tests</h4>
+<p>Each parser is a function from <code>&amp;str</code> to <code>Result</code>, with no database and no files. That is the easiest code there is to test. Tests live at the bottom of the same file:</p>
+<pre>{{code:t4_duration#tests}}</pre>
+<ul>
+  <li><code>#[cfg(test)]</code> compiles the module only for <code>cargo test</code>, so tests add nothing to your real program.</li>
+  <li><code>use super::*;</code> brings in everything from the file above, private items included. Unit tests can test private functions.</li>
+  <li><code>#[test]</code> marks a test. <code>assert_eq!(actual, expected)</code> panics with both values if they differ, and the panic is what fails the test.</li>
+  <li><code>matches!(value, pattern)</code> is true if the value fits the pattern. Use it when you care about the variant but not exactly what's inside.</li>
+  <li>The third test is all edges: zero, the largest number that fits, one past it, and a multiplication that overflows.</li>
+</ul>
+<p><code>cargo test</code> builds a test program for each target and runs them all:</p>
+<pre class="out">{{out:t4_zz_tests#1}}</pre>
+<p>(Compile lines trimmed.) Four test programs ran: the unit tests inside the library, the binary's (none), the integration test, and doc-tests, which are code examples in <code>///</code> comments. Here is a test failing, in a card parser that forgot something:</p>
+<pre data-file="t4_failing/src/card.rs">/// The number on a library card like `LIB-0042`.
+pub fn card_number(raw: &amp;str) -&gt; Option&lt;u32&gt; {
+    raw.strip_prefix("LIB-")?.parse().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn plain_card() {
+        assert_eq!(card_number("LIB-0042"), Some(42));
+    }
+
+    #[test]
+    fn card_typed_with_spaces() {
+        assert_eq!(card_number(" LIB-0042 "), Some(42));
+    }
+}</pre>
+<pre class="out">{{out:t4_zz_tests#2}}</pre>
+<p>Read it the way you read a compiler error: the test's name, the file and line, then <code>left</code> (what the code produced) against <code>right</code> (what the test expected). The parser forgot to <code>trim</code>. Hand-typed data is full of exactly this kind of mistake, and the test name says which kind of input broke.</p>
+
+<h4>Integration tests</h4>
+<p>Files in a <code>tests/</code> folder at the project root are <em>integration tests</em>. Each one is compiled as a separate program that uses your library the way any outside code would, so it can only reach <code>pub</code> items. That makes it the right place to test the whole path, raw rows in and accepted rows plus rejects out, rather than one function.</p>
+<pre data-file="t4_crate/tests/slips.rs">use shelf::duration::{DurationError, parse_duration};
+
+#[test]
+fn a_whole_batch_of_slips() {
+    let slips = ["14d", "2w", "", "3 months", "21 days"];
+    let (good, bad): (Vec&lt;_&gt;, Vec&lt;_&gt;) = slips
+        .iter()
+        .map(|s| parse_duration(s))
+        .partition(|r| r.is_ok());
+    assert_eq!(good.len(), 3);
+    assert_eq!(bad[0], Err(DurationError::Empty));
+}</pre>
+<p><code>shelf</code> is that example project's name from <code>Cargo.toml</code>. In yours it is <code>kettle_creek</code>. An integration test needs a library to import, which brings us to modules.</p>
+
+<h4>Modules: a codebase a stranger can find their way around</h4>
+<p>One package can hold a library and a program. <code>src/lib.rs</code> is the library: all the logic, organized into modules. <code>src/main.rs</code> is a thin program that uses the library by the package's name, just as your tests do:</p>
+<pre data-file="t4_crate/src/main.rs">use shelf::duration::parse_duration;
+
+fn main() {
+    for raw in std::env::args().skip(1) {
+        match parse_duration(&amp;raw) {
+            Ok(days) =&gt; println!("{raw}: {days} days"),
+            Err(e) =&gt; eprintln!("{raw}: {e}"),
+        }
+    }
+}</pre>
+<p>The library's <code>lib.rs</code> just declares the modules, one line each. <code>pub mod duration;</code> tells the compiler to read <code>src/duration.rs</code> as a module named <code>duration</code>, and makes it visible outside the library. Inside the library, one module reaches another with <code>use crate::duration::parse_duration;</code>, where <code>crate</code> means "this library". Everything is private until marked <code>pub</code>:</p>
+<pre>{{fail:t4_private}}</pre>
+<pre class="out">{{failout:t4_private}}</pre>
+<p>That privacy is a feature. A module's <code>pub</code> items are its promise to the rest of the code, and everything else can change without breaking anyone. Make things <code>pub</code> when another module needs them, not by default. <code>pub(crate)</code> means "visible inside this library, but not to outside code".</p>
+<p>One reasonable layout for where your project is heading. Yours can differ, as long as you can say in one line what each file is for:</p>
+<pre>kettle_creek/
+  Cargo.toml
+  src/
+    main.rs        wiring: open the db, call the library, write files, print
+    lib.rs         one line per module, nothing else
+    db.rs          the only file that knows SQL exists
+    model.rs       plain structs for rows: PurchaseOrder, Invoice, ...
+    money.rs       Cents: arithmetic, display, parsing text
+    dates.rs       a date type that can only hold real dates
+    branch.rs      Millbrook rows into invoices or rejects
+    reconcile.rs   expected against billed, and the Kind enum
+    report.rs      writing CSV files
+  tests/
+    millbrook.rs   a few raw rows in, invoices and rejects out</pre>
+<p>Move one module at a time, and run <code>cargo check</code> after each move. The compiler will list every <code>use</code> and <code>pub</code> you missed, which turns a scary refactor into a checklist. <kbd>&lt;leader&gt;rp</kbd> in your Neovim jumps from a module to the line in <code>lib.rs</code> that declares it.</p>
+
+<h3>Warm-up drills</h3>
+<p>In <code>src/bin/drills.rs</code>, on the <code>products</code> table. Most descriptions end in a size: <code>Roller chain 1/4in</code>, <code>Carriage bolt M10</code>, <code>Pillow block 25mm</code>. Some end in a word that isn't a size (<code>stainless</code>, <code>heavy duty</code>), or in no size at all.</p>
+<div class="drill">
+  <p><strong>Drill 1.</strong> Write an enum <code>Size</code> with three variants (inches as a fraction, a metric thread like <code>M8</code>, millimeters), an error enum, and <code>fn parse_size(word: &amp;str) -> Result&lt;Size, SizeError&gt;</code>. Run it on the last word of every description and count each kind. A zero denominator is an error of its own.</p>
+  <pre class="out">{{out:drill_t4#1}}</pre>
+</div>
+<div class="drill">
+  <p><strong>Drill 2.</strong> Add a <code>#[cfg(test)] mod tests</code> to <code>drills.rs</code> that pins down how these words behave. Run <code>cargo test --bin drills</code>.</p>
+  <pre class="out">{{out:drill_t4#2}}</pre>
+  <p>Before you write them, decide what <code>"1/2"</code> (no unit) and <code>"25 mm"</code> (two words) should mean, and say so in a test name.</p>
+</div>
+<div class="drill">
+  <p><strong>Drill 3: break it.</strong> Change one expected value so a test fails, and read the output from the top. Then put <code>parse_size</code> and its types inside <code>mod size { ... }</code> in the same file, call it from <code>main</code>, and fix the privacy errors the compiler gives you with as few <code>pub</code>s as possible.</p>
+</div>
+
+<h3>The ticket</h3>
+<ul class="criteria">
+  <li><label><input type="checkbox" class="crit-box" id="c-t4-1"><span>Loads <code>branch_invoices</code> with one plain <code>SELECT</code>. Every column is read as <code>Option&lt;String&gt;</code>: the schema allows <code>NULL</code> in all of them, so your code must too.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t4-2"><span>Checks each row's fields in Dana's order and stops at the first problem. Writes <code>out/rejects.csv</code> with header <code>ref,field,value,reason</code>, one line per rejected row, with <code>value</code> exactly as typed.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t4-3"><span>Amounts go from text straight to <code>Cents</code>. No <code>f64</code> anywhere on that path.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t4-4"><span>Dates become a type that can only hold real calendar days, leap years included, not a <code>String</code>.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t4-5"><span>Reruns the ticket 3 reconciliation with both branches and every accepted Millbrook row, into <code>out/discrepancies.csv</code> in the same format.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t4-6"><span>No input can make it panic: no <code>unwrap</code>, <code>expect</code> or indexing on anything that came from the data. (An <code>expect</code> on a proven invariant, with the proof in the message, is fine.)</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t4-7"><span>Split into <code>lib.rs</code> and modules. <code>main.rs</code> is wiring only, and only one module knows about SQL.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t4-8"><span>Unit tests for every parser (vendor, PO reference, date, amount) that cover each of Dana's rules and its edges, and at least one integration test in <code>tests/</code>.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t4-9"><span><code>cargo fmt</code>, <code>cargo clippy --all-targets</code> and <code>cargo test</code> are clean.</span></label></li>
+</ul>
+<p><strong>Before you type,</strong> answer these in your journal. Does each field get its own error enum, or is there one for the whole row, and what goes in the <code>reason</code> column either way? Where does vendor normalization happen: once for our supplier list, or for every row? What does one accepted row look like as a struct? Your ticket 3 reconciliation adds up main-branch invoices: what is the smallest change that lets it add up a second source, without it needing to know about Millbrook? Write the file tree you're aiming for before you move anything.</p>
+
+<h3>Stuck?</h3>
+<details class="hint"><summary>Hint 1: start at the leaves</summary>
+  <p>Write <code>parse_amount</code> and its tests before you touch the database, then the date parser, then the PO reference. Each is a pure function from <code>&amp;str</code>, and once its tests pass you can build on it with some confidence. The row-level code then just calls them in order.</p>
+</details>
+<details class="hint"><summary>Hint 2: rules that need memory</summary>
+  <p>Two rules can't be checked by looking at one row alone. Duplicate refs need a <code>HashSet</code> of refs seen so far, and every row's ref goes in it, accepted or not. Vendor matching needs your supplier list, normalized once into a <code>HashMap</code> from normalized name to <code>supplier_id</code>. A small struct holding both, with a method that checks one row, keeps that state in one place.</p>
+</details>
+<details class="hint"><summary>Hint 3: one shape for every bill</summary>
+  <p>The code that totals what was billed only needs a PO number and an amount. Turn both kinds of invoice into that shape before totaling (after ticket 3's duplicate check on the main invoices), and the reconciliation itself barely changes. If you find yourself adding <code>if millbrook</code> inside it, back up.</p>
+</details>
+
+<h3>Sanity checks</h3>
+<ul>
+  <li><code>branch_invoices</code> has 183 rows and 182 distinct refs.</li>
+  <li>Of the raw dates, 91 look like <code>YYYY-MM-DD</code>, 88 contain slashes, and 4 are empty or blank. Six amounts start with <code>(</code>.</li>
+  <li>Two rows claim February 29, 2025: <code>MB-2025-0022</code> and <code>MB-2026-0133</code>. 2025 wasn't a leap year, so both belong in your rejects with field <code>inv_date</code>.</li>
+  <li>Accepted plus rejected equals 183.</li>
+  <li>The ORPHAN_INVOICE, DUPLICATE_INVOICE and BILLED_CANCELLED rows are the same as in ticket 3. Millbrook didn't change the main branch's invoices.</li>
+  <li>Run the program twice. <code>rejects.csv</code> and <code>discrepancies.csv</code> come out byte for byte the same (<code>cmp</code> or <code>sha256sum</code> will tell you).</li>
+</ul>
+
+<h3>Hand it in</h3>
+<p>Commit, tag <code>t4-submitted</code>, and paste the <a href="#reviews">review prompt</a> with <code>N</code> as 4. Add:</p>
+<pre class="prompt">For this ticket, pay particular attention to: my error types (one per
+field or one per row, and whether the reasons are useful to Millbrook),
+anything that could still panic on bad input, whether my tests would fail
+if any one of Dana's rules broke, and whether the file layout would make
+sense to someone new to the project. My reject reasons are my own
+wording, so compare rejects.csv by ref and field.</pre>
+<p>Then reply to Dana and Priya: how many rows were accepted and rejected, the rejects grouped by field, and one change Millbrook's clerks could make that would remove the biggest group.</p>
+
+<h3>Under the hood</h3>
+<h4>A format is a tiny language</h4>
+<p>Dana's rules describe which strings count as valid, the same thing a programming language's grammar describes. Written in the notation language designers use (<code>[ x ]</code> means optional, <code>{ x }</code> means repeat zero or more times, <code>|</code> means or), the date rule is:</p>
+<pre>date = iso | us
+iso  = d d d d "-" d d "-" d d
+us   = d [ d ] "/" d [ d ] "/" d d d d
+d    = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"</pre>
+<p>Two things fall out of writing it down. First, a grammar describes shape, not meaning: <code>02/30/2026</code> fits the grammar perfectly and still isn't a date. Compilers work in the same two stages, first checking that the code has a valid shape (parsing), then checking that it means something (type checking). Your date parser needs both stages, and the reasons should say which one failed.</p>
+<p>Second, writing a grammar exposes decisions that prose hides. "With or without commas" sounds clear, but should <code>1,2,3.45</code> be accepted? Dana's rule, ignore commas wherever they are, says yes: it's 123.45. A stricter grammar would require groups of three digits and reject it. Neither is wrong in general, but here the agreed rule decides, so pin it down with a test, and if you think it's too loose, say so to Dana rather than quietly parsing something else.</p>
+<p>These formats are simple enough that a regular expression could recognize them. In the theory of computation they are <em>regular languages</em>, the simplest kind, recognizable with no memory beyond a fixed number of states. Balanced parentheses nested to any depth are not regular: recognizing them takes a counter or a stack. One optional pair of parentheses around an amount is fine. Regular languages are the bottom rung of the Chomsky hierarchy, and it's why nobody parses HTML with a regex.</p>
+
+<h4>Parse, don't validate</h4>
+<p>A validator answers yes or no: <code>fn is_valid_date(s: &amp;str) -> bool</code>. The caller then carries on with the same <code>String</code> it had before, and every function further down has to trust that someone, somewhere, checked it. A parser answers with a value: <code>fn parse(s: &amp;str) -> Result&lt;Date, DateError&gt;</code>. What it learned is now part of the type. Code that takes a <code>Date</code> can't be handed February 30, because no <code>Date</code> like that can exist. Alexis King's essay <a href="https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/">"Parse, don't validate"</a> makes this argument in full, and it changes how you design types. The <code>CardNumber</code> above, ticket 3's <code>Cents</code> and the <code>Date</code> you're about to write are all this idea.</p>
+
+<h4>Leap years</h4>
+<p>The rule you need is: a year is a leap year if it divides by 4, except years that divide by 100, except years that divide by 400. So 2024 is a leap year, 2025 isn't, 1900 wasn't and 2000 was. The exceptions exist because the solar year is about 365.2422 days, not 365.25. The Julian calendar's every-fourth-year rule ran about eleven minutes long each year, and by 1582 the spring equinox had drifted about ten days from the date the church had fixed for it in 325. The Gregorian reform dropped ten days and added the century exceptions, giving an average year of 365.2425 days. Britain and its colonies only switched in 1752, by which point the gap was eleven days. Your terminal remembers:</p>
+<pre class="cmd">cal 9 1752</pre>
+<p>September 1752 goes 1, 2, 14. Don't handle that in this ticket. It's here as a reminder that dates are a domain where the edge cases are real history, which is why mature code uses a tested date library. You're writing your own this once, to learn why.</p>
+
+<h4>What a test can prove</h4>
+<p>You can't test every string, so you choose. The standard method is <em>equivalence classes</em>: group inputs that should behave the same way (amounts with no decimals, one decimal, two, three or more) and test one from each group. Then test the <em>boundaries</em> between groups, because that's where bugs live: day 28, 29, 30 and 31 of February; month 0, 1, 12 and 13; two decimals and three. A test suite built that way is small and surprisingly strong.</p>
+<p>It still proves less than it feels like. In 1970 Edsger Dijkstra wrote, in <a href="https://www.cs.utexas.edu/~EWD/transcriptions/EWD02xx/EWD249/EWD249.html">Notes on Structured Programming</a>: "Program testing can be used to show the presence of bugs, but never to show their absence!" A green test run means every case you thought of behaves as you expected. The cases you didn't think of are still out there, and Millbrook's clerks will think of them. Part 3 brings in <em>property-based testing</em>, where the computer generates the cases for you.</p>
+
+<h3>Go deeper</h3>
+<ul>
+  <li><a href="https://doc.rust-lang.org/book/ch09-00-error-handling.html">The Rust Programming Language, chapter 9: Error Handling</a>, including its section on when to panic.</li>
+  <li><a href="https://doc.rust-lang.org/book/ch11-00-testing.html">Chapter 11: Writing Automated Tests</a>. Section <a href="https://doc.rust-lang.org/book/ch11-03-test-organization.html">11.3</a> covers unit and integration tests side by side.</li>
+  <li><a href="https://doc.rust-lang.org/book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html">Chapter 7: Packages, Crates and Modules</a>. Read it after your refactor, when the words will mean something.</li>
+  <li><a href="https://burntsushi.net/rust-error-handling/">Error Handling in Rust</a> by Andrew Gallant (BurntSushi, author of ripgrep and the csv crate). Long, careful, and still the best explanation of why Rust errors work the way they do.</li>
+  <li><a href="https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/">Parse, don't validate</a> by Alexis King. The examples are in Haskell, and the idea carries over directly.</li>
+  <li><a href="https://docs.rs/thiserror/latest/thiserror/">thiserror</a> and <a href="https://docs.rs/anyhow/latest/anyhow/">anyhow</a>: what most teams use instead of hand-written error code. thiserror is for libraries, where callers need to match on variants; anyhow is for programs, where errors mostly get reported. Now that you've written the code yourself, read their front pages and see what each one generates.</li>
+  <li><a href="https://rust-lang.github.io/api-guidelines/interoperability.html">The Rust API Guidelines, interoperability</a>, especially "Error types are meaningful and well-behaved".</li>
+  <li><a href="https://doc.rust-lang.org/std/primitive.str.html">The <code>str</code> docs</a>. Skim the whole method list once. Most hand-written string loops already exist there as a method.</li>
+</ul>
+
+<section class="quiz" data-quiz="t4" aria-labelledby="quiz-t4-h">
+  <h3 id="quiz-t4-h">Check yourself</h3>
+  <div class="quiz-body"></div>
+  <noscript><p>The quizzes need JavaScript turned on.</p></noscript>
+</section>

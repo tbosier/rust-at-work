@@ -1,0 +1,4 @@
+Ada     hash 17390174587215729682  bucket 2
+Grace   hash  4016552697901753768  bucket 0
+Alan    hash 10154332038248538411  bucket 3
+Edsger  hash  6817028703008280599  bucket 7

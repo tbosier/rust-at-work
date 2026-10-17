@@ -1,0 +1,7 @@
+loan 1 owes 0.30
+loan 4 owes 0.30
+same amount? true
+loan 7 owes 0.80
+---
+-1.-50
+0.-5

@@ -1,0 +1,10 @@
+24 suppliers, 21 active
+---
+ 60 days  Orlin Prairie Motors (9)
+ 60 days  Sandovar Castings (17)
+ 45 days  Norrowfield Conveyor Parts (22)
+ 45 days  Ostrand Hydraulics (3)
+ 45 days  Pellish Valve Works (11)
+---
+supplier 1: name = "MO", state = "Quarrow Bearing Co."
+Invalid column type Text at index: 0, name: name

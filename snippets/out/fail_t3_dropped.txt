@@ -1,0 +1,11 @@
+error[E0515]: cannot return value referencing local variable `books`
+  --> src/main.rs:29:5
+   |
+29 |     Catalog::new(&books)
+   |     ^^^^^^^^^^^^^------^
+   |     |            |
+   |     |            `books` is borrowed here
+   |     returns a value referencing data owned by the current function
+
+For more information about this error, try `rustc --explain E0515`.
+error: could not compile `kettle_creek` (bin "kettle_creek") due to 1 previous error

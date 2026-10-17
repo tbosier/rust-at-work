@@ -1,0 +1,8 @@
+book_id | title | author
+101 | The Mythical Man-Month | Brooks
+102 | Structure and Interpretation of Computer Programs | Abelson
+
+loan_id | member | status
+1 | Ada | returned
+2 | Grace | out
+3 | Alan | out

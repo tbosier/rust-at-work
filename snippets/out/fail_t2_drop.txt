@@ -1,0 +1,16 @@
+error[E0505]: cannot move out of `books` because it is borrowed
+  --> src/main.rs:23:10
+   |
+9  |     let books = vec![
+   |         ----- binding `books` declared here
+...
+20 |     for b in &books {
+   |              ------ borrow of `books` occurs here
+...
+23 |     drop(books);
+   |          ^^^^^ move out of `books` occurs here
+24 |     println!("{per_shelf:?}");
+   |                --------- borrow later used here
+
+For more information about this error, try `rustc --explain E0505`.
+error: could not compile `kettle_creek` (bin "kettle_creek") due to 1 previous error

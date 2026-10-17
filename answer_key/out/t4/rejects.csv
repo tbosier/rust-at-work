@@ -1,0 +1,41 @@
+ref,field,value,reason
+MB-2025-0008,vendor,Old Varrow,unknown vendor
+MB-2025-0012,amount,5594.275,more than two decimal places
+MB-2025-0022,inv_date,2025-02-29,no such date
+MB-2025-0026,inv_date,13/08/2025,no such date
+MB-2025-0032,ref,MB-2025-0032,duplicate ref
+MB-2025-0049,amount,2288.105,more than two decimal places
+MB-2025-0051,amount,6048.375,more than two decimal places
+MB-2025-0054,amount,860.255,more than two decimal places
+MB-2025-0059,inv_date,14/11/2025,no such date
+MB-2025-0063,po_ref,,not a PO number
+MB-2026-0076,amount,,missing
+MB-2026-0090,amount,4634.105,more than two decimal places
+MB-2026-0092,inv_date,13/02/2026,no such date
+MB-2026-0094,inv_date,,missing
+MB-2026-0095,amount,TBD,not a number
+MB-2026-0105,amount,TBD,not a number
+MB-2026-0107,amount,TBD,not a number
+MB-2026-0108,amount,TBD,not a number
+MB-2026-0110,po_ref,see email,not a PO number
+MB-2026-0115,po_ref,,not a PO number
+MB-2026-0116,inv_date,16/04/2026,no such date
+MB-2026-0117,amount,7546.545,more than two decimal places
+MB-2026-0124,amount,2689.145,more than two decimal places
+MB-2026-0130,po_ref,,not a PO number
+MB-2026-0131,po_ref,see email,not a PO number
+MB-2026-0133,inv_date,02/29/2025,no such date
+MB-2026-0135,po_ref,,not a PO number
+MB-2026-0140,po_ref,see email,not a PO number
+MB-2026-0141,po_ref,see email,not a PO number
+MB-2026-0155,inv_date,,missing
+MB-2026-0158,po_ref,see email,not a PO number
+MB-2026-0161,po_ref,,not a PO number
+MB-2026-0162,amount,,missing
+MB-2026-0163,po_ref,,not a PO number
+MB-2026-0164,vendor,Corvane Ridge,unknown vendor
+MB-2026-0169,po_ref,see email,not a PO number
+MB-2026-0177,po_ref,see email,not a PO number
+MB-2026-0180,inv_date,,missing
+MB-2026-0181,vendor,Hollisford Freight Brokers,unknown vendor
+MB-2026-0182,vendor,Zippett Courier,unknown vendor

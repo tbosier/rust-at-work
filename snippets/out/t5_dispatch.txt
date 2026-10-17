@@ -1,0 +1,7 @@
+book: The Mythical Man-Month
+fine: 24.95
+book: A Discipline of Programming
+---
+&Book:          8 bytes
+&dyn Describe:  16 bytes
+Box<dyn Describe>: 16 bytes

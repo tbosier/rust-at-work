@@ -1,0 +1,5 @@
+book_id,title,fines
+101,The Mythical Man-Month,0.30
+106,"Programming Pearls, 2nd ed.",1.10
+107,"The ""Dragon Book""",0.00
+108,Code,1.10

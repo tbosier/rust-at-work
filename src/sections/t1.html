@@ -1,0 +1,255 @@
+<!-- ===================================================== -->
+<h2 id="t1">Ticket 1: open purchase orders</h2>
+
+<article class="email" aria-label="Email from Dana Whitlock: Open POs">
+  <dl class="email-head">
+    <div><dt>From</dt><dd>Dana Whitlock, Operations Manager</dd></div>
+    <div><dt>To</dt><dd>You</dd></div>
+    <div><dt>Date</dt><dd>Monday, October 5, 2026, 8:12 AM</dd></div>
+    <div class="subj"><dt>Subject</dt><dd>Open POs, a quick one for your first day</dd></div>
+  </dl>
+  <div class="email-body">
+    <p>Welcome aboard. Glad you're here.</p>
+    <p>First thing. Purchasing thinks we have a pile of POs still marked open that actually arrived months ago and nobody closed out. They make our committed-spend number look worse than it is. Can you tell me:</p>
+    <ol>
+      <li>How many POs are open right now.</li>
+      <li>Which open POs were ordered before August 6, so more than 60 days ago. Send those as <code>stale_open_pos.csv</code> with columns <code>po_id</code>, <code>supplier_id</code>, <code>buyer</code> and <code>order_date</code>, oldest first. Supplier IDs are fine for now.</li>
+    </ol>
+    <p>Everything's in <code>kettle_creek.db</code>, table <code>purchase_orders</code>. You know IT's rule: plain SELECTs to pull the table, logic in the program. There's a wiki page on reading the database, <a href="#t1-wiki">here</a>.</p>
+    <p>End of day tomorrow is fine.</p>
+    <p class="sig">Dana</p>
+  </div>
+</article>
+<p class="teaches"><strong>This ticket teaches</strong> structs, <code>Vec</code>, iterators and closures, borrowing, <code>Result</code> and <code>?</code>, sorting and writing a file. <strong>Under the hood:</strong> the stack and the heap, and why ISO dates sort as text. <strong>Crates allowed:</strong> rusqlite.</p>
+
+<p class="wiki-crumb" id="t1-wiki">Engineering wiki / Rust / Reading the database</p>
+<h3>From a table to a <code>Vec</code></h3>
+
+<p>Every program in Part 1 has the same three steps: <strong>load</strong> rows into Rust values, <strong>work</strong> on them in Rust, <strong>write</strong> the result. This page covers all three. The examples use a tiny lending library rather than our own tables, so you can try things without touching real data. The shapes carry straight over.</p>
+<details>
+  <summary>The practice library database</summary>
+  <p>The examples import it as <code>snippets::library</code>, so make a scratch project with that name, next to <code>kettle_creek</code>:</p>
+  <pre class="cmd">cd ~/projects
+cargo new snippets
+cd snippets
+cargo add rusqlite --features bundled</pre>
+  <p>Save the code below as <code>src/lib.rs</code>, beside the <code>src/main.rs</code> that <code>cargo new</code> made. A package can hold a library and a program at once, and the program reaches the library by the package's name. Then type an example into <code>src/main.rs</code> and <code>cargo run</code>. The database is built in memory each run, so nothing is saved.</p>
+  <pre>{{code:lib#library}}</pre>
+</details>
+
+<h4>Describe a row with a struct</h4>
+<p>A <em>struct</em> is a named group of fields, each with a type. It is Python's <code>@dataclass</code>, except the types are checked when the program is compiled rather than ignored.</p>
+<pre>{{code:t1_struct#struct}}</pre>
+<p>Pick each field's type from the column:</p>
+<ul>
+  <li><code>INTEGER</code> becomes <code>i64</code>, a 64-bit signed integer. SQLite's integers are 64-bit, so <code>i64</code> always fits.</li>
+  <li><code>TEXT</code> becomes <code>String</code>: text that the struct owns. You'll see its cousin <code>&amp;str</code> in a moment.</li>
+  <li>A column that can be <code>NULL</code> becomes <code>Option&lt;T&gt;</code>. <code>Option&lt;String&gt;</code> is either <code>Some(text)</code> or <code>None</code>. Rust has no null, so a missing value has to be visible in the type, and the compiler makes you handle it before you use it.</li>
+</ul>
+<p><code>#[derive(Debug)]</code> asks the compiler to write the code that prints the struct with <code>{:?}</code>. Making one and printing it:</p>
+<pre>{{code:t1_struct#make}}</pre>
+<pre class="out">{{out:t1_struct}}</pre>
+<p><code>"2026-08-11"</code> on its own is a <code>&amp;str</code>, a borrowed view of text that's baked into the program. A struct field of type <code>String</code> needs text it owns, so <code>.to_string()</code> or <code>String::from(...)</code> makes an owned copy. <code>{:#?}</code> is the pretty, multi-line form of <code>{:?}</code>.</p>
+
+<h4>Load the rows</h4>
+<p>Here is the whole load step, with <code>main</code>:</p>
+<pre>{{code:t1_load#all}}</pre>
+<pre class="out">{{out:t1_load}}</pre>
+<p>Line by line:</p>
+<ul>
+  <li><code>db.prepare(...)</code> compiles the SQL once and gives back a statement. It can fail (a typo in the SQL, say), so it returns a <code>Result</code>, and the <code>?</code> passes any error up to the caller.</li>
+  <li><code>stmt.query_map([], |row| ...)</code> runs the query and calls the <em>closure</em> <code>|row| ...</code> once per row. A closure is an inline function, like Python's <code>lambda</code> but allowed to be as long as you like. The <code>[]</code> means "no parameters".</li>
+  <li><code>row.get(0)?</code> reads column 0 and converts it to whatever type the field needs. The compiler works out the type from the struct field. If the conversion fails, for example a <code>NULL</code> going into a <code>String</code>, you get an error, not a silent empty string.</li>
+  <li><code>rows.collect()</code> runs through every row and gathers the results. The function's return type, <code>rusqlite::Result&lt;Vec&lt;Loan&gt;&gt;</code>, tells <code>collect</code> what to build: either every row in a <code>Vec</code>, or the first error.</li>
+  <li><code>fn main() -&gt; Result&lt;(), Box&lt;dyn Error&gt;&gt;</code> lets <code>main</code> use <code>?</code> too. On success it returns <code>Ok(())</code>, where <code>()</code> is Rust's "nothing". On failure it returns any kind of error, and Rust prints it and exits with a failure code. For a program this size, that is enough error handling. Ticket 4 does better.</li>
+</ul>
+<h4>Your own database file</h4>
+<p>The examples use <code>library()</code>. Your program opens the real file instead, by a path relative to the folder you run <code>cargo run</code> from:</p>
+<pre>{{code:t1_open#open}}</pre>
+<pre class="out">{{out:t1_open#1}}</pre>
+<p>(<code>query_row</code> is for a query that returns exactly one row. It's here to keep the example short. Your loaders use <code>query_map</code>.) One trap: <code>Connection::open</code> creates an empty database if the file doesn't exist, so a typo in the path doesn't fail where you made it. It fails later, and confusingly:</p>
+<pre>{{code:t1_open#typo}}</pre>
+<pre class="out">{{out:t1_open#2}}</pre>
+<p>Opening read-only refuses a missing file at once, with the path in the message, and it guarantees your program can't change the warehouse data:</p>
+<pre>{{code:t1_open#readonly}}</pre>
+<pre class="out">{{out:t1_open#3}}</pre>
+<p>Forget <code>main</code>'s return type and you get one of the most common errors there is:</p>
+<pre>{{fail:t1_question}}</pre>
+<pre class="out">{{failout:t1_question}}</pre>
+<p>In Python you'd write <code>rows = cursor.execute(sql).fetchall()</code> and get a list of tuples. Here you get a <code>Vec</code> of structs whose fields have names and types. That costs you the struct definition, and pays you back every time you type <code>loan.</code> and your editor lists the fields.</p>
+
+<h4>Work on the rows</h4>
+<p>A <code>Vec&lt;T&gt;</code> is Rust's growable list, the equivalent of a Python <code>list</code> whose items all have one type. To count loans that are out:</p>
+<pre>{{code:t1_filter#count}}</pre>
+<p><code>.iter()</code> walks the items one at a time without changing or consuming them. <code>.filter(...)</code> keeps the items its closure says yes to, and <code>.count()</code> counts them. Nothing runs until <code>count</code> asks for items. These chains are called <em>iterator adaptors</em>, and they're how most Rust code works through collections. The same thing as a loop:</p>
+<pre>{{code:t1_loop#loop}}</pre>
+<p>Both compile to essentially the same machine code. Use whichever reads better. Here the chain does: it says "count the out loans" in one line. In Python the chain is <code>sum(1 for loan in loans if loan.status == "out")</code>.</p>
+
+<h4>Borrowing, in five minutes</h4>
+<p>Look at the parameter: <code>loans: &amp;[Loan]</code>, not <code>loans: Vec&lt;Loan&gt;</code>. The <code>&amp;</code> means <code>count_out</code> <em>borrows</em> the loans: it can read them, and the caller still has them afterwards. This is the idea that makes Rust Rust, so here is what happens without it:</p>
+<pre>{{fail:t1_move}}</pre>
+<pre class="out">{{failout:t1_move}}</pre>
+<p>Every value in Rust has exactly one owner. Passing a <code>Vec</code> by value <em>moves</em> it: <code>total_len</code> owns it now, frees it when it returns, and <code>main</code> can't touch it again. Python never has this problem because every variable is a shared reference and a garbage collector cleans up. Rust has no garbage collector. It frees memory at a moment the compiler can see, and ownership is how it sees that moment.</p>
+<p>You have three choices whenever a function needs a value:</p>
+<ul>
+  <li><strong>Borrow it</strong> (<code>&amp;[Loan]</code>, <code>&amp;Loan</code>, <code>&amp;str</code>) when the function only reads. This is the default. Nearly every function you write this week should take its input this way.</li>
+  <li><strong>Borrow it mutably</strong> (<code>&amp;mut Vec&lt;Loan&gt;</code>) when the function changes it in place, like sorting.</li>
+  <li><strong>Move it</strong> (<code>Vec&lt;Loan&gt;</code>) when the function keeps it or consumes it. Or <code>.clone()</code> it first if you need your own copy, which costs a full copy, every time.</li>
+</ul>
+<p>Write <code>&amp;[Loan]</code> rather than <code>&amp;Vec&lt;Loan&gt;</code>. A <em>slice</em>, <code>&amp;[T]</code>, is a view of some items in a row, and it accepts a borrowed <code>Vec</code>, an array or part of either. Clippy will tell you this too.</p>
+
+<h4>Keep some of the rows</h4>
+<p>To keep the loans that went out before a date, return a <code>Vec</code> of references to the originals instead of copies. The obvious version doesn't compile:</p>
+<pre>{{fail:t1_lifetime}}</pre>
+<pre class="out">{{failout:t1_lifetime}}</pre>
+<p>The function returns references, and the compiler needs to know what they borrow from, so it knows how long they stay valid. Two references come in, so it can't guess. <code>'a</code> is a <em>lifetime</em>, a name for "as long as this borrow lasts". The suggested fix compiles, but it's stricter than it needs to be: it ties the result to <code>cutoff</code> as well. The results only point into <code>loans</code>, so only <code>loans</code> needs the label:</p>
+<pre>{{code:t1_filter#early}}</pre>
+<p>Read it as: the <code>&amp;Loan</code>s that come out live as long as the <code>loans</code> that went in. Ticket 3 is where lifetimes get properly explained. For now, when the compiler asks, tie the output to the input it really comes from.</p>
+<p><code>loan.loaned_on.as_str() &lt; cutoff</code> compares two pieces of text. <code>as_str()</code> borrows a <code>&amp;str</code> view of the <code>String</code> so both sides have the same type.</p>
+
+<h4>Sort</h4>
+<pre>{{code:t1_sort#sort}}</pre>
+<pre class="out">{{out:t1_sort}}</pre>
+<ul>
+  <li><code>sort_by_key</code> sorts by whatever the closure returns. Sorting changes the <code>Vec</code>, so the variable must be declared <code>let mut</code>. Rust variables can't be changed unless they say so, which is why <a href="#setup">day one's</a> error happened.</li>
+  <li>The sort is <em>stable</em>: items with equal keys stay in their old order. After the first sort, <code>"pear"</code> still comes before <code>"kiwi"</code> because it did before.</li>
+  <li>A tuple key, <code>(w.len(), *w)</code>, sorts by the first part, then breaks ties with the second. Python's <code>key=lambda w: (len(w), w)</code> is the same idea.</li>
+  <li><code>sort_by</code> takes two items and returns how they compare. <code>b.cmp(a)</code> instead of <code>a.cmp(b)</code> sorts backwards.</li>
+</ul>
+<p>Using the pieces together:</p>
+<pre>{{code:t1_filter#use}}</pre>
+<pre class="out">{{out:t1_filter}}</pre>
+
+<h4>Write a file</h4>
+<pre>{{code:t1_write#write}}</pre>
+<pre class="out">{{out:t1_write}}</pre>
+<ul>
+  <li><code>File::create</code> makes or empties the file. <code>BufWriter</code> collects your small writes in memory and hands them to the operating system in big chunks. Without it, every <code>writeln!</code> is a separate request to the OS, which is much slower.</li>
+  <li><code>writeln!</code> works like <code>println!</code>, but into anything you can write to. Writing can fail (disk full, no permission), so it returns a <code>Result</code> and needs a <code>?</code>.</li>
+  <li><code>flush</code> pushes out whatever is still buffered. A <code>BufWriter</code> also flushes when it's dropped, but it has to ignore errors when it does that. Flushing yourself means an error reaches you.</li>
+  <li><code>std::io::Result&lt;()&gt;</code> is the I/O module's own <code>Result</code>, with its error type filled in.</li>
+</ul>
+<p>Writing CSV by hand works because nothing in this ticket's columns contains a comma. That's a fragile assumption, and ticket 2 replaces it.</p>
+
+<h3>Warm-up drills</h3>
+<p>Keep drills out of your real program by giving them a program of their own. Cargo treats every file in <code>src/bin/</code> as a separate program, so put them in <code>src/bin/drills.rs</code> and run <code>cargo run --bin drills</code> from the project folder. With two programs in the project, a bare <code>cargo run</code> no longer knows which one you mean. Tell it, by adding <code>default-run = "kettle_creek"</code> under <code>[package]</code> in <code>Cargo.toml</code>.</p>
+<div class="drill">
+  <p><strong>Drill 1.</strong> Load <code>suppliers</code> into a <code>Vec</code> of a struct with <code>supplier_id</code>, <code>name</code>, <code>payment_terms_days</code> and <code>active</code>. Print how many there are and how many are active. (rusqlite turns an integer 0 or 1 into a <code>bool</code> for you if the field is a <code>bool</code>.)</p>
+  <pre class="out">{{out:drill_t1#1}}</pre>
+</div>
+<div class="drill">
+  <p><strong>Drill 2.</strong> Print the five suppliers with the longest payment terms, longest first, breaking ties alphabetically by name. You need <code>sort_by</code> with two comparisons: look up <code>Ordering::then</code> in the docs (<kbd>K</kbd> on <code>cmp</code>, then follow the return type).</p>
+  <pre class="out">{{out:drill_t1#2}}</pre>
+</div>
+<div class="drill">
+  <p><strong>Drill 3: break it.</strong> Add a <code>state</code> field to your struct and your SELECT, right after <code>name</code>. Now swap <code>name</code> and <code>state</code> in the SELECT, but leave the <code>row.get</code> numbers alone, and print the first supplier. Then put <code>name</code> first in the SELECT, at index 0, where <code>supplier_id</code> was. One mistake compiles and runs, and one fails, but only when it runs:</p>
+  <pre class="out">{{out:drill_t1#3}}</pre>
+  <p>Write in your journal which mistakes the type system caught and which it couldn't. Both columns are text, so Rust has no way to know they're swapped. Types catch a lot, but not this. That's what tests are for, starting in ticket 4.</p>
+</div>
+
+<h3>The ticket</h3>
+<p>Your program, in <code>src/main.rs</code>, must do all of this. Tick each one off as you go.</p>
+<ul class="criteria">
+  <li><label><input type="checkbox" class="crit-box" id="c-t1-1"><span>Loads <code>purchase_orders</code> with a single <code>SELECT</code> of the columns you need. No <code>WHERE</code>.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t1-2"><span>Prints the number of open POs on one line and the number of stale ones on the next.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t1-3"><span>Writes <code>out/stale_open_pos.csv</code>: header <code>po_id,supplier_id,buyer,order_date</code>, one row per open PO ordered before <code>2026-08-06</code>, sorted by <code>order_date</code>, ties broken by <code>po_id</code>.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t1-4"><span><code>main</code> does no work itself. It calls a function that loads, one that picks the stale POs, and one that writes the file, and each of those takes its input by reference.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t1-5"><span>No <code>.unwrap()</code> or <code>.clone()</code> anywhere. (Both have their place. This ticket doesn't need either, and finding out why is the point.)</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t1-6"><span><code>cargo fmt</code> and <code>cargo clippy --all-targets</code> are clean.</span></label></li>
+</ul>
+<p><strong>Before you type,</strong> answer these in your journal. What struct do you need, and which columns can be <code>NULL</code>? What does "open" mean in this table, exactly? What type does the "pick the stale ones" function return? The cutoff date is a fixed number in this ticket: where should it live so the next person can find it? (Look up <code>const</code>.)</p>
+
+<h3>Stuck?</h3>
+<details class="hint"><summary>Hint 1: which columns, which types</summary>
+  <p>You only need the columns the ticket uses: <code>po_id</code>, <code>supplier_id</code>, <code>buyer</code>, <code>order_date</code> and <code>status</code>. None of those can be <code>NULL</code> in this table (<code>.schema purchase_orders</code> shows <code>NOT NULL</code>), so no <code>Option</code> yet. <code>received_date</code> is the one that would be.</p>
+</details>
+<details class="hint"><summary>Hint 2: the shape of main</summary>
+  <p>Six or seven lines: open the connection, call the loader, count, call the picker, sort, write, print. If <code>main</code> has a loop in it, something belongs in a function.</p>
+</details>
+<details class="hint"><summary>Hint 3: sorting references</summary>
+  <p>Your picker returns <code>Vec&lt;&amp;PurchaseOrder&gt;</code>. You can sort that with <code>sort_by_key</code> exactly like a <code>Vec</code> of values. A key of <code>(po.order_date.as_str(), po.po_id)</code> borrows the date instead of copying it. Try <code>po.order_date.clone()</code> as the key instead and notice it compiles but breaks criterion 5.</p>
+</details>
+
+<h3>Sanity checks</h3>
+<p>These check that you loaded the data properly, not that your answer is right. The review checks the answer.</p>
+<ul>
+  <li>Your <code>Vec</code> holds 2,017 purchase orders.</li>
+  <li>There are 56 cancelled POs. If you count those, your loading and filtering work, and the open count uses the same idea.</li>
+  <li>If your program prints 2,017 open POs, the filter isn't running.</li>
+  <li>The CSV's first line is exactly <code>po_id,supplier_id,buyer,order_date</code>, and its dates go up as you read down.</li>
+</ul>
+
+<h3>Hand it in</h3>
+<p>Commit, tag <code>t1-submitted</code>, and paste the <a href="#reviews">review prompt</a> with <code>N</code> as 1. Add this line to the end:</p>
+<pre class="prompt">For this ticket, pay particular attention to: whether main reads like a
+summary, whether every function borrows what it only reads, and whether
+my names would make sense to someone who has never seen the ticket.</pre>
+<p>Then reply to Dana. A real reply: the two numbers and one sentence on what you'd check next. (Hint: a stale open PO might still be waiting for parts. What column would tell you?)</p>
+
+<h3>Under the hood</h3>
+<h4>Where your data lives: the stack and the heap</h4>
+<p>A running program gets memory in two places. The <em>stack</em> holds each function's local variables. It is fast, because making room is just moving a pointer, and limited: every value on it must have a size known when the program is compiled. The <em>heap</em> is a big pool for anything else. You ask for a block of any size while running, and someone has to give it back.</p>
+<p>A <code>Vec</code> is both. A <code>Vec</code> in a local variable is three numbers on the stack: a pointer to a block on the heap, how many items are in it (<em>length</em>), and how many fit before it needs a bigger block (<em>capacity</em>). The items themselves sit side by side in that heap block. A <code>String</code> has the same three numbers, pointing at bytes of text.</p>
+<figure>
+  <div class="diagram" role="img" aria-label="A Vec of loans: three numbers on the stack, a pointer, length 7 and capacity 8, pointing to a heap block of eight slots, seven of them holding a Loan and one empty. Each Loan's String fields point to further heap blocks of text.">
+  <svg viewBox="0 0 640 220" aria-hidden="true">
+    <text x="20" y="22" class="tick">stack</text>
+    <rect x="20" y="32" width="210" height="40" fill="var(--sea)" stroke="var(--sea-edge)"/>
+    <line x1="90" y1="32" x2="90" y2="72" stroke="var(--sea-edge)"/>
+    <line x1="160" y1="32" x2="160" y2="72" stroke="var(--sea-edge)"/>
+    <text x="55" y="57" text-anchor="middle" class="tick">ptr</text>
+    <text x="125" y="57" text-anchor="middle" class="tick">len 7</text>
+    <text x="195" y="57" text-anchor="middle" class="tick">cap 8</text>
+    <text x="242" y="57" class="tick">loans: Vec&lt;Loan&gt;, 24 bytes on the stack</text>
+    <path d="M55 72 L55 132 L90 132" fill="none" stroke="var(--depth)" stroke-width="1.6"/>
+    <path d="M84 127 L92 132 L84 137" fill="none" stroke="var(--depth)" stroke-width="1.6"/>
+    <text x="96" y="112" class="tick">heap</text>
+    <g>
+      <rect x="96" y="118" width="64" height="30" fill="var(--sheet)" stroke="var(--depth)"/><text x="128" y="138" text-anchor="middle" class="tick">Loan</text>
+      <rect x="160" y="118" width="64" height="30" fill="var(--sheet)" stroke="var(--depth)"/><text x="192" y="138" text-anchor="middle" class="tick">Loan</text>
+      <rect x="224" y="118" width="64" height="30" fill="var(--sheet)" stroke="var(--depth)"/><text x="256" y="138" text-anchor="middle" class="tick">Loan</text>
+      <rect x="288" y="118" width="64" height="30" fill="var(--sheet)" stroke="var(--depth)"/><text x="320" y="138" text-anchor="middle" class="tick">Loan</text>
+      <rect x="352" y="118" width="64" height="30" fill="var(--sheet)" stroke="var(--depth)"/><text x="384" y="138" text-anchor="middle" class="tick">Loan</text>
+      <rect x="416" y="118" width="64" height="30" fill="var(--sheet)" stroke="var(--depth)"/><text x="448" y="138" text-anchor="middle" class="tick">Loan</text>
+      <rect x="480" y="118" width="64" height="30" fill="var(--sheet)" stroke="var(--depth)"/><text x="512" y="138" text-anchor="middle" class="tick">Loan</text>
+      <rect x="544" y="118" width="64" height="30" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/><text x="576" y="138" text-anchor="middle" class="tick">spare</text>
+    </g>
+    <path d="M128 148 L128 182" fill="none" stroke="var(--sea-edge)" stroke-width="1.2"/>
+    <rect x="96" y="182" width="130" height="26" fill="var(--sea)" stroke="var(--sea-edge)"/>
+    <text x="161" y="200" text-anchor="middle" class="tick">"Grace"</text>
+    <text x="240" y="200" class="tick">each String field points to its own text</text>
+  </svg>
+  </div>
+  <figcaption>A <code>Vec&lt;Loan&gt;</code>: 24 bytes on the stack, the loans in one heap block, and each loan's text in blocks of its own.</figcaption>
+</figure>
+<p>You can measure this yourself:</p>
+<pre>{{code:t1_memory#sizes}}</pre>
+<pre class="out">{{out:t1_memory#1}}</pre>
+<p>A <code>String</code> is 24 bytes whether it holds "Ada" or a novel: the text is elsewhere. And <code>Option&lt;String&gt;</code> costs nothing extra. Some bit patterns can never be a valid <code>String</code> (its pointer is never null, for one), so Rust uses one of those patterns to mean <code>None</code>. The spare pattern is called a <em>niche</em>.</p>
+<p>When a <code>Vec</code> runs out of room, it asks the allocator for a bigger block, and today's implementation roughly doubles it. The standard library doesn't promise the factor. The allocator may grow the block where it is, or hand back a new one and copy everything across. Pushing 2,017 IDs one at a time:</p>
+<pre>{{code:t1_memory#growth}}</pre>
+<pre class="out">{{out:t1_memory#2}}</pre>
+<p>Ten trips to the allocator for 2,017 pushes. Growing by a constant factor means the total copying is at most a small multiple of the final size, so a push costs a constant amount <em>on average</em>, even though the occasional push may copy everything. That's called <em>amortized O(1)</em>, and it's the same reason Python's <code>list.append</code> is fast. If you know the size up front, <code>Vec::with_capacity(n)</code> skips the copying entirely. Ticket 7 measures whether that matters.</p>
+<p>Moves now make sense too. Moving a <code>Vec</code> copies its 24 bytes and leaves the heap block where it is. What must never happen is two owners both freeing the same block, and that is the mistake the move error stopped.</p>
+
+<h4>Why the dates sort as text</h4>
+<pre>{{code:t1_dates#dates}}</pre>
+<pre class="out">{{out:t1_dates}}</pre>
+<p>Text compares character by character, left to right, and the first difference decides. That's <em>lexicographic</em> order, the way a dictionary is ordered. A <code>YYYY-MM-DD</code> date puts the most significant part first and pads every part to a fixed width, so text order and time order agree. <code>8/11/2026</code> breaks both rules, and so it sorts before September 2025. This is why ISO 8601 exists, why your logs and filenames should use it, and why ticket 4, where the dates aren't ISO, needs a real date type.</p>
+
+<h3>Go deeper</h3>
+<p>For when you have the evening. None of this is needed for ticket 2.</p>
+<ul>
+  <li><a href="https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html">The Rust Programming Language, chapter 4: Understanding Ownership</a>. Read it now: it's the chapter everyone needs twice, and you've just met the problem it solves.</li>
+  <li><a href="https://doc.rust-lang.org/book/ch05-00-structs.html">Chapter 5: Structs</a> and <a href="https://doc.rust-lang.org/book/ch08-01-vectors.html">chapter 8.1: Vectors</a>.</li>
+  <li><a href="https://doc.rust-lang.org/book/ch13-02-iterators.html">Chapter 13.2: Iterators</a>, on what <code>.iter().filter().count()</code> really does.</li>
+  <li><a href="https://doc.rust-lang.org/std/vec/struct.Vec.html">The <code>Vec</code> docs</a>. Read the long "Guarantees" section near the end: it's the stack-and-heap story above, from the source.</li>
+  <li><a href="https://docs.rs/rusqlite/latest/rusqlite/">rusqlite's docs</a>. The front page example is a whole program.</li>
+  <li><em>Computer Systems: A Programmer's Perspective</em> by Bryant and O'Hallaron, chapter 9 (virtual memory), for what the heap really is underneath. A university textbook, and the best book there is on how programs meet hardware.</li>
+</ul>
+
+<section class="quiz" data-quiz="t1" aria-labelledby="quiz-t1-h">
+  <h3 id="quiz-t1-h">Check yourself</h3>
+  <div class="quiz-body"></div>
+  <noscript><p>The quizzes need JavaScript turned on.</p></noscript>
+</section>

@@ -1,0 +1,17 @@
+i64:            8 bytes
+String:         24 bytes
+Option<String>: 24 bytes
+Loan:           104 bytes
+Vec<Loan>:      24 bytes
+---
+len    0  capacity    0
+len    1  capacity    4
+len    5  capacity    8
+len    9  capacity   16
+len   17  capacity   32
+len   33  capacity   64
+len   65  capacity  128
+len  129  capacity  256
+len  257  capacity  512
+len  513  capacity 1024
+len 1025  capacity 2048

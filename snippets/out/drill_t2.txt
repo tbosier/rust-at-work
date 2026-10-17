@@ -1,0 +1,16 @@
+Abrasives             12
+Bearings              12
+Electrical            25
+Fasteners             25
+Hydraulics            24
+Power transmission    27
+Safety                28
+Seals                 23
+---
+Saltreu Pneumatics           9 products, average list price 210.18
+Pellish Valve Works          8 products, average list price 199.86
+Kestrin Filtration           6 products, average list price 110.61
+---
+25 invoices totaling 85542.55
+---
+85542.55000000002

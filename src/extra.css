@@ -1,0 +1,40 @@
+  /* Emails from the boss: a printed message, not a mail client. */
+  .email { background: var(--sheet); border: 1px solid var(--sea-edge); border-radius: 4px; margin: 1.5rem 0 1.75rem; }
+  .email-head { margin: 0; padding: 0.7rem 1rem; background: var(--sea); border-bottom: 1px solid var(--sea-edge); font: 0.93rem/1.45 var(--head); }
+  .email-head div { display: flex; gap: 0.75rem; }
+  .email-head dt { color: var(--ink-2); flex: none; width: 4.2rem; }
+  .email-head dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+  .email-head .subj dd { font-weight: 600; }
+  .email-body { padding: 1rem 1rem 0.3rem; }
+  .email-body .sig { color: var(--ink-2); }
+  .teaches { font: 0.95rem/1.5 var(--head); color: var(--ink-2); margin: -0.5rem 0 1.5rem; }
+  .teaches strong { color: var(--ink); }
+
+  /* The wiki page under each email. */
+  .wiki-crumb { font: 600 0.9rem/1.3 var(--head); color: var(--ink-2); margin: 2.25rem 0 0.2rem; }
+  .wiki-crumb + h3 { margin-top: 0; }
+  h4 { font: 600 1.02rem/1.3 var(--head); margin: 1.6rem 0 0.4rem; }
+
+  /* Acceptance criteria you can tick off. */
+  .criteria { list-style: none; padding: 0; margin: 0 0 1.2rem; }
+  .criteria li { margin: 0; border-bottom: 1px solid var(--rule); }
+  .criteria label { display: flex; gap: 0.65rem; align-items: flex-start; padding: 0.5rem 0; cursor: pointer; }
+  .criteria input { margin: 0.32rem 0 0; flex: none; width: 1.05rem; height: 1.05rem; accent-color: var(--depth); }
+  .criteria input:focus-visible { outline: 3px solid var(--depth); outline-offset: 2px; }
+  .criteria input:checked + span { color: var(--ink-2); }
+
+  details.hint { border-bottom: 1px solid var(--rule); }
+  details.hint > summary { font-family: var(--head); }
+  .drill { margin: 0 0 1.4rem; }
+  .drill > p:first-child strong { font-family: var(--head); }
+  .prompt { white-space: pre-wrap; background: var(--sheet); }
+  .roadmap td:first-child { white-space: nowrap; }
+  .roadmap tr.part th { padding-top: 1.1rem; color: var(--depth); border-bottom: 1px solid var(--rule); }
+  .later { color: var(--ink-2); }
+  .shelf dt { font-weight: 600; margin-top: 0.8rem; }
+  .shelf dd { margin: 0.15rem 0 0; }
+  @media (max-width: 30rem) {
+    .email-head div { flex-direction: column; gap: 0; }
+    .email-head div + div { margin-top: 0.3rem; }
+  }
+  .tick { font: 12.5px var(--head); fill: var(--ink-2); }

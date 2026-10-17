@@ -1,0 +1,24 @@
+error[E0382]: borrow of moved value: `names`
+ --> src/main.rs:8:45
+  |
+6 |     let names = vec![String::from("Ada"), String::from("Grace")];
+  |         ----- move occurs because `names` has type `Vec<String>`, which does not implement the `Copy` trait
+7 |     let n = total_len(names);
+  |                       ----- value moved here
+8 |     println!("{n} letters across {} names", names.len());
+  |                                             ^^^^^ value borrowed here after move
+  |
+note: consider changing this parameter type in function `total_len` to borrow instead if owning the value isn't necessary
+ --> src/main.rs:1:21
+  |
+1 | fn total_len(names: Vec<String>) -> usize {
+  |    ---------        ^^^^^^^^^^^ this parameter takes ownership of the value
+  |    |
+  |    in this function
+help: consider cloning the value if the performance cost is acceptable
+  |
+7 |     let n = total_len(names.clone());
+  |                            ++++++++
+
+For more information about this error, try `rustc --explain E0382`.
+error: could not compile `kettle_creek` (bin "kettle_creek") due to 1 previous error

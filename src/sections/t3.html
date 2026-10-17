@@ -1,0 +1,253 @@
+<!-- ===================================================== -->
+<h2 id="t3">Ticket 3: invoices that don't match</h2>
+
+<article class="email" aria-label="Email from Dana Whitlock: Invoices that don't match their POs">
+  <dl class="email-head">
+    <div><dt>From</dt><dd>Dana Whitlock, Operations Manager</dd></div>
+    <div><dt>To</dt><dd>You</dd></div>
+    <div><dt>Cc</dt><dd>Priya Raman, Accounts Payable</dd></div>
+    <div><dt>Date</dt><dd>Monday, October 12, 2026, 7:58 AM</dd></div>
+    <div class="subj"><dt>Subject</dt><dd>Invoices that don't match their POs</dd></div>
+  </dl>
+  <div class="email-body">
+    <p>Thanks for the spend report. Priya used it on Thursday's supplier call.</p>
+    <p>Now the one that matters. Every month we pay a few invoices we shouldn't. Priya's team checks a sample by hand. I want every PO checked against every invoice. Main branch only for now (<code>branch</code> is <code>MAIN</code>): Millbrook's invoices are still in their old system.</p>
+    <p><strong>What a PO should cost:</strong> add up its lines, quantity times unit price.</p>
+    <p><strong>What we were billed:</strong> add up the PO's invoices. One catch. Suppliers sometimes send the same invoice twice and we key in both. If a PO has two invoices with the same invoice number, the one entered later (the higher <code>invoice_id</code>) is a duplicate: don't count it, report it. Two <em>different</em> invoice numbers that add up to the PO's total are fine; some suppliers bill in parts.</p>
+    <p>Report these, in this order:</p>
+    <ol>
+      <li><code>ORPHAN_INVOICE</code>: an invoice whose PO number doesn't exist at all. Usually a typo when it was keyed in.</li>
+      <li><code>DUPLICATE_INVOICE</code>: the extra copies described above, one row per extra copy.</li>
+      <li><code>BILLED_CANCELLED</code>: a cancelled PO with any invoices. We owe nothing on those.</li>
+      <li><code>BILLED_OPEN</code>: an open PO that's been invoiced. Shouldn't happen. I want to know if it does.</li>
+      <li><code>OVERBILLED</code>: a received PO billed more than it should cost.</li>
+      <li><code>UNDERBILLED</code>: a received PO billed less. Often a short shipment, but I still want to see it.</li>
+      <li><code>NOT_INVOICED</code>: a received PO with no invoice at all. Suppliers get 30 days, so only POs received on or before September 4.</li>
+    </ol>
+    <p>A received PO billed exactly right isn't on the report.</p>
+    <p>Send it as <code>discrepancies.csv</code> with columns <code>kind</code>, <code>po_id</code>, <code>invoice_number</code>, <code>supplier</code>, <code>expected</code>, <code>billed</code>, <code>difference</code>:</p>
+    <ul>
+      <li><code>supplier</code> is the name. <code>invoice_number</code> is only filled in on orphan and duplicate rows.</li>
+      <li><code>expected</code> is what the PO should cost. Put 0.00 for a cancelled PO, and leave it blank on orphan and duplicate rows, where there's nothing to compare.</li>
+      <li><code>billed</code> is what we were billed for the PO. On an orphan or duplicate row, it's that one invoice's amount.</li>
+      <li><code>difference</code> is billed minus expected, blank when expected is blank.</li>
+      <li>Money with two decimals, no dollar sign. Sort by kind in the order above, then <code>po_id</code>, then <code>invoice_number</code>.</li>
+    </ul>
+    <p>When it runs, print how many of each kind it found and the total overbilled (the sum of the differences on <code>OVERBILLED</code> rows).</p>
+    <p>Priya will check your numbers against her sample, to the cent. So to the cent it has to be. The wiki page is <a href="#t3-wiki">here</a>.</p>
+    <p class="sig">Dana</p>
+  </div>
+</article>
+<p class="teaches"><strong>This ticket teaches</strong> enums that carry data, exhaustive <code>match</code>, derives, a money type of your own with operator traits, <code>HashSet</code>, <code>Option</code> combinators, <code>let</code>-<code>else</code> and lifetimes properly. <strong>Under the hood:</strong> how a float stores 0.1, big-O and the hash join, and what a database index is. <strong>Crates allowed:</strong> rusqlite, csv.</p>
+
+<p class="wiki-crumb" id="t3-wiki">Engineering wiki / Rust / Types that model the business</p>
+<h3>Make wrong answers hard to write</h3>
+
+<p>Ticket 2 was arithmetic. This one is judgment: every PO lands in exactly one of several outcomes, money has to be exact, and three tables have to be lined up against each other. Rust's answer to all three is the same idea: put the rules into types, so the compiler checks them every time you build. The library examples below have the same shapes as the ticket, on different data.</p>
+
+<h4>An enum for "exactly one of these"</h4>
+<p>An <em>enum</em> lists every possible form a value can take. Unlike a Python <code>Enum</code>, each variant can carry its own data:</p>
+<pre>{{code:t3_enum#enum}}</pre>
+<p>A <code>Standing</code> is <code>Lost</code>, or <code>Overdue</code> with a number of days attached, or <code>Out</code>, or <code>Returned</code>. Never two at once, and never a value that isn't on the list. A string like <code>"overdue"</code> can be misspelled, and the misspelling compiles; <code>Standing::Overdu</code> does not.</p>
+<p>You take an enum apart with <code>match</code>:</p>
+<pre>{{code:t3_enum#match}}</pre>
+<ul>
+  <li><code>Standing::Overdue { days }</code> matches the variant and pulls its <code>days</code> out into a variable, in one step.</li>
+  <li><code>if days &gt; 30</code> after a pattern is a <em>guard</em>: the arm only matches when the condition holds too. Arms are tried top to bottom, so the 40-day loan takes the first <code>Overdue</code> arm and the 3-day loan falls through to the second.</li>
+  <li>A <code>match</code> is an expression. Each arm produces a value, and the whole <code>match</code> is the function's return value.</li>
+</ul>
+<pre>{{code:t3_enum#use}}</pre>
+<pre class="out">{{out:t3_enum}}</pre>
+<p><code>matches!(value, pattern)</code> is a one-line <code>match</code> that answers yes or no. <code>Overdue { .. }</code> means "the <code>Overdue</code> variant, whatever its fields are".</p>
+<p>The rule that makes enums worth it: a <code>match</code> must cover every variant. Leave one out and the program doesn't build:</p>
+<pre>{{fail:t3_nonexhaustive}}</pre>
+<pre class="out">{{failout:t3_nonexhaustive}}</pre>
+<p>This is the compiler keeping a list for you. Add a variant next month and every <code>match</code> that forgot about it becomes an error you have to fix before anything runs. Python's <code>match</code> statement doesn't check this when it runs (a type checker can, if you set it up), and an <code>if</code>/<code>elif</code> chain simply falls off the end. A catch-all arm, <code>_ =&gt; ...</code>, turns the check off for that <code>match</code>. Sometimes that's right. In code that decides what to report, it means a new case gets silently reported as nothing.</p>
+
+<h4>What each derive buys you</h4>
+<p>The <code>#[derive(...)]</code> line asks the compiler to write standard behavior for your type. Each one is a <em>trait</em>, a named ability, that other code can rely on:</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Derive</th><th>What you get</th><th>Why you'd want it here</th></tr></thead>
+  <tbody>
+    <tr><td><code>Debug</code></td><td>Printing with <code>{:?}</code></td><td>Seeing what you have while you work</td></tr>
+    <tr><td><code>Clone</code>, <code>Copy</code></td><td><code>.clone()</code>; and with <code>Copy</code>, plain assignment copies instead of moving</td><td>Small values like a kind or an amount should behave like numbers. <code>Copy</code> is only allowed when every field is <code>Copy</code>, so not for a <code>String</code></td></tr>
+    <tr><td><code>PartialEq</code>, <code>Eq</code></td><td><code>==</code> and <code>!=</code></td><td>Comparing kinds and amounts</td></tr>
+    <tr><td><code>PartialOrd</code>, <code>Ord</code></td><td><code>&lt;</code>, <code>.cmp()</code>, <code>.sort()</code></td><td>For an enum the order is the order you declared the variants in. That's why <code>Lost</code> sorted first above</td></tr>
+    <tr><td><code>Hash</code></td><td>Usable as a <code>HashMap</code> key or in a <code>HashSet</code></td><td>Counting per kind</td></tr>
+    <tr><td><code>Default</code></td><td>A zero value, <code>T::default()</code></td><td>What <code>entry(...).or_default()</code> starts from</td></tr>
+  </tbody>
+</table>
+</div>
+<p>Declaration order as sort order is worth noticing. If your report must list kinds in a set order, declare the enum's variants in that order and derive <code>Ord</code>: then sorting is correct by construction, and nobody has to keep a separate list of strings in step with the enum.</p>
+<p>Why <code>PartialEq</code> and <code>Eq</code> are two things: floats. <code>f64</code> has <code>NaN</code>, which isn't equal even to itself, so <code>f64</code> can only be <code>PartialEq</code>. And because it isn't <code>Eq</code> or <code>Hash</code>, it can't be a <code>HashMap</code> key:</p>
+<pre>{{fail:t3_float_eq}}</pre>
+<pre class="out">{{failout:t3_float_eq}}</pre>
+<p>That's the type system hinting that floats and exact comparison don't mix. The next section shows why.</p>
+
+<h4>Money is not a float</h4>
+<p>The library stores fines the way our warehouse system stores prices: as <code>REAL</code> dollars. Loan 1 has two fines, 10 and 20 cents. Loan 4 has one fine of 30 cents. Add them up in <code>f64</code>:</p>
+<pre>{{code:t3_float#trap}}</pre>
+<pre class="out">{{out:t3_float#1}}</pre>
+<p>Thirty cents is not thirty cents. <code>{:.2}</code> hides the problem when you print, which is why ticket 2's totals looked fine. It doesn't help when you compare, and this ticket is nothing but comparisons. <a href="#t3-floats">Under the hood</a> explains where the stray digits come from. The fix is the one every payments system uses: <strong>turn the float into whole cents once, the moment it leaves the database, and never do arithmetic on money as a float again.</strong></p>
+<p>Make cents a type of its own, a struct with one unnamed field. A wrapper like this is called a <em>newtype</em>:</p>
+<pre>{{code:t3_cents#newtype}}</pre>
+<p>The <code>.0</code> reaches the field inside. Why not just use <code>i64</code>? Because then a quantity, an ID and an amount are all <code>i64</code>, and adding a PO number to a price compiles. With <code>Cents</code>, the compiler only lets money combine with money.</p>
+<p>A new type starts with no abilities except the derived ones. You add the rest by implementing standard traits. <code>Display</code> is what <code>{}</code> uses:</p>
+<pre>{{code:t3_cents#display}}</pre>
+<p>And <code>Add</code> is what <code>+</code> uses:</p>
+<pre>{{code:t3_cents#add}}</pre>
+<p><code>type Output = Cents</code> says what <code>Cents + Cents</code> produces. Now the fines again, in cents:</p>
+<pre>{{code:t3_cents#use}}</pre>
+<pre class="out">{{out:t3_cents#1}}</pre>
+<p>Two more traits will make your code read better, and writing them is yours to do:</p>
+<ul>
+  <li><a href="https://doc.rust-lang.org/std/ops/trait.AddAssign.html"><code>AddAssign</code></a> is <code>+=</code>. With it, <code>*total = *total + x</code> becomes <code>*total += x</code>. One method, <code>add_assign(&amp;mut self, other: Cents)</code>.</li>
+  <li><a href="https://doc.rust-lang.org/std/iter/trait.Sum.html"><code>Sum</code></a> lets an iterator of <code>Cents</code> end in <code>.sum()</code>. Its one method takes an iterator and folds it, starting from <code>Cents(0)</code>. Look at <code>Iterator::fold</code>.</li>
+</ul>
+<p>Before you trust the <code>Display</code> above with your report, try it on negative amounts, because <code>difference</code> is often negative:</p>
+<pre>{{code:t3_cents#negative}}</pre>
+<pre class="out">{{out:t3_cents#2}}</pre>
+<p>Integer division and remainder keep the sign, so both halves come out negative. Fixing it is part of the ticket. Two hints: print the sign yourself, and look up <code>i64::unsigned_abs</code>.</p>
+
+<h4>Indexes: find things without searching</h4>
+<p>Ticket 2 used a <code>HashMap</code> to add things up. Here it does its other job, an <em>index</em>: build it once, then jump straight to any item by its key. The map holds references into a <code>Vec</code> you already have, so nothing is copied:</p>
+<pre>{{code:t3_index#index}}</pre>
+<pre class="out">{{out:t3_index#1}}</pre>
+<ul>
+  <li><code>HashMap&lt;i64, &amp;Book&gt;</code> maps a book ID to a borrowed book. Building it is one pass over <code>books</code>.</li>
+  <li><code>let Some(book) = ... else { ... };</code> is <code>let</code>-<code>else</code>. If the pattern matches, <code>book</code> exists for the rest of the loop body. If not, the <code>else</code> block runs, and it must leave: <code>continue</code>, <code>return</code> or <code>break</code>. It keeps the normal path flat instead of nesting it inside an <code>if let</code>.</li>
+  <li>A <code>HashSet&lt;T&gt;</code> is a <code>HashMap</code> with keys and no values: a fast "have I seen this?". <code>insert</code> returns <code>false</code> when the item was already there, so one call both checks and records. A set's key can be a tuple, such as <code>(i64, String)</code>, when "the same" means two fields at once.</li>
+</ul>
+<p><code>map.get(&amp;key)</code> returns an <code>Option</code>, and <code>Option</code> has methods that save you writing a <code>match</code> each time:</p>
+<pre>{{code:t3_index#combinators}}</pre>
+<pre class="out">{{out:t3_index#2}}</pre>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Method</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>.map(|x| ...)</code></td><td>Changes the value inside a <code>Some</code>; leaves <code>None</code> alone</td></tr>
+    <tr><td><code>.copied()</code></td><td>Turns <code>Option&lt;&amp;u32&gt;</code> into <code>Option&lt;u32&gt;</code>, for <code>Copy</code> types</td></tr>
+    <tr><td><code>.unwrap_or(x)</code></td><td>The value, or <code>x</code> if <code>None</code></td></tr>
+    <tr><td><code>.unwrap_or_default()</code></td><td>The value, or the type's <code>Default</code>: 0 for numbers, empty for strings</td></tr>
+    <tr><td><code>.is_some_and(|x| ...)</code></td><td><code>true</code> only if there's a value and it passes the test</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>Lifetimes, properly this time</h4>
+<p>Ticket 1 met <code>'a</code> on a function. An index is the same idea in a struct: a <code>Catalog</code> that holds references must say how long they're good for.</p>
+<pre>{{code:t3_catalog#catalog}}</pre>
+<p>Read <code>Catalog&lt;'a&gt;</code> as "a catalog that borrows something for the span <code>'a</code>". <code>new</code> says the catalog borrows from <code>books</code>, and <code>title</code> says the text it hands back comes from the books too, not from the catalog, so it stays valid even after the catalog is gone.</p>
+<pre>{{code:t3_catalog#use}}</pre>
+<pre class="out">{{out:t3_catalog}}</pre>
+<p>Now the mistake everyone makes once: a helper that loads the books and returns the catalog.</p>
+<pre>{{fail:t3_dropped}}</pre>
+<pre class="out">{{failout:t3_dropped}}</pre>
+<p><code>books</code> belongs to <code>load_catalog</code>, so it's freed when <code>load_catalog</code> returns. The catalog would point at memory that no longer holds books. In C this compiles and crashes later, or worse, doesn't crash and reads garbage. Rust refuses. There are two honest fixes:</p>
+<ul>
+  <li><strong>Own the data higher up.</strong> Load the <code>Vec</code> in <code>main</code> (or whoever needs the answer), then build indexes that borrow from it. The data lives at the top, and everything below borrows. This is the usual shape, and the right one for this ticket.</li>
+  <li><strong>Let the index own its data:</strong> a <code>HashMap&lt;i64, Book&gt;</code> with no references and no lifetime. Fine when the index is the only place the data lives.</li>
+</ul>
+<p>The fix that isn't honest is <code>.clone()</code> sprinkled until the errors go away. It works, it copies everything, and it hides the question of who owns what, which is the question this ticket's design depends on.</p>
+
+<h3>Warm-up drills</h3>
+<p>In <code>src/bin/drills.rs</code>, as before.</p>
+<div class="drill">
+  <p><strong>Drill 1.</strong> Make an enum <code>Terms</code> with variants <code>Net15</code>, <code>Net30</code>, <code>Net45</code>, <code>Net60</code> and <code>Other(i64)</code>, and a function that turns a supplier's <code>payment_terms_days</code> into one. Count suppliers per variant with a <code>HashMap&lt;Terms, usize&gt;</code> and print the counts in declaration order. You'll need several derives on <code>Terms</code> before the compiler lets you do all that; add them one at a time and let it tell you which.</p>
+  <pre class="out">{{out:drill_t3#1}}</pre>
+</div>
+<div class="drill">
+  <p><strong>Drill 2.</strong> Add up <code>list_price</code> for each product category twice: once in <code>f64</code>, printed with plain <code>{}</code>, and once in your own <code>Cents</code>. Same data, same order of addition.</p>
+  <pre class="out">{{out:drill_t3#2}}</pre>
+  <p>Some categories agree and some don't. In your journal: why do some categories print cleanly and others don't, when none of the float sums is exact? (Plain <code>{}</code> prints the shortest decimal that reads back as the same float. Sometimes that hides the error and sometimes it can't.)</p>
+</div>
+<div class="drill">
+  <p><strong>Drill 3.</strong> Index the suppliers by ID in a <code>HashMap&lt;i64, &amp;Supplier&gt;</code>. Walk the products, look each one's supplier up with <code>let</code>-<code>else</code> (print a line and <code>continue</code> if the supplier is missing), and list the products whose supplier is inactive, sorted by SKU. Use a <code>HashSet</code> to count how many different suppliers that is.</p>
+  <pre class="out">{{out:drill_t3#3}}</pre>
+  <p>No supplier was missing, so the <code>else</code> never ran. Make it run: change one product's ID in your <code>Vec</code> after loading and check the message appears. Code you've never seen run is code you don't know works.</p>
+</div>
+
+<h3>The ticket</h3>
+<p>Still one program in <code>src/main.rs</code>. It will be long; that's fine for now, and ticket 4 is where it gets split up. You will need the csv crate from ticket 2 again.</p>
+<ul class="criteria">
+  <li><label><input type="checkbox" class="crit-box" id="c-t3-1"><span>Loads <code>suppliers</code>, <code>purchase_orders</code>, <code>po_lines</code> and <code>invoices</code>, each with one plain <code>SELECT</code>.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t3-2"><span>Money becomes your <code>Cents</code> type while the rows load. No <code>f64</code> addition or comparison on money anywhere after that.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t3-3"><span>The seven kinds are one enum, and the report's order comes from the enum's derived <code>Ord</code>, not from a list of strings.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t3-4"><span>The <code>match</code> that decides a PO's kind has no <code>_ =&gt;</code> arm, so adding a new PO status would be a compile error until you decide what it means.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t3-5"><span>Every lookup goes through a <code>HashMap</code> or <code>HashSet</code>. No loop over one table inside a loop over another.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t3-6"><span>Writes <code>out/discrepancies.csv</code> exactly as the email describes, and prints the count per kind (all seven, zeros included) and the total overbilled.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t3-7"><span>Negative amounts print as <code>-1234.50</code>, not <code>-1234.-50</code>.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t3-8"><span><code>cargo fmt</code> and <code>cargo clippy --all-targets</code> are clean.</span></label></li>
+</ul>
+<p><strong>Before you type,</strong> draw the data flow in your journal. Which tables come in, and which indexes do you build from them? (There are at least three: what each PO should cost, what each PO was billed, and the invoice numbers already seen on each PO.) What owns the data, and what only borrows it? Which kinds come from looking at invoices one at a time, and which from looking at POs? What should <code>difference</code> be on a <code>NOT_INVOICED</code> row? And one trap: the house rule bans <code>ORDER BY</code>, and SQL without <code>ORDER BY</code> promises no particular row order. So how do you know which copy of a duplicate was entered later?</p>
+
+<h3>Stuck?</h3>
+<details class="hint"><summary>Hint 1: two passes</summary>
+  <p>Walk the invoices once, in <code>invoice_id</code> order, and you can settle the orphans and duplicates and add up what each PO was billed. Then walk the POs once and decide each one's kind from its status, its expected total and its billed total. Each pass is a single loop with index lookups inside it.</p>
+</details>
+<details class="hint"><summary>Hint 2: one row type for every kind</summary>
+  <p>Every report row has the same columns, so make one struct for a row, with a field for the kind. The blanks are <code>Option</code>s: <code>expected: Option&lt;Cents&gt;</code> is <code>None</code> on orphan and duplicate rows. Then <code>difference</code> doesn't need to be stored at all; it's a method that maps over <code>expected</code>.</p>
+</details>
+<details class="hint"><summary>Hint 3: matching on two things at once</summary>
+  <p>You can <code>match</code> on a tuple, and combine patterns with guards. Look up <code>std::cmp::Ordering</code>: <code>billed.cmp(&amp;expected)</code> gives you <code>Less</code>, <code>Equal</code> or <code>Greater</code>, which is an enum too, so it can sit in a pattern next to the PO's status. If your <code>status</code> is still a <code>String</code>, that's a sign it wants to be an enum as well.</p>
+</details>
+
+<h3>Sanity checks</h3>
+<p>These confirm your loading and your setup, not the answer.</p>
+<ul>
+  <li>5,315 PO lines and 1,745 invoices loaded. 1,711 POs are on the main branch with status <code>received</code>.</li>
+  <li>89 POs have more than one invoice row. That's split billing and duplicates together, so it's not your duplicate count.</li>
+  <li>If you compare dollar totals as <code>f64</code> with <code>==</code>, 508 of the 1,649 received main-branch POs that have invoices look mismatched. If your over and under counts add up to anything near 508, there's a float in your comparison. Most of those 508 are not real.</li>
+  <li>Check one row by hand. Pick an <code>OVERBILLED</code> PO from your file and look at it with <code>sqlite3</code>: <code>SELECT * FROM po_lines WHERE po_id = ...;</code> and the same for <code>invoices</code>. Do the sum on paper. Using SQL to look is allowed.</li>
+  <li>Run it twice. The file should be byte for byte the same both times (<code>cmp</code> or <code>diff</code> will tell you). If it isn't, something is coming out of a <code>HashMap</code> unsorted.</li>
+</ul>
+
+<h3>Hand it in</h3>
+<p>Commit, tag <code>t3-submitted</code>, and paste the <a href="#reviews">review prompt</a> with <code>N</code> as 3. Add this to the end:</p>
+<pre class="prompt">For this ticket, pay particular attention to: whether my enum and money
+type make wrong code hard to write, whether any f64 survives past loading,
+the big-O of each pass, and whether the lifetimes and ownership in my
+indexes are as simple as they can be.</pre>
+<p>Then reply to Dana and Priya: the count per kind, the total overbilled, and the three most overbilled POs with their suppliers. Add one honest sentence on what this report can't tell them. (For example: does a duplicate row mean we paid twice? Nothing in this database says what was paid.)</p>
+
+<h3>Under the hood</h3>
+<h4 id="t3-floats">How a computer stores 0.1</h4>
+<p>An <code>f64</code> is 64 bits in the IEEE 754 <em>binary64</em> format: 1 bit for the sign, 11 for an exponent and 52 for a fraction. It's scientific notation in base 2, a number like <code>1.f × 2<sup>e</sup></code>, with about 15 to 17 significant decimal digits.</p>
+<p>Base 2 is the problem. In base 10, 1/3 can't be written exactly: 0.3333... goes on forever, and you stop somewhere. In base 2 the same thing happens to 1/10, because 10 has a factor of 5 and powers of 2 don't. 0.1 in binary is 0.000110011001100110011..., repeating forever, so the computer keeps the nearest 53 significant bits and stores a number that is very slightly off. Print enough digits and you can see each one:</p>
+<pre>{{code:t3_float#exact}}</pre>
+<pre class="out">{{out:t3_float#2}}</pre>
+<p>0.1 is stored a hair high, and so is 0.2. 0.3 is stored a hair low. Add the first two and their errors don't cancel; the sum is rounded to a different nearest <code>f64</code> from the one 0.3 got. Each step is correct to within half a unit in the last place, which is excellent for measuring a bridge. It's useless for "is this invoice exactly right?".</p>
+<p>That was 508 mismatches in our own data, with plain <code>f64</code> addition and <code>==</code>. Done in integer cents, 401 of them disappear. Nearly four alarms in five would have been the float, not the supplier, and Priya's team would have spent a week learning to ignore the report.</p>
+<p>Why rounding <em>once</em> at the boundary is safe: a stored price like 4.35 is really 4.349999999999999644..., within about one part in 10<sup>16</sup> of what someone typed. Times 100 that's 434.99999999999994, a tiny distance from 435, so <code>.round()</code> lands on the integer you meant. That holds for amounts up to many billions of dollars. After that, integers add exactly: an <code>i64</code> holds up to about 9.2 &times; 10<sup>18</sup> cents. One warning: <code>as i64</code> never fails. A float too big for an <code>i64</code> becomes the largest <code>i64</code>, and <code>NaN</code> becomes 0. That's fine for numbers from a <code>REAL</code> column you've seen, and not for text from a stranger, which is why ticket 4 parses text straight into cents.</p>
+<p>Floats are for measuring, estimating and deciding: averages, ratios, forecasts, the machine learning in Part 4. Money, counts and IDs are integers.</p>
+
+<h4>Big-O, and the join you just wrote</h4>
+<p>Lining up two tables by a shared column is a <em>join</em>. There are two obvious ways to write one:</p>
+<pre>{{code:t3_join#joins}}</pre>
+<p>The first, a <em>nested-loop join</em>, searches the whole PO list for every invoice: with <em>n</em> invoices and <em>m</em> POs, about <em>n</em> &times; <em>m</em> comparisons in the worst case. The second, a <em>hash join</em>, makes one pass to build an index and one pass to look things up: about <em>n</em> + <em>m</em> steps, because a <code>HashMap</code> lookup takes the same time on average however big the map is (ticket 2's under-the-hood section is why). In big-O notation, the nested loop is O(<em>nm</em>) and the hash join is O(<em>n</em> + <em>m</em>). Big-O ignores constant factors and asks only how the cost grows as the input grows.</p>
+<p>Here are both, timed on our real tables, then on copies made 4, 16 and 64 times bigger, built with <code>--release</code>:</p>
+<pre class="out">{{out:t3_join_release}}</pre>
+<p>At today's size the difference is 0.4 milliseconds against 0.08, and nobody would notice. Each time the data grows 4 times, the hash join takes about 4 times longer and the nested loop about 16 times longer. That's what O(<em>n</em>) and O(<em>n</em><sup>2</sup>) look like when you measure them. Carry the pattern on to the million invoices of ticket 7 and the nested loop takes minutes while the hash join takes a fraction of a second. These timings came from one desktop, an AMD Ryzen 9 5900X. Your milliseconds will be different. How they grow won't be, and that's why big-O is worth learning: it predicts the shape of a measurement you haven't made yet.</p>
+<p>A debug build, plain <code>cargo run</code>, runs this sort of loop many times slower than <code>--release</code>. Never time anything in debug.</p>
+
+<h4>What a database index is</h4>
+<p>You aren't allowed to write a SQL <code>JOIN</code>, but it's worth knowing what one does. <code>po_id</code> is the <code>INTEGER PRIMARY KEY</code> of <code>purchase_orders</code>, so SQLite stores the table as a <em>B-tree</em> sorted by <code>po_id</code>: a shallow, wide tree that finds any key in a few steps, O(log <em>n</em>). A <code>JOIN</code> in SQLite is a nested loop. When the inner table has an index on the join column, as <code>purchase_orders</code> does on <code>po_id</code>, the inner loop becomes an index lookup instead of a scan, and that's how it stays fast without a hash table. Without a usable index it scans.</p>
+<p>When you <code>SELECT</code> a table into a <code>Vec</code>, the index stays behind in the database. Your <code>HashMap</code> is the index you rebuild in Rust. The two make different trade-offs. A hash index is the faster of the two for "find this exact key", but it keeps no order. A B-tree keeps keys sorted, so it can also answer range questions, but only on the column it's sorted by. "Every PO between two dates" would need a B-tree index on <code>order_date</code>, which this table doesn't have. Rust has both: <code>HashMap</code> and <code>BTreeMap</code>. When you choose between them, you're making the same choice a database designer makes.</p>
+
+<h3>Go deeper</h3>
+<ul>
+  <li><a href="https://doc.rust-lang.org/book/ch06-00-enums.html">The Rust Programming Language, chapter 6: Enums and Pattern Matching</a>. Then <a href="https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html">chapter 10.3: Validating References with Lifetimes</a>, which will read very differently now than it would have a week ago.</li>
+  <li><a href="https://doc.rust-lang.org/std/option/enum.Option.html">The <code>Option</code> docs</a>. Skim the whole method list once. Half the <code>match</code> blocks you'll ever write about <code>Option</code> already exist as one method.</li>
+  <li><a href="https://doc.rust-lang.org/std/collections/struct.HashMap.html"><code>HashMap</code></a> and <a href="https://doc.rust-lang.org/std/collections/struct.HashSet.html"><code>HashSet</code></a>. The <code>HashSet</code> page shows set operations (<code>union</code>, <code>difference</code>, <code>intersection</code>) you'll want sooner than you think.</li>
+  <li><a href="https://doc.rust-lang.org/rust-by-example/generics/new_types.html">Rust by Example: New Type Idiom</a>, a one-page take on <code>Cents</code>.</li>
+  <li><a href="https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html">David Goldberg, "What Every Computer Scientist Should Know About Floating-Point Arithmetic"</a> (1991). The classic. Read the first section and the part on rounding error, and skip the proofs on a first pass. If that's too much, <a href="https://floating-point-gui.de/">The Floating-Point Guide</a> is the short, practical version.</li>
+  <li><a href="https://www.sqlite.org/queryplanner.html">SQLite's "Query Planning"</a> page explains indexes and B-trees with pictures. Fifteen minutes, and SQL indexes stop being magic.</li>
+  <li><em>Introduction to Algorithms</em> by Cormen, Leiserson, Rivest and Stein (CLRS), chapter 3 on growth of functions and chapter 11 on hash tables. The standard algorithms textbook. Dense, and worth owning.</li>
+</ul>
+
+<section class="quiz" data-quiz="t3" aria-labelledby="quiz-t3-h">
+  <h3 id="quiz-t3-h">Check yourself</h3>
+  <div class="quiz-body"></div>
+  <noscript><p>The quizzes need JavaScript turned on.</p></noscript>
+</section>

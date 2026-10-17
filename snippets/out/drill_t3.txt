@@ -1,0 +1,24 @@
+Net15: 2
+Net30: 15
+Net45: 5
+Net60: 2
+---
+Abrasives            99.02                  99.02
+Bearings             446.01                 446.01
+Electrical           1638.0700000000006     1638.07
+Fasteners            28.019999999999996     28.02
+Hydraulics           4933.429999999999      4933.43
+Power transmission   1850.6400000000003     1850.64
+Safety               634.4799999999999      634.48
+Seals                327.19                 327.19
+---
+24 products from 3 inactive suppliers
+  CMH-2129  Coravel Marine Hardware
+  CMH-3794  Coravel Marine Hardware
+  CMH-4977  Coravel Marine Hardware
+---
+received MAIN POs with invoices: 1649
+mismatched by f64 ==: 508
+mismatched in cents:  107
+false alarms from f64: 401
+MAIN received POs: 1711; POs with 2+ invoice rows: 89

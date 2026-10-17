@@ -1,0 +1,5 @@
+24 suppliers
+---
+Some("no such table: suppliers")
+---
+Some("unable to open database file: data_kettle_creek.db")

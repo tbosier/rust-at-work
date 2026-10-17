@@ -1,0 +1,19 @@
+$ fines --db library.db
+wrote 7 fines
+$ echo $?
+0
+
+$ fines --db missing.db
+error: database not found: missing.db
+$ echo $?
+1
+
+$ fines --month 2026-08
+error: unexpected argument '--month' found
+
+Usage: fines [OPTIONS]
+
+For more information, try '--help'.
+$ echo $?
+2
+

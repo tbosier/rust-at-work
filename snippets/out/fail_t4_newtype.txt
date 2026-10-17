@@ -1,0 +1,21 @@
+error[E0603]: tuple struct constructor `CardNumber` is private
+  --> src/main.rs:13:24
+   |
+3  |     pub struct CardNumber(u32);
+   |                           --- a constructor is private if any of the fields is private
+...
+13 |     let forged = card::CardNumber(9999);
+   |                        ^^^^^^^^^^ private tuple struct constructor
+   |
+note: the tuple struct constructor `CardNumber` is defined here
+  --> src/main.rs:3:5
+   |
+3  |     pub struct CardNumber(u32);
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: consider making the field publicly accessible
+   |
+3  |     pub struct CardNumber(pub u32);
+   |                           +++
+
+For more information about this error, try `rustc --explain E0603`.
+error: could not compile `kettle_creek` (bin "kettle_creek") due to 1 previous error

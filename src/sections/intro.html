@@ -1,0 +1,227 @@
+<!-- ===================================================== -->
+<h2 id="how">How this works</h2>
+
+<p>Kettle Creek Supply buys parts from two dozen suppliers and sells them to factories and repair shops. Purchasing raises a <em>purchase order</em> (PO) for each order: what it bought, how many and at what price. The supplier ships the parts and later sends an <em>invoice</em>, which says how much to pay. Most of the work in this course comes from a single question that every distributor asks: did we pay what we agreed to pay?</p>
+<p>The company is invented and so is every row of its data. The work is real. Reconciling invoices, cleaning a newly acquired branch's records, building a scheduled job and putting an API in front of it are things people get paid to do, and they need the same skills here as they do in a real job.</p>
+
+<h3>Who's who</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Who</th><th>What they want from you</th></tr></thead>
+  <tbody>
+    <tr><td>Dana Whitlock, Operations Manager</td><td>Your manager. Writes the tickets. Cares whether the answer is right and on time, not how the code looks.</td></tr>
+    <tr><td>Priya Raman, Accounts Payable lead</td><td>Finance. Pays the suppliers. Cares about every cent, and appears from ticket 2.</td></tr>
+    <tr><td>The senior engineer</td><td>Reviews your code when a ticket is done. In practice this is Claude, run from your terminal, under rules that stop it writing your code. See <a href="#reviews">How reviews work</a>.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>House rules</h3>
+<p>These are the rules a good engineering team would give a new hire. Each one is here because breaking it costs you something later.</p>
+<ol>
+  <li><strong>You write every line.</strong> Claude can explain a compiler error, point you at a concept, or review finished work. It does not write your implementation. The <code>CLAUDE.md</code> you add on day one tells it so.</li>
+  <li><strong>SQL stops at <code>SELECT columns FROM table</code>.</strong> No <code>WHERE</code>, <code>JOIN</code>, <code>GROUP BY</code> or <code>SUM</code>. Kettle Creek's IT team asks for this because business rules buried in SQL strings inside a program are easy to miss in review, awkward to test without a live database, and soon forgotten. For you there is a second reason: every filter, join and total you write in Rust is Rust you learn.</li>
+  <li><strong>No crate until a ticket needs it.</strong> Each ticket names the crates it allows. Learning what the standard library already does is part of the job.</li>
+  <li><strong>Clean before review.</strong> <code>cargo fmt</code>, then <code>cargo clippy --all-targets</code> with no warnings, then <code>cargo test</code>. A reviewer's time goes on design, not on things a tool can find.</li>
+  <li><strong>Commit each ticket, and say why.</strong> A commit message says what changed and why it changed. Tag the commit you hand in, so the review can see exactly what changed since the last ticket.</li>
+  <li><strong>Keep a journal.</strong> Three lines per ticket in <code>JOURNAL.md</code>: what surprised you, what the compiler taught you, and what you would design differently. Writing it down is what turns an error you fixed into one you won't make again.</li>
+</ol>
+
+<h3>The whole road</h3>
+<p>The codebase grows with you. You won't design a big system up front; each new request pushes the existing code until it needs a better shape, and that's when you learn the shape. Part 1 is written and on this page. Later parts get written when you reach them, so they can push on whatever your reviews show you need.</p>
+<div class="table-wrap">
+<table class="roadmap">
+  <thead><tr><th>Ticket</th><th>The ask</th><th>Rust you learn</th><th>Computer science you learn</th></tr></thead>
+  <tbody>
+    <tr class="part"><th colspan="4">Part 1: reports (this page)</th></tr>
+    <tr><td><a href="#t1">1</a></td><td>How many POs are open?</td><td>Cargo, structs, <code>Vec</code>, iterators, borrowing, <code>Result</code> and <code>?</code></td><td>Stack and heap, how text sorts</td></tr>
+    <tr><td><a href="#t2">2</a></td><td>Spend by supplier, as a CSV</td><td><code>HashMap</code>, <code>String</code> and <code>&amp;str</code>, <code>Option</code>, sorting with tie-breaks, the csv crate</td><td>Hash tables, sort stability</td></tr>
+    <tr><td><a href="#t3">3</a></td><td>Which invoices don't match their POs?</td><td>Enums with data, <code>match</code>, derives, a money type, lifetimes</td><td>Floating point, big-O, the hash join</td></tr>
+    <tr><td><a href="#t4">4</a></td><td>A newly acquired branch's messy data</td><td>Error types, parsing, unit and integration tests, modules</td><td>Parsing, calendars, what tests can and can't prove</td></tr>
+    <tr><td><a href="#t5">5</a></td><td>The monthly Excel pack</td><td>Traits, generics, a real command-line interface</td><td>Interfaces and dispatch, file formats, exit codes</td></tr>
+    <tr class="part"><th colspan="4">Part 2: pipeline</th></tr>
+    <tr class="later"><td>6</td><td>Run it every 15 minutes as new invoices arrive</td><td>Long-running programs, logging, state on disk</td><td>Idempotency, clocks, at-least-once processing</td></tr>
+    <tr class="later"><td>7</td><td>We have a million invoices now</td><td>Benchmarks, profiling, fewer allocations, iterators that stream</td><td>Memory hierarchy, cache locality, streaming vs batch</td></tr>
+    <tr class="part"><th colspan="4">Part 3: service</th></tr>
+    <tr class="later"><td>8</td><td>Other teams want the numbers over HTTP</td><td>axum, async and tokio, shared state</td><td>TCP and HTTP, concurrency vs parallelism</td></tr>
+    <tr class="later"><td>9</td><td>Prove the API works</td><td>Integration tests against a live server, error responses</td><td>Contracts, test pyramids, property-based tests</td></tr>
+    <tr class="part"><th colspan="4">Part 4: math in the service</th></tr>
+    <tr class="later"><td>10</td><td>A demand forecast endpoint</td><td>Your own matrix type, then nalgebra</td><td>Least squares, conditioning, numerical stability</td></tr>
+    <tr class="later"><td>11</td><td>Which suppliers will bill late or wrong?</td><td>Logistic regression by hand, train and test split</td><td>Gradient descent, overfitting, evaluation</td></tr>
+    <tr class="later"><td>12</td><td>The results weren't good enough</td><td>A stronger model and an honest comparison with the baseline</td><td>Bias and variance, cross-validation, leakage</td></tr>
+    <tr class="later"><td>Capstone</td><td>Review someone else's messy Rust service</td><td>Reading code critically</td><td>Everything above</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ===================================================== -->
+<h2 id="setup">Day one: set up</h2>
+
+<p>Most of this you already have. The point of today is a project you can build, a loop you can run in your sleep, and the rules written down where Claude will read them.</p>
+
+<h3>Check your tools</h3>
+<pre class="cmd">cargo --version
+rustup component list --installed</pre>
+<p>You want cargo 1.89 or newer (<code>rustup update</code> gets it) and, in the component list, <code>clippy</code>, <code>rustfmt</code> and <code>rust-analyzer</code>. On this machine all three are installed.</p>
+
+<h3>Make the project</h3>
+<pre class="cmd">cd ~/projects
+cargo new kettle_creek
+cd kettle_creek
+mkdir data out
+cp ~/projects/space_sim/learning/data/kettle_creek.db data/
+cargo add rusqlite --features bundled
+printf '/out\n/data/*.db\n' &gt;&gt; .gitignore</pre>
+<p><code>cargo new</code> makes <code>Cargo.toml</code>, <code>src/main.rs</code> and a git repository with a <code>.gitignore</code> that already skips <code>target/</code>. The last line adds two more: your program's output files, which are rebuilt every run, and your copy of the database, which you can always copy again.</p>
+<p><code>cargo add rusqlite --features bundled</code> adds the SQLite crate. A <em>crate</em> is one unit of compiled Rust, a library or a program, and a <em>package</em> is what cargo downloads and builds, holding one or more crates. Day to day, people say crate for both. <code>bundled</code> compiles SQLite itself from C source into your program, so nothing has to be installed on the machine. That makes the first build slow, a minute or so, and every build after it fast. <code>Cargo.toml</code> now ends with something like:</p>
+<pre>[dependencies]
+rusqlite = { version = "0.40.2", features = ["bundled"] }</pre>
+<p>Your version may be newer. If an example on this page stops compiling with a newer rusqlite, pin the tested one with <code>version = "=0.40.2"</code>.</p>
+
+<h3>The database</h3>
+<p>The file is a copy of the warehouse system's tables, as of Monday, October 5, 2026. Dates are text in <code>YYYY-MM-DD</code> form. Money is stored the way many real systems store it, as floating-point dollars in a <code>REAL</code> column, and ticket 3 is about why that is a problem.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Table</th><th>Rows</th><th>Columns</th></tr></thead>
+  <tbody>
+    <tr><td><code>suppliers</code></td><td>24</td><td><code>supplier_id</code>, <code>name</code>, <code>city</code>, <code>state</code>, <code>payment_terms_days</code>, <code>active</code> (1 or 0)</td></tr>
+    <tr><td><code>products</code></td><td>176</td><td><code>sku</code>, <code>description</code>, <code>category</code>, <code>supplier_id</code>, <code>list_price</code></td></tr>
+    <tr><td><code>purchase_orders</code></td><td>2,017</td><td><code>po_id</code>, <code>supplier_id</code>, <code>branch</code> (<code>MAIN</code> or <code>MILLBROOK</code>), <code>buyer</code>, <code>order_date</code>, <code>expected_date</code>, <code>received_date</code> (empty until the parts arrive), <code>status</code> (<code>open</code>, <code>received</code> or <code>cancelled</code>)</td></tr>
+    <tr><td><code>po_lines</code></td><td>5,315</td><td><code>po_id</code>, <code>line_no</code>, <code>sku</code>, <code>quantity</code>, <code>unit_price</code></td></tr>
+    <tr><td><code>invoices</code></td><td>1,745</td><td><code>invoice_id</code>, <code>invoice_number</code>, <code>supplier_id</code>, <code>po_id</code>, <code>invoice_date</code>, <code>amount</code></td></tr>
+    <tr><td><code>branch_invoices</code></td><td>183</td><td>All text, no rules. You meet it in ticket 4.</td></tr>
+  </tbody>
+</table>
+</div>
+<p>To look around, <code>sqlite3 data/kettle_creek.db</code> opens a prompt. <code>.tables</code> lists tables, <code>.schema purchase_orders</code> shows one, and <code>SELECT * FROM suppliers LIMIT 5;</code> shows a few rows. Using SQL to look is fine. The rule is about what goes in your program.</p>
+
+<h3>The loop you'll run a thousand times</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Command</th><th>What it does</th><th>Python's nearest</th></tr></thead>
+  <tbody>
+    <tr><td><code>cargo check</code></td><td>Type-checks without building a program. Fastest way to see errors.</td><td>Running mypy</td></tr>
+    <tr><td><code>cargo run</code></td><td>Builds, then runs <code>src/main.rs</code>. Arguments after <code>--</code> go to your program.</td><td><code>python main.py</code></td></tr>
+    <tr><td><code>cargo clippy --all-targets</code></td><td>The linter: hundreds of checks for code that works but could be clearer, faster or more correct.</td><td>ruff or pylint</td></tr>
+    <tr><td><code>cargo fmt</code></td><td>Formats every file the one standard way. Nobody argues about style in Rust.</td><td>black</td></tr>
+    <tr><td><code>cargo test</code></td><td>Builds and runs every test. From ticket 4.</td><td>pytest</td></tr>
+    <tr><td><code>cargo doc --open</code></td><td>Builds HTML docs for your code and every crate you use, offline.</td><td>pydoc, sort of</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Your editor</h3>
+<p>Your Neovim already runs rust-analyzer through rustaceanvim, with clippy on every save, and shows inferred types as gray inlay hints. Start <code>nvim</code> from the project folder so it picks up the right project. The keys worth learning this week, all from your own config:</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Key</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>K</kbd></td><td>Hover: the type and docs of whatever is under the cursor. Use it constantly.</td></tr>
+    <tr><td><kbd>gd</kbd></td><td>Go to definition, including into a crate's source. Reading library code is how you learn idioms.</td></tr>
+    <tr><td><kbd>&lt;leader&gt;cd</kbd></td><td>Show this line's problems in a float.</td></tr>
+    <tr><td><kbd>&lt;leader&gt;rd</kbd></td><td>The full compiler message, laid out the way <code>cargo build</code> prints it. Read this rather than the one-line summary.</td></tr>
+    <tr><td><kbd>&lt;leader&gt;re</kbd></td><td>Explain the error code, the same text as <code>rustc --explain</code>.</td></tr>
+    <tr><td><kbd>&lt;leader&gt;ro</kbd></td><td>Open the docs page for the symbol under the cursor.</td></tr>
+    <tr><td><kbd>&lt;leader&gt;rr</kbd>, <kbd>&lt;leader&gt;rt</kbd></td><td>Run the program, run tests.</td></tr>
+    <tr><td><kbd>&lt;leader&gt;xx</kbd></td><td>Every problem in the project, as a list.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>How to read a compiler error</h3>
+<p>Rust's compiler is the best teacher you'll have, if you read what it says. Here is a small mistake and the message it produces:</p>
+<pre>{{fail:t1_mut}}</pre>
+<pre class="out">{{failout:t1_mut}}</pre>
+<ul>
+  <li><strong>The first line</strong> is the headline: an error code (<code>E0596</code>) and a sentence. The code is a search term: <code>rustc --explain E0596</code> prints a page about it with examples.</li>
+  <li><strong>The arrow</strong> (<code>--&gt; src/main.rs:3:5</code>) is the file, line and column.</li>
+  <li><strong>The carets</strong> (<code>^^^^^</code>) underline the exact code, with a label saying what is wrong there.</li>
+  <li><strong>The help</strong> is a suggested fix, and the <code>+++</code> marks what it would add. It is right most of the time. When it isn't, it still tells you what the compiler expected.</li>
+</ul>
+<p>Fix the first error, then rebuild. One mistake often causes several errors further down, and they disappear with the first.</p>
+
+<h3>Tell Claude the rules</h3>
+<p>Save this as <code>CLAUDE.md</code> in the project root. Claude Code reads it at the start of every session in that folder, so the rules hold even when you ask for help late at night and would secretly like the answer.</p>
+<pre class="prompt"># kettle_creek
+
+My Rust learning project. I am working through the guide at
+~/projects/space_sim/learning/rust_at_work.html, one ticket at a time.
+
+## Rules for Claude
+
+- Never write or edit code in this project, even if I ask casually.
+  Never show me a full solution to a ticket.
+- If I'm stuck, ask what I tried, then give the smallest hint that
+  unblocks me: a concept name, a docs link, or a short example on
+  different data. Suggest the next rung of the guide's hint ladder
+  before going further.
+- Explaining compiler errors is encouraged: what the message means and
+  what Rust is protecting me from. Let me write the fix.
+- When I ask for a senior review, follow "How reviews work" in the
+  guide: run the checks, compare my output with the answer key, then
+  review like a senior engineer on a pull request. Don't rewrite it.
+- The answer key is in ~/projects/testRandomShiz/rust_at_work/answer_key.
+  Never show me its code or open its output files for me. You may compare
+  my output with it and tell me where they differ.</pre>
+<p>Then start the journal and make the first commit:</p>
+<pre class="cmd">printf '# Journal\n\n' &gt; JOURNAL.md
+cargo run
+git add -A
+git commit -m "Start kettle_creek: empty binary, rusqlite, rules for Claude"</pre>
+<p>If <code>cargo run</code> prints <code>Hello, world!</code> after compiling SQLite, day one is done.</p>
+
+<!-- ===================================================== -->
+<h2 id="reviews">How reviews work</h2>
+
+<p>A review is where most of the learning in this course happens. Getting a program to print the right number is half the job. The other half is a program that the next person, or you in six months, can read, change and trust. Nobody can teach you that half from a book. It comes from someone looking at your code and asking why.</p>
+
+<h3>When to ask</h3>
+<p>When the sanity checks pass, <code>cargo fmt</code> and <code>cargo clippy --all-targets</code> are clean, and the work is committed and tagged:</p>
+<pre class="cmd">git add -A
+git commit -m "Ticket 1: count open POs and list stale ones"
+git tag t1-submitted</pre>
+
+<h3>What to paste</h3>
+<p>Start <code>claude</code> in the project folder and paste this, with the ticket number filled in. Each ticket adds a line or two of its own to focus the review.</p>
+<pre class="prompt">Senior review, ticket N.
+
+My code is in this folder; the tag tN-submitted is what I'm handing in,
+and the ticket is the "Ticket N" section of
+~/projects/space_sim/learning/rust_at_work.html.
+
+1. Run cargo fmt --check, cargo clippy --all-targets and cargo test,
+   then run the program the way the ticket asks.
+2. Compare my output files with the answer key's
+   (~/projects/testRandomShiz/rust_at_work/answer_key/out/tN/).
+   Tell me whether they match. If not, tell me which rows or numbers
+   differ, but not why. Free-text columns (like a reject reason) only
+   have to mean the same thing, not match word for word.
+3. Review it like a senior engineer reviewing a pull request:
+   correctness, structure and file layout, naming, error handling,
+   ownership, idiomatic Rust and tests. At most seven points, most
+   important first. For each one: file and line, what's wrong, why it
+   matters, and the concept or docs page to look up.
+4. Don't rewrite my code or show me a fixed version. A short example on
+   different data is fine.
+5. End with one thing I did well, and one question for my journal.</pre>
+
+<h3>What the reviewer looks for</h3>
+<p>The same list every time. Read it before you start a ticket, not just before you hand it in.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Area</th><th>The question</th></tr></thead>
+  <tbody>
+    <tr><td>Correct</td><td>Does it do what the ticket says, including the edge cases the email mentions in passing?</td></tr>
+    <tr><td>Clear</td><td>Does <code>main</code> read like a summary of the program? Does each function do one thing its name describes?</td></tr>
+    <tr><td>Structured</td><td>Is each file about one thing? Is the structure as simple as the problem allows, and no simpler?</td></tr>
+    <tr><td>Honest about failure</td><td>Can bad data or a missing file crash it? When it fails, does the message say what went wrong and where?</td></tr>
+    <tr><td>Ownership</td><td>Does it borrow by default, and clone only on purpose?</td></tr>
+    <tr><td>Idiomatic</td><td>Iterators where they read better than loops, the standard library's types instead of homemade ones, <code>derive</code> instead of hand-written boilerplate.</td></tr>
+    <tr><td>Tested</td><td>From ticket 4: would a test fail if the important logic broke?</td></tr>
+    <tr><td>Reproducible</td><td>Same input, same output, byte for byte. No absolute paths baked in.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>After the review</h3>
+<p>Fix what it found, yourself. If you disagree with a point, say so and ask for the tradeoff. A good reviewer can tell you what the alternative costs, and sometimes your way is fine. Then write your journal lines, commit, and <code>git tag tN-final</code>. The next ticket starts from there.</p>

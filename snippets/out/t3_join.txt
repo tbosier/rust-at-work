@@ -1,0 +1,3 @@
+      POs  invoices    nested loop    hash join
+     2017      1745         8.6 ms      0.74 ms
+     4034      3490        35.1 ms      1.43 ms

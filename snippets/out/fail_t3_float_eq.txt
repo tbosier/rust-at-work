@@ -1,0 +1,22 @@
+error[E0599]: the method `insert` exists for struct `HashMap<f64, &str>`, but its trait bounds were not satisfied
+ --> src/main.rs:5:14
+  |
+5 |     by_price.insert(0.30, "loan 4");
+  |              ^^^^^^
+  |
+  = note: the following trait bounds were not satisfied:
+          `f64: Eq`
+          `f64: Hash`
+
+error[E0599]: the method `get` exists for struct `HashMap<f64, &str>`, but its trait bounds were not satisfied
+ --> src/main.rs:6:31
+  |
+6 |     println!("{:?}", by_price.get(&0.30));
+  |                               ^^^ method cannot be called on `HashMap<f64, &str>` due to unsatisfied trait bounds
+  |
+  = note: the following trait bounds were not satisfied:
+          `f64: Eq`
+          `f64: Hash`
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `kettle_creek` (bin "kettle_creek") due to 2 previous errors

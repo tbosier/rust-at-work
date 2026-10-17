@@ -1,0 +1,3 @@
+Ok(35)
+Err("slip 4: \"a fortnight\" doesn't start with a number")
+Err("database: no such table: renewal_slips")

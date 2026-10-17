@@ -1,0 +1,12 @@
+loan 1: The Mythical Man-Month
+loan 2: Structure and Interpretation of Computer Programs
+loan 3: The Art of Computer Programming
+loan 4: The Mythical Man-Month (again)
+loan 5: A Discipline of Programming
+loan 6: Notes on the Synthesis of Form
+loan 7: The Art of Computer Programming (again)
+loan 8: no book 999 in the catalog
+---
+A Discipline of Programming
+(unknown)
+copies of 101: 2, of 105: 0

@@ -1,0 +1,14 @@
+error[E0603]: function `parse_days` is private
+ --> src/main.rs:8:32
+  |
+8 |     println!("{:?}", duration::parse_days("14d"));
+  |                                ^^^^^^^^^^ private function
+  |
+note: the function `parse_days` is defined here
+ --> src/main.rs:2:5
+  |
+2 |     fn parse_days(raw: &str) -> Option<u32> {
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For more information about this error, try `rustc --explain E0603`.
+error: could not compile `kettle_creek` (bin "kettle_creek") due to 1 previous error

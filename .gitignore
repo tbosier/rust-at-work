@@ -1,0 +1,9 @@
+# Build output and the local cargo cache the tools use
+.cargo-home/
+target/
+.verify.lock
+__pycache__/
+
+# Files the snippet examples write while verify.py runs them
+snippets/out/*.xlsx
+snippets/out/*.csv

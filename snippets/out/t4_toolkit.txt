@@ -1,0 +1,20 @@
+"Card: LIB-0042"
+Some("LIB-0042")
+None
+Some(("LIB", "0042"))
+None
+true
+Ok(42)
+---
+Ok(42)
+Err(ParseIntError { kind: InvalidDigit })
+Err(ParseIntError { kind: Empty })
+Err(ParseIntError { kind: PosOverflow })
+Err(ParseIntError { kind: InvalidDigit })
+true
+false
+true
+---
+28.999999999999996
+28
+29
