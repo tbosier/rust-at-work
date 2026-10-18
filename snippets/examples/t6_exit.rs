@@ -17,6 +17,8 @@ fn run(cli: &Cli) -> Result<usize, String> {
     if !std::path::Path::new(&cli.db).exists() {
         return Err(format!("database not found: {}", cli.db));
     }
+    // A stand-in for the real work: this example is about exit codes,
+    // so it only checks the file exists and reports a made-up count.
     Ok(7)
 }
 

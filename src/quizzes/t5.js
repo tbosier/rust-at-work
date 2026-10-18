@@ -19,7 +19,7 @@ QUIZZES.t5 = {
       explain: "Integration tests use your library the way a stranger would. If something is hard to test from there, your public interface may be the problem.",
     },
     {
-      q: "You moved <code>money.rs</code> out of <code>main.rs</code>. <code>cargo run &amp;&amp; diff -r out_before out</code> prints nothing. What do you know?",
+      q: "You moved <code>money.rs</code> out of <code>main.rs</code>. <code>cargo run &amp;&amp; diff -r ../out_before out</code> prints nothing. What do you know?",
       options: [
         { t: "On today's data, the program's output didn't change", ok: true },
         { t: "The program is correct", why: "The saved output was never proven right. A golden file checks that nothing moved, not that it was right to begin with." },

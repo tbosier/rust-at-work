@@ -26,13 +26,12 @@
 
 <h4>Change the shape, not the behavior</h4>
 <p>Changing the structure of code without changing what it does is called <em>refactoring</em>. The danger is obvious: you move two hundred lines and something small breaks without anyone noticing. So before you move anything, save what the program produces today, and after every step, check that it still produces exactly that:</p>
-<pre class="cmd">cargo run
-cp -r out out_before
-printf '/out_before\n' &gt;&gt; .gitignore
+<pre class="cmd">cargo run &gt; ../printed_before.txt
+cp -r out ../out_before
 
 # move one thing, then:
-cargo run &amp;&amp; diff -r out_before out &amp;&amp; echo "no change"</pre>
-<p><code>diff -r</code> compares two folders file by file and prints nothing when they match. <code>&amp;&amp;</code> runs the next command only if the one before it succeeded, so "no change" appears only when the program ran and every file matched. If something did change, you know which step did it, because you only took one. Commit after each step that passes. Then a step that goes wrong costs you two commands. <code>git restore .</code> puts every file git already tracks back the way it was at the last commit, as long as you haven't run <code>git add</code> since. New files the step created, like a fresh <code>src/lib.rs</code>, aren't tracked yet, so it leaves them. <code>git clean -nd</code> lists them, new folders like <code>tests/</code> included, and <code>git clean -fd</code> deletes them. Ignored files, like <code>out/</code> and <code>out_before/</code>, are left alone by both.</p>
+cargo run &gt; ../printed.txt &amp;&amp; diff ../printed_before.txt ../printed.txt &amp;&amp; diff -r ../out_before out &amp;&amp; echo "no change"</pre>
+<p>The <code>..</code> puts the saved copies in the folder above your project, outside the repository, so nothing git does to your project can touch them. <code>cargo run &gt; ../printed.txt</code> saves what the program prints, so the counts and totals on screen are checked too, not just the files. <code>diff</code> compares two files and <code>diff -r</code> two folders, file by file, and both print nothing when they match. <code>&amp;&amp;</code> runs the next command only if the one before it succeeded, so "no change" appears only when the program ran and everything matched. If something did change, you know which step did it, because you only took one. Commit after each step that passes. Then a step that goes wrong costs you two commands. <code>git restore .</code> puts every file git already tracks back the way it was at the last commit, as long as you haven't run <code>git add</code> since. New files the step created, like a fresh <code>src/lib.rs</code>, aren't tracked yet, so it leaves them. <code>git clean -nd</code> lists them, new folders like <code>tests/</code> included, and <code>git clean -fd</code> deletes them. Ignored files, like <code>out/</code>, are left alone by both, and the saved copies in <code>..</code> are outside the repository altogether.</p>
 <p>Do the two jobs in this ticket in order. Refactor first, until <code>diff</code> shows no change at all with everything in modules. Then add Millbrook to the reconciliation as a separate step, and expect exactly one file to change. Mixing them means a difference in the output could come from either.</p>
 <p>This saved copy is a test. It can't tell you the output is right. It tells you the output didn't change, which is exactly the question a refactor asks. <a href="#t5-golden">Under the hood</a> says more about tests like this.</p>
 
@@ -48,7 +47,7 @@ fn main() {
         }
     }
 }</pre>
-<p>In your project the first part of every such path is <code>kettle_creek</code>, the name in your <code>Cargo.toml</code>. Two keywords do two different jobs, and Python folds both into <code>import</code>:</p>
+<p>You don't need to build <code>shelf</code>. Read its files here; the drills below make the same moves in your <code>snippets</code> project, and then you make them for real in <code>kettle_creek</code>. In your project the first part of every such path is <code>kettle_creek</code>, the name in your <code>Cargo.toml</code>. Two keywords do two different jobs, and Python folds both into <code>import</code>:</p>
 <ul>
   <li><strong><code>mod</code> declares that a module exists.</strong> <code>pub mod duration;</code> in <code>lib.rs</code> tells the compiler to read <code>src/duration.rs</code> as a module named <code>duration</code>. Each module is declared exactly once, in its parent. In Python every file is a module automatically. In Rust a file that no <code>mod</code> line mentions is never compiled at all.</li>
   <li><strong><code>use</code> makes a short name for something that already exists.</strong> <code>use crate::money::Cents;</code> lets the rest of that file write <code>Cents</code> instead of the full path. Write <code>use</code> lines in any file that needs them. Inside the library, paths start with <code>crate</code>, meaning "this library". From <code>main.rs</code> and from tests, they start with the package's name.</li>
@@ -57,6 +56,14 @@ fn main() {
 <pre>{{fail:t5_private}}</pre>
 <pre class="out">{{failout:t5_private}}</pre>
 <p>That privacy is a feature. A module's <code>pub</code> items are its promise to the rest of the code, and everything else can change without breaking anyone. Make things <code>pub</code> when another module needs them, not by default. <code>pub(crate)</code> means "visible inside this library, but not to outside code", and outside code includes your own <code>main.rs</code>. Making a struct <code>pub</code> doesn't make its fields <code>pub</code>. Each field needs its own, which is what made ticket 4's <code>CardNumber</code> safe.</p>
+<p>That rule bites the moment <code>Cents</code> moves into <code>money.rs</code>. A tuple struct's field is private like any other, so code outside the module can no longer write <code>Cents(0)</code> or read <code>.0</code>:</p>
+<pre>{{fail:t5_tuple_private}}</pre>
+<pre class="out">{{failout:t5_tuple_private}}</pre>
+<p>Three ways out. <code>pub struct Cents(pub i64);</code> makes the field public to everyone. <code>pub struct Cents(pub(crate) i64);</code> makes it public inside your library only. Or keep it private and give the module a small front door:</p>
+<pre>{{code:t5_money#money}}</pre>
+<pre>{{code:t5_money#money_use}}</pre>
+<pre class="out">{{out:t5_money}}</pre>
+<p><code>pub const ZERO</code> is an <em>associated constant</em>, a constant that belongs to the type. The front door is a little more typing now and pays off later: if money ever needs a currency, only <code>money.rs</code> changes. The same question comes up for every struct you move. Rows that are plain data, like a loaded <code>PurchaseOrder</code>, can have <code>pub</code> fields. A type with a rule to keep, like <code>Cents</code> or your date, gets a constructor.</p>
 <p>One reasonable layout for where your project is heading. Yours can differ, as long as you can say in one line what each file is for:</p>
 <pre>kettle_creek/
   Cargo.toml
@@ -65,6 +72,8 @@ fn main() {
     lib.rs         one line per module, nothing else
     db.rs          the only file that knows SQL exists
     model.rs       plain structs for rows: PurchaseOrder, Invoice, ...
+    open_pos.rs    ticket 1's report
+    spend.rs       ticket 2's report
     money.rs       Cents: arithmetic, display, parsing text
     dates.rs       a date type that can only hold real dates
     branch.rs      Millbrook rows into invoices or rejects
@@ -90,6 +99,14 @@ fn main() {
   <li>The parse error goes through <code>map_err</code> instead, because the error needs something <code>From</code> can't know: which slip it came from. Use <code>From</code> for "this kind of error always becomes that variant", and <code>map_err</code> to add context.</li>
   <li>Three runs, three outcomes, each with a message a person can act on.</li>
 </ul>
+<p>One trap, the first time a loader returns your own error type. In ticket 1, <code>rows.collect()</code> could build a <code>rusqlite::Result&lt;Vec&lt;Loan&gt;&gt;</code> straight from rusqlite's rows. It can't build a <code>Result&lt;Vec&lt;Loan&gt;, YourError&gt;</code>, because <code>collect</code> doesn't use <code>From</code>; only <code>?</code> does. The same thing happens with any error type, here a parse error:</p>
+<pre>{{fail:t5_collect}}</pre>
+<pre class="out">{{failout:t5_collect}}</pre>
+<p>Read the two <code>help</code> lines together: <code>collect</code> could build a <code>Result&lt;Vec&lt;u32&gt;, SlipError&gt;</code> from items whose error is already a <code>SlipError</code>, and these items carry a <code>ParseIntError</code>. So collect into a <code>Result</code> with the items' own error first, written <code>Result&lt;Vec&lt;_&gt;, _&gt;</code> to let the compiler fill in the types, and then let <code>?</code> do the conversion:</p>
+<pre>{{code:t5_collect#collect}}</pre>
+<pre>{{code:t5_collect#collect_use}}</pre>
+<pre class="out">{{out:t5_collect}}</pre>
+<p><code>total_days</code> above does the same with rusqlite: <code>.collect::&lt;rusqlite::Result&lt;Vec&lt;_&gt;&gt;&gt;()?</code>.</p>
 <p>Your library will want a variant each for rusqlite, csv and file errors (<code>std::io::Error</code>), and a <code>From</code> for each. A Millbrook reject is not one of them: a bad row is an expected result, and it's already a value in your rejects list, not an error that stops the run. Real projects often use the <code>thiserror</code> crate to write the <code>Display</code> and <code>From</code> code. Write it by hand this time, so you know what the crate writes for you.</p>
 
 <h4>Integration tests</h4>
@@ -112,7 +129,7 @@ fn a_whole_batch_of_slips() {
 <p>Notice what the integration test doesn't need: a database. If your Millbrook code takes a <code>Connection</code> and runs its own <code>SELECT</code>, every test has to build a database with the right table first. If it takes rows that were already loaded, as plain structs, a test can build three rows by hand. Code that's easy to test from outside usually has a clean interface, and the test is the first outside caller to find out whether yours does.</p>
 
 <h3>Warm-up drills</h3>
-<p>These use your ticket 4 drill, <code>parse_size</code>, and your <code>snippets</code> scratch project.</p>
+<p>These use your ticket 4 drill, <code>parse_size</code>, and your <code>snippets</code> scratch project. Copy <code>parse_size</code> and its <code>Size</code> and error types from <code>kettle_creek</code>'s <code>src/bin/drills.rs</code> into <code>snippets</code>, and leave the originals where they are, so your ticket 4 drills still build.</p>
 <div class="drill">
   <p><strong>Drill 1.</strong> In <code>src/bin/drills.rs</code>, put <code>parse_size</code>, its <code>Size</code> enum and its error enum inside <code>mod size { ... }</code> in the same file, and call it from <code>main</code>. Fix the privacy errors with as few <code>pub</code>s as you can. Which items needed one, and which didn't? The counts should match ticket 4's drill 1 exactly:</p>
   <pre class="out">{{out:drill_t4#1}}</pre>
@@ -139,7 +156,7 @@ fn a_whole_batch_of_slips() {
 
 <h3>Stuck?</h3>
 <details class="hint"><summary>Hint 1: move the leaves first</summary>
-  <p>Start with the code that depends on nothing else in your program: <code>Cents</code>, then the date type, then the parsers. Then the row structs and the database loading, then the reconciliation, and <code>main</code> last. After each move: <code>cargo check</code>, then <code>cargo run</code> and the <code>diff</code>. The compiler will list each missing <code>pub</code> and <code>use</code>, one move at a time.</p>
+  <p>Start with the code that depends on nothing else in your program: <code>Cents</code>, then the date type, then the parsers. Then the row structs and the database loading, then the reconciliation, and <code>main</code> last. When <code>Cents</code> moves, every <code>Cents(...)</code> outside <code>money.rs</code> breaks at once; that's the privacy rule above, not a mess you made. After each move: <code>cargo check</code>, then <code>cargo run</code> and the <code>diff</code>. The compiler will list each missing <code>pub</code> and <code>use</code>, one move at a time.</p>
 </details>
 <details class="hint"><summary>Hint 2: what to make public</summary>
   <p>Leave everything private, move a module, and add <code>pub</code> only where the compiler says another module needs it. If you find yourself making every field of a struct <code>pub</code> so another module can build one, ask whether that module should be calling a constructor instead. Your parsers' helper functions probably don't need to be <code>pub</code> at all. The row-level function that the integration test calls does.</p>
@@ -151,7 +168,7 @@ fn a_whole_batch_of_slips() {
 <h3>Sanity checks</h3>
 <ul>
   <li>Every row of ticket 3's <code>discrepancies.csv</code> is still in the new one, unchanged, and every new row is for a Millbrook PO. The main branch's invoices didn't change, so its results can't either.</li>
-  <li>With the refactor done and before Millbrook goes in, <code>diff -r out_before out</code> prints nothing. After Millbrook goes in, it shows only <code>discrepancies.csv</code> changing.</li>
+  <li>With the refactor done and before Millbrook goes in, <code>diff -r ../out_before out</code> and <code>diff ../printed_before.txt ../printed.txt</code> both print nothing. After Millbrook goes in, only <code>discrepancies.csv</code> and the reconciliation's printed counts change.</li>
   <li><code>cargo test</code> prints a <code>Running tests/</code> line for your integration test, with at least one test under it.</li>
   <li>Run the program twice. Every file comes out byte for byte the same.</li>
 </ul>
@@ -176,7 +193,7 @@ the reconciliation needed any Millbrook-specific code.</pre>
 <p>Your package now holds several crates. Cargo compiles the library first. Then it compiles <code>main.rs</code> as a second crate that links to the library, and each file in <code>tests/</code> as one more crate that does the same. That's why <code>main.rs</code> sees only what's <code>pub</code>: to the compiler it is outside code, exactly like a test. It's also why <code>cargo test</code> printed four sections above. Between builds, <code>rustc</code> keeps notes in <code>target/</code> about what it already compiled (<em>incremental compilation</em>), so a one-line change doesn't redo everything. Big projects go further and split into many crates in a <em>workspace</em>, so cargo can compile independent crates at the same time and skip the ones that didn't change.</p>
 
 <h4 id="t5-golden">A diff is a test</h4>
-<p>Your <code>out_before</code> folder is what's called a <em>golden file</em> test: save output that's known to be good, and compare every new run against it. Michael Feathers calls tests like this <em>characterization tests</em>, in <em>Working Effectively with Legacy Code</em>. They pin down what code does today, right or wrong, so you can change it safely. They're cheap to write and catch any change at all, which makes them the right tool for a refactor. A bug fix is different: it's supposed to change the output, and the old golden file can't tell a fix from a mistake. There you read the new output, check the change is the one you meant, and save it as the new golden file. They're brittle too, when output contains something that changes every run, like a timestamp. Ticket 6's workbook has one. Unit tests say why each rule exists. A golden file says only that nothing moved, and during a refactor that's the one thing you need to know.</p>
+<p>Your <code>../out_before</code> folder is what's called a <em>golden file</em> test: save output that's known to be good, and compare every new run against it. Michael Feathers calls tests like this <em>characterization tests</em>, in <em>Working Effectively with Legacy Code</em>. They pin down what code does today, right or wrong, so you can change it safely. They're cheap to write and catch any change at all, which makes them the right tool for a refactor. A bug fix is different: it's supposed to change the output, and the old golden file can't tell a fix from a mistake. There you read the new output, check the change is the one you meant, and save it as the new golden file. They're brittle too, when output contains something that changes every run, like a timestamp. Ticket 6's workbook has one. Unit tests say why each rule exists. A golden file says only that nothing moved, and during a refactor that's the one thing you need to know.</p>
 
 <h3>Go deeper</h3>
 <ul>

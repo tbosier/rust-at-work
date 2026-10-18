@@ -72,8 +72,12 @@ reviews can decide what they push on.
 - [x] Another beginner read-through after the week zero rewrite (October 18,
       2026): a read-only audit of the whole page and a hands-on run of set up,
       week zero and tickets 1 and 2. Their findings are fixed.
-- [ ] A hands-on beginner run of tickets 3 to 6. Only the read-only audit has
-      covered them, and it named ticket 3 as the likeliest place to quit.
+- [x] A hands-on beginner run of tickets 3 to 6 (October 18, 2026). It
+      finished all four with output matching the answer key; its friction
+      points are fixed.
+- [ ] Ticket 5's refactor is the step a real beginner is most likely to find
+      slow: the run's author wrote the module split from experience, so the
+      page's guidance there is the least tested. Watch it in the first review.
 - [ ] The answer key sits in the same public repo as the course. Moving it to a
       private repo or a separate branch would make spoilers harder to stumble on.
 - [ ] No CI yet. A GitHub Action that runs `verify.py`, `build.py` and the

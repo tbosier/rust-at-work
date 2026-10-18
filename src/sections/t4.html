@@ -159,6 +159,7 @@
   <li><code>#[cfg(test)]</code> compiles the module only for <code>cargo test</code>, so tests add nothing to your real program.</li>
   <li><code>use super::*;</code> brings in everything from the file above, private items included. Unit tests can test private functions.</li>
   <li><code>#[test]</code> marks a test. <code>assert_eq!(actual, expected)</code> panics with both values if they differ, and the panic is what fails the test.</li>
+  <li><code>assert_ne!(a, b)</code> is the opposite check, and <code>assert!(condition)</code> takes any <code>bool</code>. All three take an optional message after the values, written like <code>format!</code>: <code>assert!(n &gt; 0, "no rows loaded from {path}")</code>.</li>
   <li><code>matches!(value, pattern)</code> is true if the value fits the pattern. Use it when you care about the variant but not exactly what's inside.</li>
   <li>The third test is all edges: zero, the largest number that fits, one past it, and a multiplication that overflows.</li>
 </ul>
@@ -214,6 +215,8 @@ mod tests {
 </ul>
 <p><strong>Before you type,</strong> answer these in your journal. Does each field get its own error enum, or is there one for the whole row, and what goes in the <code>reason</code> column either way? Where does vendor normalization happen: once for our supplier list, or for every row? What does one accepted row look like as a struct? For each of Dana's five columns, list the equivalence classes of input you can think of (there's a section on those <a href="#t4-tests">under the hood</a>; read it first), and write one test name per class before you write the parser.</p>
 
+<p>One clippy snag to expect. Next week puts the accepted rows into the reconciliation, so this week nothing reads some of <code>BranchInvoice</code>'s fields, and the compiler warns that they're "never read". Don't delete them, and don't put a blanket <code>#[allow(...)]</code> on the file. Put <code>#[expect(dead_code, reason = "ticket 5 reconciles these")]</code> on the struct. <code>expect</code> silences the warning and records why, and once ticket 5 uses the fields, the compiler warns that the expectation no longer holds, so you remember to take it off. The same works for a drill you've commented out the call to.</p>
+
 <h3>Stuck?</h3>
 <details class="hint"><summary>Hint 1: start at the leaves</summary>
   <p>Write <code>parse_amount</code> and its tests before you touch the database, then the date parser, then the PO reference. Each is a pure function from <code>&amp;str</code>, and once its tests pass you can build on it with some confidence. The row-level code then just calls them in order.</p>
@@ -231,7 +234,8 @@ mod tests {
   <li>Of the raw dates, 91 look like <code>YYYY-MM-DD</code>, 88 contain slashes, and 4 are empty or blank. Six amounts start with <code>(</code>.</li>
   <li>Two rows claim February 29, 2025: <code>MB-2025-0022</code> and <code>MB-2026-0133</code>. 2025 wasn't a leap year, so both belong in your rejects with field <code>inv_date</code>.</li>
   <li>Accepted plus rejected equals 183.</li>
-  <li>Your ticket 1 to 3 files are byte for byte what they were last week. Copy them somewhere before you start (<code>cp -r out out_t3</code>) and compare at the end with <code>diff -r out_t3 out</code>: the only difference should be the new <code>rejects.csv</code>.</li>
+  <li>Ten amounts have only one decimal, such as <code>MB-2025-0002</code>'s <code>678.6</code>. Fewer than two decimals isn't a mistype, so that's $678.60: 67,860 cents, not 6. Give your amount parser a test for it.</li>
+  <li>Your ticket 1 to 3 files are byte for byte what they were last week. Copy them outside the repository before you start (<code>cp -r out ../out_t3</code>, so git never sees the copy) and compare at the end with <code>diff -r ../out_t3 out</code>: the only difference should be the new <code>rejects.csv</code>.</li>
   <li>Run the program twice. <code>rejects.csv</code> comes out byte for byte the same (<code>cmp</code> or <code>sha256sum</code> will tell you).</li>
 </ul>
 

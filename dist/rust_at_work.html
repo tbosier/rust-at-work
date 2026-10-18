@@ -435,6 +435,9 @@ My Rust learning project. I am working through the guide at
 cargo run
 git add -A
 git commit -m "Start kettle_creek: empty binary, rusqlite, rules for Claude"</pre>
+<p><code>git add -A</code> <em>stages</em> every change: it marks what goes into the next commit. <code>git commit</code> then saves the staged changes as one snapshot you can always get back to. If this is the first time you've used git on this machine, the commit stops and asks who you are. Tell it once, with your own name and email, and commit again:</p>
+<pre class="cmd">git config --global user.name "Your Name"
+git config --global user.email "you@example.com"</pre>
 <p>If <code>cargo run</code> prints <code>Hello, world!</code> after compiling SQLite, you're set up. Week zero is next.</p>
 
 <!-- ===================================================== -->
@@ -864,7 +867,7 @@ println!("{}", skus[skus.len() - 1]);</pre>
 None
 Some("BRG-6204") Some("HSE-12")
 HSE-12</pre>
-<p><code>skus[0]</code> reads a position, starting from 0. There are no negative positions: Python's <code>skus[-1]</code> is <code>skus[skus.len() - 1]</code>, or better, <code>skus.last()</code>. A position past the end doesn't raise an exception you can catch. It stops the program. That's called a <em>panic</em>: the program prints where and why, and stops with exit status 101, a number that tells the shell it failed (<a href="#t0-process">under the hood</a> has more).</p>
+<p><code>skus[0]</code> reads a position, starting from 0. There are no negative positions: Python's <code>skus[-1]</code> is <code>skus[skus.len() - 1]</code>, or better, <code>skus.last()</code>. A position past the end doesn't raise an exception for a <code>try</code> block to catch. It stops the program. (Rust has a way to catch a panic, for special cases. It isn't error handling, and this course never uses it.) That's called a <em>panic</em>: the program prints where and why, and stops with exit status 101, a number that tells the shell it failed (<a href="#t0-process">under the hood</a> has more).</p>
 <pre>let qty = vec![12, 0, 7];
 let day = 3;
 println!("{}", qty[day]);</pre>
@@ -1331,7 +1334,7 @@ i64   8 bytes
 f64   8 bytes
 usize 8 bytes
 &amp;i64  8 bytes</pre>
-<p>A <code>char</code> takes four bytes because it can hold any single Unicode code point, the numbered symbols that cover every writing system. A reference such as <code>&amp;i64</code> is an address: eight bytes on a 64-bit machine, whatever it points at. That's also why <code>usize</code> is eight bytes here: it's defined as the size of an address, so it can count as far as memory goes. The addresses themselves change every run, because the operating system shuffles where a program's memory starts, as a defense against attacks. Ticket 1 shows where a <code>Vec</code> and a <code>String</code> keep their contents.</p>
+<p>A <code>char</code> takes four bytes because it can hold any single <em>Unicode scalar value</em>. Unicode gives every symbol in every writing system a number, a <em>code point</em>, and a scalar value is any code point outside a small reserved range. A reference such as <code>&amp;i64</code> is an address: eight bytes on a 64-bit machine, whatever it points at. That's also why <code>usize</code> is eight bytes here: it's defined as the size of an address, so it can count as far as memory goes. The addresses themselves change every run, because the operating system shuffles where a program's memory starts, as a defense against attacks. Ticket 1 shows where a <code>Vec</code> and a <code>String</code> keep their contents.</p>
 <p>A value that holds an address is called a <em>pointer</em>, and a reference is a pointer with rules. Rust checks that every reference points at a live value. There is no <em>null</em> reference, the "points at nothing" value that crashes C and Java programs: where something might be missing, Rust uses <code>Option</code>, and the compiler makes you check.</p>
 <p>Getting memory for a value is <em>allocating</em> it, and handing it back when you're done is <em>freeing</em> it. In C you free by hand, and freeing too early or twice is a classic crash. Python has a <em>garbage collector</em>, a part of the running program that finds values nothing uses anymore and frees them. Rust has neither. Every value has one owner, usually a variable, and when the owner's block ends at its closing brace, its <em>scope</em> ends and the value is <em>dropped</em>: freed, right there. That's the rule behind every borrow error you'll meet: a reference can't outlive the value it points at.</p>
 
@@ -1350,7 +1353,7 @@ café   5 bytes, 4 chars
 [99, 97, 102, 195, 169]
 Some('c')
 BRG</pre>
-<p><code>é</code> is two bytes, 195 and 169, so <code>café</code> is four characters and five bytes. Python's <code>len("café")</code> is 4 because Python counts code points. Rust's <code>.len()</code> counts bytes, because that's what the computer stores and what it costs to copy, and <code>.chars().count()</code> counts code points. (Those usually match what you'd call characters. Not always: an accent can be stored as its own code point after the letter, and some emoji are several joined together.) Since characters have different widths, finding the fifth one means reading from the start, so Rust won't let you write <code>sku[0]</code>:</p>
+<p><code>é</code> is two bytes, 195 and 169, so <code>café</code> is four characters and five bytes. Python's <code>len("café")</code> is 4 because Python counts code points. Rust's <code>.len()</code> counts bytes, because that's what the computer stores and what it costs to copy, and <code>.chars().count()</code> counts <code>char</code>s, which are code points. (Those usually match what you'd call characters. Not always: an accent can be stored as its own code point after the letter, and some emoji are several joined together.) Since characters have different widths, finding the fifth one means reading from the start, so Rust won't let you write <code>sku[0]</code>:</p>
 <pre>fn main() {
     let sku = "BRG-6204";
     let first = sku[0];
@@ -2825,7 +2828,7 @@ Lost       2 days: bill the replacement</pre>
   <li><code>Ordering::Less | Ordering::Equal</code> is an <em>or-pattern</em>: the arm matches either one.</li>
   <li><code>(LoanStatus::Lost, _)</code> means "lost, and any <code>Ordering</code>". A <code>_</code> inside a tuple only waves through that one position. Every status is still named, so a new <code>LoanStatus</code> variant would still be a compile error here. That's different from a whole-arm <code>_ =&gt;</code>, which waves through everything.</li>
   <li><code>-&gt; &amp;'static str</code> returns text written into the program itself, like <code>"bill the replacement"</code>. Text like that is never freed, and <code>'static</code> is the lifetime that says so. It needs no input to borrow from, which is why this function can return a <code>&amp;str</code> without a <code>'a</code>. <a href="#t6-wiki">Ticket 6</a> says more.</li>
-  <li>The compiler checks every combination. Delete the <code>Returned, Greater</code> arm and it names the missing pair: <code>(LoanStatus::Returned, Ordering::Greater)</code> not covered.</li>
+  <li>The compiler checks every combination. Delete the <code>Returned, Greater</code> arm and it names the missing pair, with its full path: <code>(LoanStatus::Returned, std::cmp::Ordering::Greater)</code> not covered.</li>
 </ul>
 
 <h4>What each derive buys you</h4>
@@ -2878,8 +2881,10 @@ error: could not compile `snippets` (bin "snippets") due to 2 previous errors</p
 
 <h4>Money is not a float</h4>
 <p>The library stores fines the way our warehouse system stores prices: as <code>REAL</code> dollars. Loan 1 has two fines, 10 and 20 cents. Loan 4 has one fine of 30 cents. Add them up in <code>f64</code>:</p>
-<pre>use std::collections::HashMap;
+<pre>use snippets::library;
+use std::collections::HashMap;
 
+let db = library()?;
 let mut stmt = db.prepare("SELECT loan_id, amount FROM fines")?;
 let fines: Vec&lt;(i64, f64)&gt; = stmt
     .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
@@ -2899,7 +2904,7 @@ loan 4 owes 0.3
 same amount? false
 loan 7 owes 0.7999999999999999
 printed nicely: 0.30 and 0.80</pre>
-<p>Thirty cents is not thirty cents. <code>{:.2}</code> hides the problem when you print, which is why ticket 2's totals looked fine. It doesn't help when you compare, and this ticket is nothing but comparisons. <a href="#t3-floats">Under the hood</a> explains where the stray digits come from. The fix is the one every payments system uses: <strong>turn the float into whole cents once, the moment it leaves the database, and never do arithmetic on money as a float again.</strong></p>
+<p>Thirty cents is not thirty cents. <code>{:.2}</code> hides the problem when you print, which is why ticket 2's totals looked fine. It doesn't help when you compare, and this ticket is nothing but comparisons. <a href="#t3-floats">Under the hood</a> explains where the stray digits come from. The usual fix, and the right one for invoices billed in whole cents like ours: <strong>turn the float into whole cents once, the moment it leaves the database, and never do arithmetic on money as a float again.</strong> (Some systems price in fractions of a cent, such as a per-unit rate. They use a smaller integer unit or a decimal type, and round only when they bill. The rule is the same: no floats.)</p>
 <p>Make cents a type of its own, a struct with one unnamed field. A wrapper like this is called a <em>newtype</em>:</p>
 <pre>#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 struct Cents(i64);
@@ -2943,6 +2948,33 @@ println!("loan 7 owes {}", owed[&amp;7]);</pre>
 loan 4 owes 0.30
 same amount? true
 loan 7 owes 0.80</pre>
+<p>The amounts above were loaded as <code>f64</code> and turned into cents later. Better to do it the moment they leave the database, inside the closure that builds each row:</p>
+<pre>struct Fine {
+    loan_id: i64,
+    amount: Cents,
+}
+
+let mut stmt = db.prepare("SELECT loan_id, amount FROM fines")?;
+let fines: Vec&lt;Fine&gt; = stmt
+    .query_map([], |row| {
+        Ok(Fine {
+            loan_id: row.get(0)?,
+            amount: Cents::from_dollars(row.get(1)?),
+        })
+    })?
+    .collect::&lt;Result&lt;_, _&gt;&gt;()?;
+println!(
+    "{} fines, the first {} on loan {}",
+    fines.len(),
+    fines[0].amount,
+    fines[0].loan_id
+);</pre>
+<pre class="out">6 fines, the first 0.10 on loan 1</pre>
+<ul>
+  <li><code>amount: row.get(1)?</code> wouldn't compile. rusqlite can hand out the types it knows, like <code>f64</code>, <code>i64</code> and <code>String</code>, and it has never heard of <code>Cents</code>: the error says the trait <code>FromSql</code> isn't implemented for it. You don't need to implement it. <code>Cents::from_dollars(row.get(1)?)</code> asks for an <code>f64</code>, because that's what <code>from_dollars</code> takes, and converts it on the spot.</li>
+  <li><code>.collect::&lt;Result&lt;_, _&gt;&gt;()?</code> is ticket 1's <code>rows.collect()</code>, written in one chain. There the function's return type told <code>collect</code> what to build. Here the turbofish says "a <code>Result</code>", the <code>_</code>s let the compiler fill in the rest from <code>Vec&lt;Fine&gt;</code>, and <code>?</code> takes the <code>Vec</code> out or returns the first error.</li>
+</ul>
+<p>The ticket needs more arithmetic than <code>+</code>. <code>Sub</code> is <code>-</code>, the same pattern as <code>Add</code>. A PO line is a quantity times a price, which is <code>Cents * i64</code>: implement <code>Mul&lt;i64&gt; for Cents</code>, where the <code>&lt;i64&gt;</code> names the type on the right of the <code>*</code>. The compiler's error, if you try <code>*</code> first, names exactly the trait it wants.</p>
 <p>One more iterator method before the traits. <code>fold</code> walks an iterator and carries one value along: you give it a starting value and a closure that takes "the value so far" and the next item, and returns the new value so far. Its result is the last one. <code>sum()</code> is a <code>fold</code> that starts at 0 and adds:</p>
 <pre>let late_days = [3, 0, 12, 5];
 // 25 cents a day, at most $2 per loan, in cents.
@@ -3014,7 +3046,7 @@ loan 7: The Art of Computer Programming (again)
 loan 8: no book 999 in the catalog</pre>
 <ul>
   <li><code>HashMap&lt;i64, &amp;Book&gt;</code> maps a book ID to a borrowed book. Building it is one pass over <code>books</code>.</li>
-  <li><code>let Some(book) = ... else { ... };</code> is <code>let</code>-<code>else</code>. If the pattern matches, <code>book</code> exists for the rest of the loop body. If not, the <code>else</code> block runs, and it must leave: <code>continue</code>, <code>return</code> or <code>break</code>. It keeps the normal path flat instead of nesting it inside an <code>if let</code>.</li>
+  <li><code>let Some(book) = ... else { ... };</code> is <code>let</code>-<code>else</code>. If the pattern matches, <code>book</code> exists for the rest of the loop body. If not, the <code>else</code> block runs, and it must leave: <code>continue</code>, <code>return</code> or <code>break</code>. It keeps the normal path flat instead of nesting it inside an <code>if let</code>. A cousin you'll meet when clippy suggests it: <code>if done &amp;&amp; let Some(day) = returned { ... }</code> is a <em>let chain</em>, a condition and an <code>if let</code> in one <code>if</code>. It's new in Rust's 2024 edition, and fine to accept.</li>
   <li>A <code>HashSet&lt;T&gt;</code> is a <code>HashMap</code> with keys and no values: a fast "have I seen this?". <code>insert</code> returns <code>false</code> when the item was already there, so one call both checks and records. A set's key can be a tuple, such as <code>(i64, String)</code>, when "the same" means two fields at once.</li>
 </ul>
 <p><code>map.get(&amp;key)</code> returns an <code>Option</code>, and <code>Option</code> has methods that save you writing a <code>match</code> each time:</p>
@@ -3042,7 +3074,9 @@ copies of 101: 2, of 105: 0</pre>
     <tr><td><code>.copied()</code></td><td>Turns <code>Option&lt;&amp;u32&gt;</code> into <code>Option&lt;u32&gt;</code>, for <code>Copy</code> types</td></tr>
     <tr><td><code>.unwrap_or(x)</code></td><td>The value, or <code>x</code> if <code>None</code></td></tr>
     <tr><td><code>.unwrap_or_default()</code></td><td>The value, or the type's <code>Default</code>: 0 for numbers, empty for strings</td></tr>
-    <tr><td><code>.is_some_and(|x| ...)</code></td><td><code>true</code> only if there's a value and it passes the test</td></tr>
+    <tr><td><code>.is_some_and(|x| ...)</code></td><td><code>true</code> only if there's a value and it passes the test. It takes the <code>Option</code> by value, so on one you've only borrowed, such as a struct's field, put <code>.as_ref()</code> first</td></tr>
+    <tr><td><code>.as_ref()</code></td><td>Turns <code>&amp;Option&lt;T&gt;</code> into <code>Option&lt;&amp;T&gt;</code>: look at what's inside without taking it. For <code>Option&lt;String&gt;</code>, <code>.as_deref()</code> goes one step further, to <code>Option&lt;&amp;str&gt;</code></td></tr>
+    <tr><td><code>.and_then(|x| ...)</code></td><td>Like <code>map</code>, for a closure that itself returns an <code>Option</code>: one <code>None</code> anywhere and the result is <code>None</code></td></tr>
   </tbody>
 </table>
 </div>
@@ -3170,11 +3204,11 @@ Seals                327.19                 327.19</pre>
 <p>Still one program in <code>src/main.rs</code>. It will be long; that's fine for now, and ticket 5 is where it gets split up. You will need the csv crate from ticket 2 again.</p>
 <ul class="criteria">
   <li><label><input type="checkbox" class="crit-box" id="c-t3-1"><span>Loads <code>suppliers</code>, <code>purchase_orders</code>, <code>po_lines</code> and <code>invoices</code>, each with one plain <code>SELECT</code>.</span></label></li>
-  <li><label><input type="checkbox" class="crit-box" id="c-t3-2"><span>Money becomes your <code>Cents</code> type while the rows load. No <code>f64</code> addition or comparison on money anywhere after that.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t3-2"><span>Money becomes your <code>Cents</code> type while the rows load. No <code>f64</code> addition or comparison on money anywhere after that in this ticket's code. (Ticket 2's report can keep its <code>f64</code> sum, or move to <code>Cents</code> too, as long as its file comes out the same.)</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-3"><span>The seven kinds are one enum, and the report's order comes from the enum's derived <code>Ord</code>, not from a list of strings.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-4"><span>The <code>match</code> that decides a PO's kind has no <code>_ =&gt;</code> arm, so adding a new PO status would be a compile error until you decide what it means. (The one <code>_</code> you need is where the status text becomes an enum, as in the wiki.)</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-5"><span>Every lookup goes through a <code>HashMap</code> or <code>HashSet</code>. No loop over one table inside a loop over another.</span></label></li>
-  <li><label><input type="checkbox" class="crit-box" id="c-t3-6"><span>Writes <code>out/discrepancies.csv</code> exactly as the email describes, and prints the count per kind (all seven, zeros included) and the total overbilled.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t3-6"><span>Writes <code>out/discrepancies.csv</code> exactly as the email describes, and prints the count per kind (all seven, zeros included) and the total overbilled. Rust can't list an enum's variants for you, so to print every kind, keep a <code>const</code> array of all seven next to the enum. That's a list of variants the compiler checks, not a list of strings, and sorting the report still uses the derived <code>Ord</code>.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-7"><span>Negative amounts print as <code>-1234.50</code>, not <code>-1234.-50</code>.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-8"><span><code>cargo fmt</code> and <code>cargo clippy --all-targets</code> are clean.</span></label></li>
 </ul>
@@ -3196,7 +3230,7 @@ Seals                327.19                 327.19</pre>
 <ul>
   <li>5,315 PO lines and 1,745 invoices loaded. 1,711 POs are on the main branch with status <code>received</code>.</li>
   <li>89 POs have more than one invoice row. That's split billing and duplicates together, so it's not your duplicate count.</li>
-  <li>If you compare dollar totals as <code>f64</code> with <code>==</code>, 508 of the 1,649 received main-branch POs that have invoices look mismatched. If your over and under counts add up to anything near 508, there's a float in your comparison. Most of those 508 are not real.</li>
+  <li>If you compare dollar totals as <code>f64</code> with <code>==</code>, after dropping the duplicate invoices, 508 of the 1,649 received main-branch POs that have invoices look mismatched (519 if you keep the duplicates in). If your over and under counts add up to anything near 508, there's a float in your comparison. Most of those 508 are not real.</li>
   <li>Check one row by hand. Pick an <code>OVERBILLED</code> PO from your file and look at it with <code>sqlite3</code>: <code>SELECT * FROM po_lines WHERE po_id = ...;</code> and the same for <code>invoices</code>. Do the sum on paper. Using SQL to look is allowed.</li>
   <li>Run it twice. The file should be byte for byte the same both times (<code>cmp</code> or <code>diff</code> will tell you). If it isn't, something is coming out of a <code>HashMap</code> unsorted.</li>
 </ul>
@@ -3222,13 +3256,22 @@ println!("{:.30}", 0.1 + 0.2);</pre>
 0.299999999999999988897769753748
 0.300000000000000044408920985006</pre>
 <p>0.1 is stored a hair high, and so is 0.2. 0.3 is stored a hair low. Add the first two and their errors don't cancel; the sum is rounded to a different nearest <code>f64</code> from the one 0.3 got. Each step is correct to within half a unit in the last place, which is excellent for measuring a bridge. It's useless for "is this invoice exactly right?".</p>
-<p>That was 508 mismatches in our own data, with plain <code>f64</code> addition and <code>==</code>. Done in integer cents, 401 of them disappear. Nearly four alarms in five would have been the float, not the supplier, and Priya's team would have spent a week learning to ignore the report.</p>
+<p>That was 508 mismatches in our own data, with plain <code>f64</code> addition and <code>==</code> and the duplicates set aside. Done in integer cents, 401 of them disappear. Nearly four alarms in five would have been the float, not the supplier, and Priya's team would have spent a week learning to ignore the report.</p>
 <p>Why rounding <em>once</em> at the boundary is safe: a stored price like 4.35 is really 4.349999999999999644..., within about one part in 10<sup>16</sup> of what someone typed. Times 100 that's 434.99999999999994, a tiny distance from 435, so <code>.round()</code> lands on the integer you meant. That holds for amounts up to many billions of dollars. After that, integers add exactly: an <code>i64</code> holds up to about 9.2 &times; 10<sup>18</sup> cents. One warning: <code>as i64</code> never fails. A float too big for an <code>i64</code> becomes the largest <code>i64</code>, and <code>NaN</code> becomes 0. That's fine for numbers from a <code>REAL</code> column you've seen, and not for text from a stranger, which is why ticket 4 parses text straight into cents.</p>
-<p>Floats are for measuring, estimating and deciding: averages, ratios, forecasts, the machine learning in Part 4. Money, counts and IDs are integers.</p>
+<p>Floats are for measuring, estimating and deciding: averages, ratios, forecasts, the machine learning in Part 4. Money, counts and IDs are integers here (or a decimal type, where money has fractions of a cent).</p>
 
 <h4>Big-O, and the join you just wrote</h4>
 <p>Lining up two tables by a shared column is a <em>join</em>. There are two obvious ways to write one:</p>
 <pre>use std::collections::HashMap;
+
+struct Po {
+    po_id: i64,
+    supplier_id: i64,
+}
+
+struct Inv {
+    po_id: i64,
+}
 
 fn nested_loop(invoices: &amp;[Inv], pos: &amp;[Po]) -&gt; i64 {
     let mut checksum = 0;
@@ -3734,7 +3777,7 @@ fn check(raw: &amp;RawSlip) -&gt; Result&lt;Renewal, Reject&gt; {
 }
 
 /// Builds a test row. `String::from` is a function, passed as a value.
-fn raw(slip: Option&lt;&amp;str&gt;, shelf: Option&lt;&amp;str&gt;, asked_for: Option&lt;&amp;str&gt;) -&gt; RawSlip {
+fn slip_row(slip: Option&lt;&amp;str&gt;, shelf: Option&lt;&amp;str&gt;, asked_for: Option&lt;&amp;str&gt;) -&gt; RawSlip {
     RawSlip {
         slip: slip.map(String::from),
         shelf: shelf.map(String::from),
@@ -3743,12 +3786,12 @@ fn raw(slip: Option&lt;&amp;str&gt;, shelf: Option&lt;&amp;str&gt;, asked_for: O
 }</pre>
 <pre>// In the ticket these rows come from one SELECT.
 let slips = vec![
-    raw(Some("R-01"), Some("A-3"), Some("14d")),
-    raw(Some("R-02"), Some("D-30"), Some("2w")),
-    raw(Some("R-03"), Some("C-7"), Some("a fortnight")),
-    raw(None, Some("B-1"), Some("7 days")),
-    raw(Some("R-05"), Some("B-40"), Some(" 3 weeks ")),
-    raw(Some("R-06"), None, Some("1w")),
+    slip_row(Some("R-01"), Some("A-3"), Some("14d")),
+    slip_row(Some("R-02"), Some("D-30"), Some("2w")),
+    slip_row(Some("R-03"), Some("C-7"), Some("a fortnight")),
+    slip_row(None, Some("B-1"), Some("7 days")),
+    slip_row(Some("R-05"), Some("B-40"), Some(" 3 weeks ")),
+    slip_row(Some("R-06"), None, Some("1w")),
 ];
 let mut accepted = Vec::new();
 let mut rejected = Vec::new();
@@ -3841,6 +3884,7 @@ mod tests {
   <li><code>#[cfg(test)]</code> compiles the module only for <code>cargo test</code>, so tests add nothing to your real program.</li>
   <li><code>use super::*;</code> brings in everything from the file above, private items included. Unit tests can test private functions.</li>
   <li><code>#[test]</code> marks a test. <code>assert_eq!(actual, expected)</code> panics with both values if they differ, and the panic is what fails the test.</li>
+  <li><code>assert_ne!(a, b)</code> is the opposite check, and <code>assert!(condition)</code> takes any <code>bool</code>. All three take an optional message after the values, written like <code>format!</code>: <code>assert!(n &gt; 0, "no rows loaded from {path}")</code>.</li>
   <li><code>matches!(value, pattern)</code> is true if the value fits the pattern. Use it when you care about the variant but not exactly what's inside.</li>
   <li>The third test is all edges: zero, the largest number that fits, one past it, and a multiplication that overflows.</li>
 </ul>
@@ -3928,6 +3972,8 @@ duty   Err(NotASize("duty"))
 </ul>
 <p><strong>Before you type,</strong> answer these in your journal. Does each field get its own error enum, or is there one for the whole row, and what goes in the <code>reason</code> column either way? Where does vendor normalization happen: once for our supplier list, or for every row? What does one accepted row look like as a struct? For each of Dana's five columns, list the equivalence classes of input you can think of (there's a section on those <a href="#t4-tests">under the hood</a>; read it first), and write one test name per class before you write the parser.</p>
 
+<p>One clippy snag to expect. Next week puts the accepted rows into the reconciliation, so this week nothing reads some of <code>BranchInvoice</code>'s fields, and the compiler warns that they're "never read". Don't delete them, and don't put a blanket <code>#[allow(...)]</code> on the file. Put <code>#[expect(dead_code, reason = "ticket 5 reconciles these")]</code> on the struct. <code>expect</code> silences the warning and records why, and once ticket 5 uses the fields, the compiler warns that the expectation no longer holds, so you remember to take it off. The same works for a drill you've commented out the call to.</p>
+
 <h3>Stuck?</h3>
 <details class="hint"><summary>Hint 1: start at the leaves</summary>
   <p>Write <code>parse_amount</code> and its tests before you touch the database, then the date parser, then the PO reference. Each is a pure function from <code>&amp;str</code>, and once its tests pass you can build on it with some confidence. The row-level code then just calls them in order.</p>
@@ -3945,7 +3991,8 @@ duty   Err(NotASize("duty"))
   <li>Of the raw dates, 91 look like <code>YYYY-MM-DD</code>, 88 contain slashes, and 4 are empty or blank. Six amounts start with <code>(</code>.</li>
   <li>Two rows claim February 29, 2025: <code>MB-2025-0022</code> and <code>MB-2026-0133</code>. 2025 wasn't a leap year, so both belong in your rejects with field <code>inv_date</code>.</li>
   <li>Accepted plus rejected equals 183.</li>
-  <li>Your ticket 1 to 3 files are byte for byte what they were last week. Copy them somewhere before you start (<code>cp -r out out_t3</code>) and compare at the end with <code>diff -r out_t3 out</code>: the only difference should be the new <code>rejects.csv</code>.</li>
+  <li>Ten amounts have only one decimal, such as <code>MB-2025-0002</code>'s <code>678.6</code>. Fewer than two decimals isn't a mistype, so that's $678.60: 67,860 cents, not 6. Give your amount parser a test for it.</li>
+  <li>Your ticket 1 to 3 files are byte for byte what they were last week. Copy them outside the repository before you start (<code>cp -r out ../out_t3</code>, so git never sees the copy) and compare at the end with <code>diff -r ../out_t3 out</code>: the only difference should be the new <code>rejects.csv</code>.</li>
   <li>Run the program twice. <code>rejects.csv</code> comes out byte for byte the same (<code>cmp</code> or <code>sha256sum</code> will tell you).</li>
 </ul>
 
@@ -4024,13 +4071,12 @@ d    = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"</pre>
 
 <h4>Change the shape, not the behavior</h4>
 <p>Changing the structure of code without changing what it does is called <em>refactoring</em>. The danger is obvious: you move two hundred lines and something small breaks without anyone noticing. So before you move anything, save what the program produces today, and after every step, check that it still produces exactly that:</p>
-<pre class="cmd">cargo run
-cp -r out out_before
-printf '/out_before\n' &gt;&gt; .gitignore
+<pre class="cmd">cargo run &gt; ../printed_before.txt
+cp -r out ../out_before
 
 # move one thing, then:
-cargo run &amp;&amp; diff -r out_before out &amp;&amp; echo "no change"</pre>
-<p><code>diff -r</code> compares two folders file by file and prints nothing when they match. <code>&amp;&amp;</code> runs the next command only if the one before it succeeded, so "no change" appears only when the program ran and every file matched. If something did change, you know which step did it, because you only took one. Commit after each step that passes. Then a step that goes wrong costs you two commands. <code>git restore .</code> puts every file git already tracks back the way it was at the last commit, as long as you haven't run <code>git add</code> since. New files the step created, like a fresh <code>src/lib.rs</code>, aren't tracked yet, so it leaves them. <code>git clean -nd</code> lists them, new folders like <code>tests/</code> included, and <code>git clean -fd</code> deletes them. Ignored files, like <code>out/</code> and <code>out_before/</code>, are left alone by both.</p>
+cargo run &gt; ../printed.txt &amp;&amp; diff ../printed_before.txt ../printed.txt &amp;&amp; diff -r ../out_before out &amp;&amp; echo "no change"</pre>
+<p>The <code>..</code> puts the saved copies in the folder above your project, outside the repository, so nothing git does to your project can touch them. <code>cargo run &gt; ../printed.txt</code> saves what the program prints, so the counts and totals on screen are checked too, not just the files. <code>diff</code> compares two files and <code>diff -r</code> two folders, file by file, and both print nothing when they match. <code>&amp;&amp;</code> runs the next command only if the one before it succeeded, so "no change" appears only when the program ran and everything matched. If something did change, you know which step did it, because you only took one. Commit after each step that passes. Then a step that goes wrong costs you two commands. <code>git restore .</code> puts every file git already tracks back the way it was at the last commit, as long as you haven't run <code>git add</code> since. New files the step created, like a fresh <code>src/lib.rs</code>, aren't tracked yet, so it leaves them. <code>git clean -nd</code> lists them, new folders like <code>tests/</code> included, and <code>git clean -fd</code> deletes them. Ignored files, like <code>out/</code>, are left alone by both, and the saved copies in <code>..</code> are outside the repository altogether.</p>
 <p>Do the two jobs in this ticket in order. Refactor first, until <code>diff</code> shows no change at all with everything in modules. Then add Millbrook to the reconciliation as a separate step, and expect exactly one file to change. Mixing them means a difference in the output could come from either.</p>
 <p>This saved copy is a test. It can't tell you the output is right. It tells you the output didn't change, which is exactly the question a refactor asks. <a href="#t5-golden">Under the hood</a> says more about tests like this.</p>
 
@@ -4046,7 +4092,7 @@ fn main() {
         }
     }
 }</pre>
-<p>In your project the first part of every such path is <code>kettle_creek</code>, the name in your <code>Cargo.toml</code>. Two keywords do two different jobs, and Python folds both into <code>import</code>:</p>
+<p>You don't need to build <code>shelf</code>. Read its files here; the drills below make the same moves in your <code>snippets</code> project, and then you make them for real in <code>kettle_creek</code>. In your project the first part of every such path is <code>kettle_creek</code>, the name in your <code>Cargo.toml</code>. Two keywords do two different jobs, and Python folds both into <code>import</code>:</p>
 <ul>
   <li><strong><code>mod</code> declares that a module exists.</strong> <code>pub mod duration;</code> in <code>lib.rs</code> tells the compiler to read <code>src/duration.rs</code> as a module named <code>duration</code>. Each module is declared exactly once, in its parent. In Python every file is a module automatically. In Rust a file that no <code>mod</code> line mentions is never compiled at all.</li>
   <li><strong><code>use</code> makes a short name for something that already exists.</strong> <code>use crate::money::Cents;</code> lets the rest of that file write <code>Cents</code> instead of the full path. Write <code>use</code> lines in any file that needs them. Inside the library, paths start with <code>crate</code>, meaning "this library". From <code>main.rs</code> and from tests, they start with the package's name.</li>
@@ -4076,6 +4122,61 @@ note: the function `parse_days` is defined here
 For more information about this error, try `rustc --explain E0603`.
 error: could not compile `snippets` (bin "snippets") due to 1 previous error</pre>
 <p>That privacy is a feature. A module's <code>pub</code> items are its promise to the rest of the code, and everything else can change without breaking anyone. Make things <code>pub</code> when another module needs them, not by default. <code>pub(crate)</code> means "visible inside this library, but not to outside code", and outside code includes your own <code>main.rs</code>. Making a struct <code>pub</code> doesn't make its fields <code>pub</code>. Each field needs its own, which is what made ticket 4's <code>CardNumber</code> safe.</p>
+<p>That rule bites the moment <code>Cents</code> moves into <code>money.rs</code>. A tuple struct's field is private like any other, so code outside the module can no longer write <code>Cents(0)</code> or read <code>.0</code>:</p>
+<pre>mod money {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+    pub struct Cents(i64);
+}
+
+use money::Cents;
+
+fn main() {
+    let total = Cents(0);
+    println!("{total:?}");
+}</pre>
+<pre class="out">error[E0423]: cannot initialize a tuple struct which contains private fields
+ --&gt; src/main.rs:9:17
+  |
+9 |     let total = Cents(0);
+  |                 ^^^^^
+  |
+note: constructor is not visible here due to private fields
+ --&gt; src/main.rs:3:22
+  |
+3 |     pub struct Cents(i64);
+  |                      ^^^ private field
+help: consider making the field publicly accessible
+  |
+3 |     pub struct Cents(pub i64);
+  |                      +++
+
+For more information about this error, try `rustc --explain E0423`.
+error: could not compile `snippets` (bin "snippets") due to 1 previous error</pre>
+<p>Three ways out. <code>pub struct Cents(pub i64);</code> makes the field public to everyone. <code>pub struct Cents(pub(crate) i64);</code> makes it public inside your library only. Or keep it private and give the module a small front door:</p>
+<pre>mod money {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+    pub struct Cents(i64);
+
+    impl Cents {
+        pub const ZERO: Cents = Cents(0);
+
+        pub fn new(cents: i64) -&gt; Cents {
+            Cents(cents)
+        }
+
+        pub fn get(self) -&gt; i64 {
+            self.0
+        }
+    }
+}
+
+use money::Cents;</pre>
+<pre>let a = Cents::ZERO;
+let b = Cents::default();
+let c = Cents::new(1250);
+println!("{a:?} {b:?} {}", c.get());</pre>
+<pre class="out">Cents(0) Cents(0) 1250</pre>
+<p><code>pub const ZERO</code> is an <em>associated constant</em>, a constant that belongs to the type. The front door is a little more typing now and pays off later: if money ever needs a currency, only <code>money.rs</code> changes. The same question comes up for every struct you move. Rows that are plain data, like a loaded <code>PurchaseOrder</code>, can have <code>pub</code> fields. A type with a rule to keep, like <code>Cents</code> or your date, gets a constructor.</p>
 <p>One reasonable layout for where your project is heading. Yours can differ, as long as you can say in one line what each file is for:</p>
 <pre>kettle_creek/
   Cargo.toml
@@ -4084,6 +4185,8 @@ error: could not compile `snippets` (bin "snippets") due to 1 previous error</pr
     lib.rs         one line per module, nothing else
     db.rs          the only file that knows SQL exists
     model.rs       plain structs for rows: PurchaseOrder, Invoice, ...
+    open_pos.rs    ticket 1's report
+    spend.rs       ticket 2's report
     money.rs       Cents: arithmetic, display, parsing text
     dates.rs       a date type that can only hold real dates
     branch.rs      Millbrook rows into invoices or rejects
@@ -4197,6 +4300,91 @@ Err("database: no such table: renewal_slips")</pre>
   <li>The parse error goes through <code>map_err</code> instead, because the error needs something <code>From</code> can't know: which slip it came from. Use <code>From</code> for "this kind of error always becomes that variant", and <code>map_err</code> to add context.</li>
   <li>Three runs, three outcomes, each with a message a person can act on.</li>
 </ul>
+<p>One trap, the first time a loader returns your own error type. In ticket 1, <code>rows.collect()</code> could build a <code>rusqlite::Result&lt;Vec&lt;Loan&gt;&gt;</code> straight from rusqlite's rows. It can't build a <code>Result&lt;Vec&lt;Loan&gt;, YourError&gt;</code>, because <code>collect</code> doesn't use <code>From</code>; only <code>?</code> does. The same thing happens with any error type, here a parse error:</p>
+<pre>use std::num::ParseIntError;
+
+#[derive(Debug)]
+enum SlipError {
+    BadNumber(ParseIntError),
+}
+
+impl From&lt;ParseIntError&gt; for SlipError {
+    fn from(e: ParseIntError) -&gt; SlipError {
+        SlipError::BadNumber(e)
+    }
+}
+
+fn days(raw: &amp;[&amp;str]) -&gt; Result&lt;Vec&lt;u32&gt;, SlipError&gt; {
+    raw.iter().map(|s| s.parse::&lt;u32&gt;()).collect()
+}
+
+fn main() {
+    println!("{:?}", days(&amp;["14", "7"]));
+}</pre>
+<pre class="out">error[E0277]: a value of type `Result&lt;Vec&lt;u32&gt;, SlipError&gt;` cannot be built from an iterator over elements of type `Result&lt;u32, ParseIntError&gt;`
+    --&gt; src/main.rs:15:42
+     |
+15   |     raw.iter().map(|s| s.parse::&lt;u32&gt;()).collect()
+     |                                          ^^^^^^^ value of type `Result&lt;Vec&lt;u32&gt;, SlipError&gt;` cannot be built from `std::iter::Iterator&lt;Item=Result&lt;u32, ParseIntError&gt;&gt;`
+     |
+     = help: the trait `FromIterator&lt;Result&lt;_, ParseIntError&gt;&gt;` is not implemented for `Result&lt;Vec&lt;u32&gt;, SlipError&gt;`
+             but trait `FromIterator&lt;Result&lt;_, SlipError&gt;&gt;` is implemented for it
+     = help: for that trait implementation, expected `SlipError`, found `ParseIntError`
+note: the method call chain might not have had the expected associated types
+    --&gt; src/main.rs:15:16
+     |
+15   |     raw.iter().map(|s| s.parse::&lt;u32&gt;()).collect()
+     |     --- ------ ^^^^^^^^^^^^^^^^^^^^^^^^^ `Iterator::Item` changed to `Result&lt;u32, ParseIntError&gt;` here
+     |     |   |
+     |     |   `Iterator::Item` is `&amp;&amp;str` here
+     |     this expression has type `&amp;[&amp;str]`
+note: required by a bound in `collect`
+    --&gt; ~/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/iter/traits/iterator.rs:2014:19
+     |
+2014 |     fn collect&lt;B: FromIterator&lt;Self::Item&gt;&gt;(self) -&gt; B
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Iterator::collect`
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `snippets` (bin "snippets") due to 1 previous error</pre>
+<p>Read the two <code>help</code> lines together: <code>collect</code> could build a <code>Result&lt;Vec&lt;u32&gt;, SlipError&gt;</code> from items whose error is already a <code>SlipError</code>, and these items carry a <code>ParseIntError</code>. So collect into a <code>Result</code> with the items' own error first, written <code>Result&lt;Vec&lt;_&gt;, _&gt;</code> to let the compiler fill in the types, and then let <code>?</code> do the conversion:</p>
+<pre>use std::fmt;
+use std::num::ParseIntError;
+
+#[derive(Debug)]
+enum SlipError {
+    BadNumber(ParseIntError),
+}
+
+impl fmt::Display for SlipError {
+    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+        match self {
+            SlipError::BadNumber(e) =&gt; write!(f, "not a number of days: {e}"),
+        }
+    }
+}
+
+impl From&lt;ParseIntError&gt; for SlipError {
+    fn from(e: ParseIntError) -&gt; SlipError {
+        SlipError::BadNumber(e)
+    }
+}
+
+fn days(raw: &amp;[&amp;str]) -&gt; Result&lt;Vec&lt;u32&gt;, SlipError&gt; {
+    let days = raw
+        .iter()
+        .map(|s| s.parse::&lt;u32&gt;())
+        .collect::&lt;Result&lt;Vec&lt;_&gt;, _&gt;&gt;()?;
+    Ok(days)
+}</pre>
+<pre>for slips in [["14", "7"], ["14", "two"]] {
+    match days(&amp;slips) {
+        Ok(d) =&gt; println!("{d:?}"),
+        Err(e) =&gt; println!("error: {e}"),
+    }
+}</pre>
+<pre class="out">[14, 7]
+error: not a number of days: invalid digit found in string</pre>
+<p><code>total_days</code> above does the same with rusqlite: <code>.collect::&lt;rusqlite::Result&lt;Vec&lt;_&gt;&gt;&gt;()?</code>.</p>
 <p>Your library will want a variant each for rusqlite, csv and file errors (<code>std::io::Error</code>), and a <code>From</code> for each. A Millbrook reject is not one of them: a bad row is an expected result, and it's already a value in your rejects list, not an error that stops the run. Real projects often use the <code>thiserror</code> crate to write the <code>Display</code> and <code>From</code> code. Write it by hand this time, so you know what the crate writes for you.</p>
 
 <h4>Integration tests</h4>
@@ -4245,7 +4433,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 <p>Notice what the integration test doesn't need: a database. If your Millbrook code takes a <code>Connection</code> and runs its own <code>SELECT</code>, every test has to build a database with the right table first. If it takes rows that were already loaded, as plain structs, a test can build three rows by hand. Code that's easy to test from outside usually has a clean interface, and the test is the first outside caller to find out whether yours does.</p>
 
 <h3>Warm-up drills</h3>
-<p>These use your ticket 4 drill, <code>parse_size</code>, and your <code>snippets</code> scratch project.</p>
+<p>These use your ticket 4 drill, <code>parse_size</code>, and your <code>snippets</code> scratch project. Copy <code>parse_size</code> and its <code>Size</code> and error types from <code>kettle_creek</code>'s <code>src/bin/drills.rs</code> into <code>snippets</code>, and leave the originals where they are, so your ticket 4 drills still build.</p>
 <div class="drill">
   <p><strong>Drill 1.</strong> In <code>src/bin/drills.rs</code>, put <code>parse_size</code>, its <code>Size</code> enum and its error enum inside <code>mod size { ... }</code> in the same file, and call it from <code>main</code>. Fix the privacy errors with as few <code>pub</code>s as you can. Which items needed one, and which didn't? The counts should match ticket 4's drill 1 exactly:</p>
   <pre class="out">176 descriptions
@@ -4276,7 +4464,7 @@ no size        57</pre>
 
 <h3>Stuck?</h3>
 <details class="hint"><summary>Hint 1: move the leaves first</summary>
-  <p>Start with the code that depends on nothing else in your program: <code>Cents</code>, then the date type, then the parsers. Then the row structs and the database loading, then the reconciliation, and <code>main</code> last. After each move: <code>cargo check</code>, then <code>cargo run</code> and the <code>diff</code>. The compiler will list each missing <code>pub</code> and <code>use</code>, one move at a time.</p>
+  <p>Start with the code that depends on nothing else in your program: <code>Cents</code>, then the date type, then the parsers. Then the row structs and the database loading, then the reconciliation, and <code>main</code> last. When <code>Cents</code> moves, every <code>Cents(...)</code> outside <code>money.rs</code> breaks at once; that's the privacy rule above, not a mess you made. After each move: <code>cargo check</code>, then <code>cargo run</code> and the <code>diff</code>. The compiler will list each missing <code>pub</code> and <code>use</code>, one move at a time.</p>
 </details>
 <details class="hint"><summary>Hint 2: what to make public</summary>
   <p>Leave everything private, move a module, and add <code>pub</code> only where the compiler says another module needs it. If you find yourself making every field of a struct <code>pub</code> so another module can build one, ask whether that module should be calling a constructor instead. Your parsers' helper functions probably don't need to be <code>pub</code> at all. The row-level function that the integration test calls does.</p>
@@ -4288,7 +4476,7 @@ no size        57</pre>
 <h3>Sanity checks</h3>
 <ul>
   <li>Every row of ticket 3's <code>discrepancies.csv</code> is still in the new one, unchanged, and every new row is for a Millbrook PO. The main branch's invoices didn't change, so its results can't either.</li>
-  <li>With the refactor done and before Millbrook goes in, <code>diff -r out_before out</code> prints nothing. After Millbrook goes in, it shows only <code>discrepancies.csv</code> changing.</li>
+  <li>With the refactor done and before Millbrook goes in, <code>diff -r ../out_before out</code> and <code>diff ../printed_before.txt ../printed.txt</code> both print nothing. After Millbrook goes in, only <code>discrepancies.csv</code> and the reconciliation's printed counts change.</li>
   <li><code>cargo test</code> prints a <code>Running tests/</code> line for your integration test, with at least one test under it.</li>
   <li>Run the program twice. Every file comes out byte for byte the same.</li>
 </ul>
@@ -4313,7 +4501,7 @@ the reconciliation needed any Millbrook-specific code.</pre>
 <p>Your package now holds several crates. Cargo compiles the library first. Then it compiles <code>main.rs</code> as a second crate that links to the library, and each file in <code>tests/</code> as one more crate that does the same. That's why <code>main.rs</code> sees only what's <code>pub</code>: to the compiler it is outside code, exactly like a test. It's also why <code>cargo test</code> printed four sections above. Between builds, <code>rustc</code> keeps notes in <code>target/</code> about what it already compiled (<em>incremental compilation</em>), so a one-line change doesn't redo everything. Big projects go further and split into many crates in a <em>workspace</em>, so cargo can compile independent crates at the same time and skip the ones that didn't change.</p>
 
 <h4 id="t5-golden">A diff is a test</h4>
-<p>Your <code>out_before</code> folder is what's called a <em>golden file</em> test: save output that's known to be good, and compare every new run against it. Michael Feathers calls tests like this <em>characterization tests</em>, in <em>Working Effectively with Legacy Code</em>. They pin down what code does today, right or wrong, so you can change it safely. They're cheap to write and catch any change at all, which makes them the right tool for a refactor. A bug fix is different: it's supposed to change the output, and the old golden file can't tell a fix from a mistake. There you read the new output, check the change is the one you meant, and save it as the new golden file. They're brittle too, when output contains something that changes every run, like a timestamp. Ticket 6's workbook has one. Unit tests say why each rule exists. A golden file says only that nothing moved, and during a refactor that's the one thing you need to know.</p>
+<p>Your <code>../out_before</code> folder is what's called a <em>golden file</em> test: save output that's known to be good, and compare every new run against it. Michael Feathers calls tests like this <em>characterization tests</em>, in <em>Working Effectively with Legacy Code</em>. They pin down what code does today, right or wrong, so you can change it safely. They're cheap to write and catch any change at all, which makes them the right tool for a refactor. A bug fix is different: it's supposed to change the output, and the old golden file can't tell a fix from a mistake. There you read the new output, check the change is the one you meant, and save it as the new golden file. They're brittle too, when output contains something that changes every run, like a timestamp. Ticket 6's workbook has one. Unit tests say why each rule exists. A golden file says only that nothing moved, and during a refactor that's the one thing you need to know.</p>
 
 <h3>Go deeper</h3>
 <ul>
@@ -4347,8 +4535,8 @@ the reconciliation needed any Millbrook-specific code.</pre>
   <div class="email-body">
     <p>Finance closes September this week, and Priya would rather have one workbook than four CSVs and an email thread. Can you put everything into a single Excel file, <code>kettle_pack_2026-09.xlsx</code>, with these sheets in this order:</p>
     <ol>
-      <li><strong>Summary.</strong> The month, how many invoices are dated in it, the month's spend, how many open discrepancies of each kind we have today, and how many Millbrook rows were rejected.</li>
-      <li><strong>Spend.</strong> Supplier, number of invoices and total for invoices dated in the month, biggest first. Count Millbrook's accepted invoices, and don't count the duplicate copies you found in ticket 3.</li>
+      <li><strong>Summary.</strong> The month, how many invoices are dated in it (the same invoices the Spend sheet adds up), the month's spend, how many open discrepancies of each kind we have today, and how many Millbrook rows were rejected.</li>
+      <li><strong>Spend.</strong> Supplier, number of invoices and total for invoices dated in the month, biggest first. Count Millbrook's accepted invoices, and don't count the duplicate copies you found in ticket 3. An invoice with a PO number we can't find still counts here: it's a bill from that supplier either way.</li>
       <li><strong>Discrepancies.</strong> Everything from your reconciliation as it stands today, both branches.</li>
       <li><strong>Rejects.</strong> The Millbrook rows you couldn't read, and why.</li>
     </ol>
@@ -4366,6 +4554,7 @@ the reconciliation needed any Millbrook-specific code.</pre>
 <p>Three of the four sheets are tables: a header row, then one row per item, each item a different type. You could write three nearly identical functions. This page shows how to write one, and how to give the program a command line that refuses bad input. First, the new crates:</p>
 <pre class="cmd">cargo add rust_xlsxwriter
 cargo add clap --features derive</pre>
+<p><code>cargo add</code> changes only the project you run it in. Run both lines in <code>snippets</code> for the examples, and again in <code>kettle_creek</code> for the drills and the ticket.</p>
 
 <h4>A trait is a promise</h4>
 <p>A <em>trait</em> names a set of methods that a type promises to have. You've been using traits since ticket 1: <code>Debug</code>, <code>Display</code>, <code>Ord</code> and <code>Iterator</code> are all traits. Now you write one. Here is a trait for anything that can be one row of a table, on the library toy:</p>
@@ -4561,7 +4750,7 @@ help: alternatively, consider constraining `headers` so it does not apply to tra
 
 For more information about this error, try `rustc --explain E0038`.
 error: could not compile `snippets` (bin "snippets") due to 1 previous error</pre>
-<p>A trait object only knows a value, not its type. <code>headers()</code> has no value to ask, so there would be nothing to call it on. That's what "dyn compatible" means: every method has to be callable through a value, unless it opts out of trait objects with <code>where Self: Sized</code>, which is what the compiler's help above suggests.</p>
+<p>A trait object only knows a value, not its type. <code>headers()</code> has no value to ask, so there would be nothing to call it on. That's what "dyn compatible" means: every method has to be callable through a value, unless it opts out of trait objects with <code>where Self: Sized</code>, which is what the compiler's help above suggests. <code>Sized</code> means "a type whose size is known when the program is compiled", which every ordinary type is and a <code>dyn</code> value isn't. So a method with that bound exists on <code>Book</code> and <code>Loan</code>, and simply isn't offered on a <code>dyn TableRow</code>.</p>
 <p>For the pack, generics are the right fit. Each sheet holds one type of row, known when you write the code, and <code>headers</code> naturally belongs to the type. Reach for <code>dyn</code> when the set of types really is open or mixed at run time: plugins, a list of different shapes, error types from several libraries (that's what <code>Box&lt;dyn Error&gt;</code> in <code>main</code> has been doing since ticket 1).</p>
 
 <h4>A real command line</h4>
@@ -4604,6 +4793,7 @@ fn parse_shelf(s: &amp;str) -&gt; Result&lt;String, String&gt; {
   <li><code>#[derive(Parser)]</code> writes the parser. <code>#[arg(long)]</code> makes a field a <code>--name value</code> option.</li>
   <li>A plain <code>String</code> field is required. <code>Option&lt;String&gt;</code> is optional. <code>default_value</code> fills it in when it's left out.</li>
   <li><code>value_parser = parse_shelf</code> runs your function on the raw text. Its <code>Err</code> message goes into clap's error, so the user sees exactly what was wrong.</li>
+  <li>A parser can return a type of your own instead of a <code>String</code>, such as a small <code>Month</code>. clap then needs that type to be <code>Clone</code>, and says so: "the trait bound `Month: Clone` is not satisfied". <code>#[derive(Clone)]</code> on it is the fix.</li>
 </ul>
 <p>In a real program you call <code>Cli::parse()</code>, which reads the real arguments and exits on error. To see the results here, the examples use <code>Cli::try_parse_from</code>, which takes the arguments as a list and returns a <code>Result</code> instead:</p>
 <pre>let args = ["fines", "--shelf", "B12", "--member", "Grace"];
@@ -4637,7 +4827,7 @@ Usage: fines --shelf &lt;SHELF&gt; --member &lt;MEMBER&gt;
 
 For more information, try '--help'.
 (exit code 2)</pre>
-<p>Every one of those messages came from clap, using your <code>parse_shelf</code> text for the first two. The exit code 2 is the Unix convention for "you used the command wrongly". The help text is free too, and stays in step with the code because it is generated from it:</p>
+<p>Every one of those messages came from clap, using your <code>parse_shelf</code> text for the first two. The exit code 2 is the Unix convention for "you used the command wrongly". The help text is free too, and stays in step with the code because it is generated from it. This is what <code>--help</code> prints:</p>
 <pre class="out">Fines report for the lending library
 
 Usage: fines [OPTIONS] --shelf &lt;SHELF&gt;
@@ -4647,6 +4837,7 @@ Options:
       --member &lt;MEMBER&gt;  Only this member's fines
       --out &lt;OUT&gt;        Where to write the workbook [default: out/fines.xlsx]
   -h, --help             Print help</pre>
+<p>The usage lines say <code>fines</code> because of <code>#[command(name = "fines")]</code> and because the examples pass <code>"fines"</code> as the first argument. Run your own program with <code>cargo run -- --help</code> and the usage line names the program that's actually running, such as <code>snippets</code> or <code>kettle_creek</code>.</p>
 <p>Validating in the parser has a second benefit. Once <code>Cli</code> exists, its <code>shelf</code> is a well-formed shelf code. Code further in never has to check again, the same idea as parsing Millbrook's rows into proper types in ticket 4.</p>
 
 <h4>Writing a workbook</h4>
@@ -4732,6 +4923,8 @@ fn run(cli: &amp;Cli) -&gt; Result&lt;usize, String&gt; {
     if !std::path::Path::new(&amp;cli.db).exists() {
         return Err(format!("database not found: {}", cli.db));
     }
+    // A stand-in for the real work: this example is about exit codes,
+    // so it only checks the file exists and reports a made-up count.
     Ok(7)
 }
 
@@ -4749,7 +4942,7 @@ fn real_main() -&gt; ExitCode {
     }
 }</pre>
 <p>The example's function is called <code>real_main</code> only because the program that tested it for this page needed <code>main</code> for itself. In your program it is <code>fn main() -&gt; ExitCode</code>.</p>
-<p>Run from a shell, with <code>echo $?</code> printing the last exit status:</p>
+<p><code>run</code> is a stand-in: it checks the file exists and reports a made-up count, because the point here is the exit status. To try it in <code>snippets</code>, make an empty file to point it at first, with <code>touch library.db</code>. Run from a shell, with <code>echo $?</code> printing the last exit status:</p>
 <pre class="out">$ fines --db library.db
 wrote 7 fines
 $ echo $?
@@ -4773,7 +4966,7 @@ $ echo $?
 <h3>Warm-up drills</h3>
 <p>In <code>src/bin/drills.rs</code>, as before. These use the real database but not the ticket's tables.</p>
 <div class="drill">
-  <p><strong>Drill 1.</strong> Give the drills program a required <code>--category</code> option with clap. Load <code>products</code>, keep the ones in that category, sort by SKU, and print how many there are and the first three. Run it with <code>cargo run --bin drills -- --category Bearings</code>. Then run it with no arguments and with <code>--help</code>, and read what clap wrote for you.</p>
+  <p><strong>Drill 1.</strong> Give the drills program a required <code>--category</code> option with clap. Load <code>products</code>, keep the ones in that category, sort by SKU, and print how many there are and the first three. Run it with <code>cargo run --bin drills -- --category Bearings</code>. Then run it with no arguments and with <code>--help</code>, and read what clap wrote for you. The other drills live in the same program, so from now on run it with <code>-- --category Bearings</code> every time.</p>
   <pre class="out">12 products in Bearings
 NCP-2976  Tapered roller bearing 40mm
 NCP-4180  Needle bearing 25mm
@@ -4791,6 +4984,59 @@ sku       description                        price
 NCP-2976  Tapered roller bearing 40mm        37.47
 NCP-4180  Needle bearing 25mm                83.55
 NCP-6478  Tapered roller bearing heavy duty  15.52</pre>
+  <p>If you hand it drill 1's filtered products, a <code>Vec&lt;&amp;Product&gt;</code>, the call fails:</p>
+  <pre>trait TextRow {
+    fn cells(&amp;self) -&gt; Vec&lt;String&gt;;
+}
+
+struct Product {
+    sku: String,
+}
+
+impl TextRow for Product {
+    fn cells(&amp;self) -&gt; Vec&lt;String&gt; {
+        vec![self.sku.clone()]
+    }
+}
+
+fn print_table&lt;T: TextRow&gt;(rows: &amp;[T]) {
+    for r in rows {
+        println!("{}", r.cells().join(" | "));
+    }
+}
+
+fn main() {
+    let products = vec![Product {
+        sku: "BRG-6204".to_string(),
+    }];
+    let bearings: Vec&lt;&amp;Product&gt; = products
+        .iter()
+        .filter(|p| p.sku.starts_with("BRG"))
+        .collect();
+    print_table(&amp;bearings);
+}</pre>
+  <pre class="out">error[E0277]: the trait bound `&amp;Product: TextRow` is not satisfied
+  --&gt; src/main.rs:29:17
+   |
+29 |     print_table(&amp;bearings);
+   |     ----------- ^^^^^^^^^ the trait `TextRow` is not implemented for `&amp;Product`
+   |     |
+   |     required by a bound introduced by this call
+   |
+note: required by a bound in `print_table`
+  --&gt; src/main.rs:15:19
+   |
+15 | fn print_table&lt;T: TextRow&gt;(rows: &amp;[T]) {
+   |                   ^^^^^^^ required by this bound in `print_table`
+help: consider removing the leading `&amp;`-reference
+   |
+29 -     print_table(&amp;bearings);
+29 +     print_table(bearings);
+   |
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `snippets` (bin "snippets") due to 1 previous error</pre>
+  <p>The function asked for a slice of <code>T</code>s that implement the trait, and these items are <code>&amp;Product</code>, a different type from <code>Product</code>. Take the help's advice and the next error is "expected `&amp;[_]`, found `Vec&lt;&amp;Product&gt;`", so it's one of the <a href="#t0-help-wrong">suggestions to check</a> before you follow it. Two honest fixes: make the function take references, <code>rows: &amp;[&amp;T]</code>, or add <code>impl TextRow for &amp;Product</code> whose <code>cells</code> just calls the <code>Product</code> one with <code>(*self).cells()</code>.</p>
 </div>
 <div class="drill">
   <p><strong>Drill 3.</strong> Write <code>suppliers.xlsx</code>: one sheet called <code>Suppliers</code>, a bold header, one row per supplier. Open it in LibreOffice or Excel. Then try giving the sheet a name longer than 31 characters and see where the error appears.</p>
@@ -4809,11 +5055,12 @@ NCP-6478  Tapered roller bearing heavy duty  15.52</pre>
   <li><label><input type="checkbox" class="crit-box" id="c-t6-8"><span>The workbook code lives in its own module. <code>main.rs</code> parses arguments, calls the library, and turns errors into an exit status, nothing more.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t6-9"><span>Unit tests for the month validation and for the month filter on spend. <code>cargo fmt</code>, <code>cargo clippy --all-targets</code> and <code>cargo test</code> are clean.</span></label></li>
 </ul>
+<p>One decision before you start: what plain <code>cargo run</code> does now. If <code>--month</code> is required, it stops with exit status 2, and ticket 5's <code>cargo run &amp;&amp; diff</code> line stops with it. Either make <code>--month</code> an <code>Option</code>, so tickets 1 to 5 still come out of a plain <code>cargo run</code> and the pack is written only when a month is given, or keep it required and run <code>cargo run -- --month 2026-09</code> from now on, with the new workbook expected in any <code>diff</code>. Both are fine. Say which in your journal and in your hand-in.</p>
 <p><strong>Before you type,</strong> answer these in your journal. What does each table sheet's row type need to carry, and does it own its data or borrow it from the vectors you loaded? Your ticket 5 code produced CSVs: which of its functions can the pack call as they are, and which return the wrong shape? Is <code>--month</code> a <code>String</code> once it's been checked, or would a small type of its own be clearer? Where does the decision "this run failed" get turned into an exit status, and is there exactly one such place?</p>
 
 <h3>Stuck?</h3>
 <details class="hint"><summary>Hint 1: the shape of the trait</summary>
-  <p>The wiki's <code>cells</code> returns <code>Vec&lt;String&gt;</code>, which loses the difference between text and numbers. Your sheets need that difference, because money must be written with <code>write_number_with_format</code>. So let the row write itself: a method that takes the worksheet, the row number and the money format, and writes its own cells. Look at what <code>&amp;mut Worksheet</code> lets a method do.</p>
+  <p>The wiki's <code>cells</code> returns <code>Vec&lt;String&gt;</code>, which loses the difference between text and numbers. Your sheets need that difference, because money must be written with <code>write_number_with_format</code>. So let the row write itself: a method that takes the worksheet, the row number and the money format, and writes its own cells. Its signature can look like <code>fn write_row(&amp;self, sheet: &amp;mut Worksheet, row: u32, money: &amp;Format) -&gt; Result&lt;(), XlsxError&gt;</code>. The <code>&amp;mut</code> is what lets it write cells, and <code>workbook.add_worksheet()</code> is where a <code>&amp;mut Worksheet</code> comes from. The generic function writes the header, then calls <code>write_row</code> once per row with a row number one past the last.</p>
 </details>
 <details class="hint"><summary>Hint 2: rows that borrow</summary>
   <p>A discrepancy row needs the supplier's name, which lives in your suppliers <code>Vec</code>. Rather than cloning every name into a new struct, a small struct with a <code>&amp;'a Discrepancy</code> and a <code>&amp;'a str</code> can implement the trait. Implementing a trait for a type with a lifetime looks like <code>impl TableRow for DiscrepancyRow&lt;'_&gt;</code>. The <code>'_</code> means "some lifetime, and I don't need to name it", because nothing in the impl has to say how it relates to anything else. Most of the time Rust works lifetimes out without being told, and <code>'_</code> marks a spot where you let it.</p>
@@ -4856,7 +5103,7 @@ println!(
 <pre class="out">&amp;Book:          8 bytes
 &amp;dyn Describe:  16 bytes
 Box&lt;dyn Describe&gt;: 16 bytes</pre>
-<p>A <em>fat pointer</em>, twice the size of an ordinary reference. This is <em>dynamic dispatch</em>: one copy of the code, decided at run time. The optimizer usually can't see through the jump to inline it, though it sometimes works out which method it must be. For a monthly report, the speed difference between the two is far too small to measure. Choose by what the code needs to say: a fixed type per call means generics, a mixed collection means <code>dyn</code>. C++ templates and virtual functions make the same trade. Java's and Python's generics only give you the dynamic kind.</p>
+<p>A <em>fat pointer</em>, twice the size of an ordinary reference. This is <em>dynamic dispatch</em>: one copy of the code, decided at run time. The optimizer usually can't see through the jump to inline it, though it sometimes works out which method it must be. For a monthly report, the speed difference between the two is far too small to measure. Choose by what the code needs to say: a fixed type per call means generics, a mixed collection means <code>dyn</code>. C++ templates and virtual functions make the same trade. In Java and Python, calling a method on a value of a generic type always looks the method up at run time: Java's compiler erases the type parameter, and Python looks up every method as it runs. So their generics never get Rust's per-type copies.</p>
 
 <h4>An .xlsx file is a folder of XML</h4>
 <p>Office Open XML, the format behind <code>.xlsx</code>, <code>.docx</code> and <code>.pptx</code>, is a ZIP archive of XML files. A one-fine workbook made the same way as the wiki's example, listed with <code>unzip -l</code> (dates and times blanked here):</p>
@@ -5369,7 +5616,7 @@ QUIZZES.t5 = {
       explain: "Integration tests use your library the way a stranger would. If something is hard to test from there, your public interface may be the problem.",
     },
     {
-      q: "You moved <code>money.rs</code> out of <code>main.rs</code>. <code>cargo run &amp;&amp; diff -r out_before out</code> prints nothing. What do you know?",
+      q: "You moved <code>money.rs</code> out of <code>main.rs</code>. <code>cargo run &amp;&amp; diff -r ../out_before out</code> prints nothing. What do you know?",
       options: [
         { t: "On today's data, the program's output didn't change", ok: true },
         { t: "The program is correct", why: "The saved output was never proven right. A golden file checks that nothing moved, not that it was right to begin with." },

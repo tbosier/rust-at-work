@@ -47,6 +47,7 @@ def main():
     crate = SNIP / "failcrate"
     manifest = (crate / "Cargo.toml").read_text()
     lockfile = (crate / "Cargo.lock").read_text()
+    mainfile = (crate / "src" / "main.rs").read_text()
     for f in sorted((SNIP / "fail").glob("*.rs")):
         # Wiki examples are typed in the learner's snippets project. The one
         # error in set up comes from their ticket project.
@@ -65,6 +66,7 @@ def main():
         (OUT / f"fail_{f.stem}.txt").write_text(text)
     (crate / "Cargo.toml").write_text(manifest)
     (crate / "Cargo.lock").write_text(lockfile)
+    (crate / "src" / "main.rs").write_text(mainfile)
     print(f"{len(list((SNIP / 'examples').glob('*.rs')))} examples, "
           f"{len(list((SNIP / 'fail').glob('*.rs')))} expected failures, {bad} problems")
     sys.exit(1 if bad else 0)

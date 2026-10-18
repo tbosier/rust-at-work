@@ -131,7 +131,7 @@ fn check(raw: &RawSlip) -> Result<Renewal, Reject> {
 }
 
 /// Builds a test row. `String::from` is a function, passed as a value.
-fn raw(slip: Option<&str>, shelf: Option<&str>, asked_for: Option<&str>) -> RawSlip {
+fn slip_row(slip: Option<&str>, shelf: Option<&str>, asked_for: Option<&str>) -> RawSlip {
     RawSlip {
         slip: slip.map(String::from),
         shelf: shelf.map(String::from),
@@ -153,12 +153,12 @@ fn main() {
     // region: reject_use
     // In the ticket these rows come from one SELECT.
     let slips = vec![
-        raw(Some("R-01"), Some("A-3"), Some("14d")),
-        raw(Some("R-02"), Some("D-30"), Some("2w")),
-        raw(Some("R-03"), Some("C-7"), Some("a fortnight")),
-        raw(None, Some("B-1"), Some("7 days")),
-        raw(Some("R-05"), Some("B-40"), Some(" 3 weeks ")),
-        raw(Some("R-06"), None, Some("1w")),
+        slip_row(Some("R-01"), Some("A-3"), Some("14d")),
+        slip_row(Some("R-02"), Some("D-30"), Some("2w")),
+        slip_row(Some("R-03"), Some("C-7"), Some("a fortnight")),
+        slip_row(None, Some("B-1"), Some("7 days")),
+        slip_row(Some("R-05"), Some("B-40"), Some(" 3 weeks ")),
+        slip_row(Some("R-06"), None, Some("1w")),
     ];
     let mut accepted = Vec::new();
     let mut rejected = Vec::new();

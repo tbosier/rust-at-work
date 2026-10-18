@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::time::Instant;
 
+// region: joins
 struct Po {
     po_id: i64,
     supplier_id: i64,
@@ -16,7 +17,6 @@ struct Inv {
     po_id: i64,
 }
 
-// region: joins
 fn nested_loop(invoices: &[Inv], pos: &[Po]) -> i64 {
     let mut checksum = 0;
     for inv in invoices {

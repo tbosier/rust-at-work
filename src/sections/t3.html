@@ -84,7 +84,7 @@
   <li><code>Ordering::Less | Ordering::Equal</code> is an <em>or-pattern</em>: the arm matches either one.</li>
   <li><code>(LoanStatus::Lost, _)</code> means "lost, and any <code>Ordering</code>". A <code>_</code> inside a tuple only waves through that one position. Every status is still named, so a new <code>LoanStatus</code> variant would still be a compile error here. That's different from a whole-arm <code>_ =&gt;</code>, which waves through everything.</li>
   <li><code>-&gt; &amp;'static str</code> returns text written into the program itself, like <code>"bill the replacement"</code>. Text like that is never freed, and <code>'static</code> is the lifetime that says so. It needs no input to borrow from, which is why this function can return a <code>&amp;str</code> without a <code>'a</code>. <a href="#t6-wiki">Ticket 6</a> says more.</li>
-  <li>The compiler checks every combination. Delete the <code>Returned, Greater</code> arm and it names the missing pair: <code>(LoanStatus::Returned, Ordering::Greater)</code> not covered.</li>
+  <li>The compiler checks every combination. Delete the <code>Returned, Greater</code> arm and it names the missing pair, with its full path: <code>(LoanStatus::Returned, std::cmp::Ordering::Greater)</code> not covered.</li>
 </ul>
 
 <h4>What each derive buys you</h4>
@@ -112,7 +112,7 @@
 <p>The library stores fines the way our warehouse system stores prices: as <code>REAL</code> dollars. Loan 1 has two fines, 10 and 20 cents. Loan 4 has one fine of 30 cents. Add them up in <code>f64</code>:</p>
 <pre>{{code:t3_float#trap}}</pre>
 <pre class="out">{{out:t3_float#1}}</pre>
-<p>Thirty cents is not thirty cents. <code>{:.2}</code> hides the problem when you print, which is why ticket 2's totals looked fine. It doesn't help when you compare, and this ticket is nothing but comparisons. <a href="#t3-floats">Under the hood</a> explains where the stray digits come from. The fix is the one every payments system uses: <strong>turn the float into whole cents once, the moment it leaves the database, and never do arithmetic on money as a float again.</strong></p>
+<p>Thirty cents is not thirty cents. <code>{:.2}</code> hides the problem when you print, which is why ticket 2's totals looked fine. It doesn't help when you compare, and this ticket is nothing but comparisons. <a href="#t3-floats">Under the hood</a> explains where the stray digits come from. The usual fix, and the right one for invoices billed in whole cents like ours: <strong>turn the float into whole cents once, the moment it leaves the database, and never do arithmetic on money as a float again.</strong> (Some systems price in fractions of a cent, such as a per-unit rate. They use a smaller integer unit or a decimal type, and round only when they bill. The rule is the same: no floats.)</p>
 <p>Make cents a type of its own, a struct with one unnamed field. A wrapper like this is called a <em>newtype</em>:</p>
 <pre>{{code:t3_cents#newtype}}</pre>
 <p>The <code>.0</code> reaches the field inside. Why not just use <code>i64</code>? Because then a quantity, an ID and an amount are all <code>i64</code>, and adding a PO number to a price compiles. With <code>Cents</code>, the compiler only lets money combine with money.</p>
@@ -123,6 +123,14 @@
 <p><code>type Output = Cents</code> says what <code>Cents + Cents</code> produces. Now the fines again, in cents:</p>
 <pre>{{code:t3_cents#use}}</pre>
 <pre class="out">{{out:t3_cents#1}}</pre>
+<p>The amounts above were loaded as <code>f64</code> and turned into cents later. Better to do it the moment they leave the database, inside the closure that builds each row:</p>
+<pre>{{code:t3_cents#load}}</pre>
+<pre class="out">{{out:t3_cents#3}}</pre>
+<ul>
+  <li><code>amount: row.get(1)?</code> wouldn't compile. rusqlite can hand out the types it knows, like <code>f64</code>, <code>i64</code> and <code>String</code>, and it has never heard of <code>Cents</code>: the error says the trait <code>FromSql</code> isn't implemented for it. You don't need to implement it. <code>Cents::from_dollars(row.get(1)?)</code> asks for an <code>f64</code>, because that's what <code>from_dollars</code> takes, and converts it on the spot.</li>
+  <li><code>.collect::&lt;Result&lt;_, _&gt;&gt;()?</code> is ticket 1's <code>rows.collect()</code>, written in one chain. There the function's return type told <code>collect</code> what to build. Here the turbofish says "a <code>Result</code>", the <code>_</code>s let the compiler fill in the rest from <code>Vec&lt;Fine&gt;</code>, and <code>?</code> takes the <code>Vec</code> out or returns the first error.</li>
+</ul>
+<p>The ticket needs more arithmetic than <code>+</code>. <code>Sub</code> is <code>-</code>, the same pattern as <code>Add</code>. A PO line is a quantity times a price, which is <code>Cents * i64</code>: implement <code>Mul&lt;i64&gt; for Cents</code>, where the <code>&lt;i64&gt;</code> names the type on the right of the <code>*</code>. The compiler's error, if you try <code>*</code> first, names exactly the trait it wants.</p>
 <p>One more iterator method before the traits. <code>fold</code> walks an iterator and carries one value along: you give it a starting value and a closure that takes "the value so far" and the next item, and returns the new value so far. Its result is the last one. <code>sum()</code> is a <code>fold</code> that starts at 0 and adds:</p>
 <pre>{{code:t3_tuple#fold}}</pre>
 <pre class="out">{{out:t3_tuple#2}}</pre>
@@ -143,7 +151,7 @@
 <pre class="out">{{out:t3_index#1}}</pre>
 <ul>
   <li><code>HashMap&lt;i64, &amp;Book&gt;</code> maps a book ID to a borrowed book. Building it is one pass over <code>books</code>.</li>
-  <li><code>let Some(book) = ... else { ... };</code> is <code>let</code>-<code>else</code>. If the pattern matches, <code>book</code> exists for the rest of the loop body. If not, the <code>else</code> block runs, and it must leave: <code>continue</code>, <code>return</code> or <code>break</code>. It keeps the normal path flat instead of nesting it inside an <code>if let</code>.</li>
+  <li><code>let Some(book) = ... else { ... };</code> is <code>let</code>-<code>else</code>. If the pattern matches, <code>book</code> exists for the rest of the loop body. If not, the <code>else</code> block runs, and it must leave: <code>continue</code>, <code>return</code> or <code>break</code>. It keeps the normal path flat instead of nesting it inside an <code>if let</code>. A cousin you'll meet when clippy suggests it: <code>if done &amp;&amp; let Some(day) = returned { ... }</code> is a <em>let chain</em>, a condition and an <code>if let</code> in one <code>if</code>. It's new in Rust's 2024 edition, and fine to accept.</li>
   <li>A <code>HashSet&lt;T&gt;</code> is a <code>HashMap</code> with keys and no values: a fast "have I seen this?". <code>insert</code> returns <code>false</code> when the item was already there, so one call both checks and records. A set's key can be a tuple, such as <code>(i64, String)</code>, when "the same" means two fields at once.</li>
 </ul>
 <p><code>map.get(&amp;key)</code> returns an <code>Option</code>, and <code>Option</code> has methods that save you writing a <code>match</code> each time:</p>
@@ -158,7 +166,9 @@
     <tr><td><code>.copied()</code></td><td>Turns <code>Option&lt;&amp;u32&gt;</code> into <code>Option&lt;u32&gt;</code>, for <code>Copy</code> types</td></tr>
     <tr><td><code>.unwrap_or(x)</code></td><td>The value, or <code>x</code> if <code>None</code></td></tr>
     <tr><td><code>.unwrap_or_default()</code></td><td>The value, or the type's <code>Default</code>: 0 for numbers, empty for strings</td></tr>
-    <tr><td><code>.is_some_and(|x| ...)</code></td><td><code>true</code> only if there's a value and it passes the test</td></tr>
+    <tr><td><code>.is_some_and(|x| ...)</code></td><td><code>true</code> only if there's a value and it passes the test. It takes the <code>Option</code> by value, so on one you've only borrowed, such as a struct's field, put <code>.as_ref()</code> first</td></tr>
+    <tr><td><code>.as_ref()</code></td><td>Turns <code>&amp;Option&lt;T&gt;</code> into <code>Option&lt;&amp;T&gt;</code>: look at what's inside without taking it. For <code>Option&lt;String&gt;</code>, <code>.as_deref()</code> goes one step further, to <code>Option&lt;&amp;str&gt;</code></td></tr>
+    <tr><td><code>.and_then(|x| ...)</code></td><td>Like <code>map</code>, for a closure that itself returns an <code>Option</code>: one <code>None</code> anywhere and the result is <code>None</code></td></tr>
   </tbody>
 </table>
 </div>
@@ -200,11 +210,11 @@
 <p>Still one program in <code>src/main.rs</code>. It will be long; that's fine for now, and ticket 5 is where it gets split up. You will need the csv crate from ticket 2 again.</p>
 <ul class="criteria">
   <li><label><input type="checkbox" class="crit-box" id="c-t3-1"><span>Loads <code>suppliers</code>, <code>purchase_orders</code>, <code>po_lines</code> and <code>invoices</code>, each with one plain <code>SELECT</code>.</span></label></li>
-  <li><label><input type="checkbox" class="crit-box" id="c-t3-2"><span>Money becomes your <code>Cents</code> type while the rows load. No <code>f64</code> addition or comparison on money anywhere after that.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t3-2"><span>Money becomes your <code>Cents</code> type while the rows load. No <code>f64</code> addition or comparison on money anywhere after that in this ticket's code. (Ticket 2's report can keep its <code>f64</code> sum, or move to <code>Cents</code> too, as long as its file comes out the same.)</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-3"><span>The seven kinds are one enum, and the report's order comes from the enum's derived <code>Ord</code>, not from a list of strings.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-4"><span>The <code>match</code> that decides a PO's kind has no <code>_ =&gt;</code> arm, so adding a new PO status would be a compile error until you decide what it means. (The one <code>_</code> you need is where the status text becomes an enum, as in the wiki.)</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-5"><span>Every lookup goes through a <code>HashMap</code> or <code>HashSet</code>. No loop over one table inside a loop over another.</span></label></li>
-  <li><label><input type="checkbox" class="crit-box" id="c-t3-6"><span>Writes <code>out/discrepancies.csv</code> exactly as the email describes, and prints the count per kind (all seven, zeros included) and the total overbilled.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t3-6"><span>Writes <code>out/discrepancies.csv</code> exactly as the email describes, and prints the count per kind (all seven, zeros included) and the total overbilled. Rust can't list an enum's variants for you, so to print every kind, keep a <code>const</code> array of all seven next to the enum. That's a list of variants the compiler checks, not a list of strings, and sorting the report still uses the derived <code>Ord</code>.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-7"><span>Negative amounts print as <code>-1234.50</code>, not <code>-1234.-50</code>.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-8"><span><code>cargo fmt</code> and <code>cargo clippy --all-targets</code> are clean.</span></label></li>
 </ul>
@@ -226,7 +236,7 @@
 <ul>
   <li>5,315 PO lines and 1,745 invoices loaded. 1,711 POs are on the main branch with status <code>received</code>.</li>
   <li>89 POs have more than one invoice row. That's split billing and duplicates together, so it's not your duplicate count.</li>
-  <li>If you compare dollar totals as <code>f64</code> with <code>==</code>, 508 of the 1,649 received main-branch POs that have invoices look mismatched. If your over and under counts add up to anything near 508, there's a float in your comparison. Most of those 508 are not real.</li>
+  <li>If you compare dollar totals as <code>f64</code> with <code>==</code>, after dropping the duplicate invoices, 508 of the 1,649 received main-branch POs that have invoices look mismatched (519 if you keep the duplicates in). If your over and under counts add up to anything near 508, there's a float in your comparison. Most of those 508 are not real.</li>
   <li>Check one row by hand. Pick an <code>OVERBILLED</code> PO from your file and look at it with <code>sqlite3</code>: <code>SELECT * FROM po_lines WHERE po_id = ...;</code> and the same for <code>invoices</code>. Do the sum on paper. Using SQL to look is allowed.</li>
   <li>Run it twice. The file should be byte for byte the same both times (<code>cmp</code> or <code>diff</code> will tell you). If it isn't, something is coming out of a <code>HashMap</code> unsorted.</li>
 </ul>
@@ -246,9 +256,9 @@ indexes are as simple as they can be.</pre>
 <pre>{{code:t3_float#exact}}</pre>
 <pre class="out">{{out:t3_float#2}}</pre>
 <p>0.1 is stored a hair high, and so is 0.2. 0.3 is stored a hair low. Add the first two and their errors don't cancel; the sum is rounded to a different nearest <code>f64</code> from the one 0.3 got. Each step is correct to within half a unit in the last place, which is excellent for measuring a bridge. It's useless for "is this invoice exactly right?".</p>
-<p>That was 508 mismatches in our own data, with plain <code>f64</code> addition and <code>==</code>. Done in integer cents, 401 of them disappear. Nearly four alarms in five would have been the float, not the supplier, and Priya's team would have spent a week learning to ignore the report.</p>
+<p>That was 508 mismatches in our own data, with plain <code>f64</code> addition and <code>==</code> and the duplicates set aside. Done in integer cents, 401 of them disappear. Nearly four alarms in five would have been the float, not the supplier, and Priya's team would have spent a week learning to ignore the report.</p>
 <p>Why rounding <em>once</em> at the boundary is safe: a stored price like 4.35 is really 4.349999999999999644..., within about one part in 10<sup>16</sup> of what someone typed. Times 100 that's 434.99999999999994, a tiny distance from 435, so <code>.round()</code> lands on the integer you meant. That holds for amounts up to many billions of dollars. After that, integers add exactly: an <code>i64</code> holds up to about 9.2 &times; 10<sup>18</sup> cents. One warning: <code>as i64</code> never fails. A float too big for an <code>i64</code> becomes the largest <code>i64</code>, and <code>NaN</code> becomes 0. That's fine for numbers from a <code>REAL</code> column you've seen, and not for text from a stranger, which is why ticket 4 parses text straight into cents.</p>
-<p>Floats are for measuring, estimating and deciding: averages, ratios, forecasts, the machine learning in Part 4. Money, counts and IDs are integers.</p>
+<p>Floats are for measuring, estimating and deciding: averages, ratios, forecasts, the machine learning in Part 4. Money, counts and IDs are integers here (or a decimal type, where money has fractions of a cent).</p>
 
 <h4>Big-O, and the join you just wrote</h4>
 <p>Lining up two tables by a shared column is a <em>join</em>. There are two obvious ways to write one:</p>

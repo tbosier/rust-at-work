@@ -1,12 +1,12 @@
-use snippets::library;
 // region: trap
+use snippets::library;
 use std::collections::HashMap;
 // endregion
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let db = library()?;
     // region: trap
+    let db = library()?;
     let mut stmt = db.prepare("SELECT loan_id, amount FROM fines")?;
     let fines: Vec<(i64, f64)> = stmt
         .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?

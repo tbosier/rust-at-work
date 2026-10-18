@@ -92,7 +92,7 @@ scope and returns rusqlite's error type rather than the error enum ticket 5 asks
 for. Reviews compare the learner's outputs with it, never its code.
 
 Answer key: `answer_key/` (`cargo run -- tN`), outputs in `answer_key/out/tN/`.
-Sanity checks may reveal loading facts and partial counts, not the answers.
+Sanity checks may reveal loading facts and partial counts, not the answers. They may also name a spot check: one row of the result or a few named records (one supplier's total, two rows that must be rejected), so the learner can test their logic on a known case. Never the counts or totals the email asks for.
 
 ### T1 open POs
 Count status == "open" (70). Stale = open and order_date < "2026-08-06" (18).

@@ -60,5 +60,28 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("{}", Cents(-150));
     println!("{}", Cents(-5));
     // endregion
+    println!("---");
+    // region: load
+    struct Fine {
+        loan_id: i64,
+        amount: Cents,
+    }
+
+    let mut stmt = db.prepare("SELECT loan_id, amount FROM fines")?;
+    let fines: Vec<Fine> = stmt
+        .query_map([], |row| {
+            Ok(Fine {
+                loan_id: row.get(0)?,
+                amount: Cents::from_dollars(row.get(1)?),
+            })
+        })?
+        .collect::<Result<_, _>>()?;
+    println!(
+        "{} fines, the first {} on loan {}",
+        fines.len(),
+        fines[0].amount,
+        fines[0].loan_id
+    );
+    // endregion
     Ok(())
 }

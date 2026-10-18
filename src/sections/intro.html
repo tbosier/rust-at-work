@@ -187,6 +187,9 @@ My Rust learning project. I am working through the guide at
 cargo run
 git add -A
 git commit -m "Start kettle_creek: empty binary, rusqlite, rules for Claude"</pre>
+<p><code>git add -A</code> <em>stages</em> every change: it marks what goes into the next commit. <code>git commit</code> then saves the staged changes as one snapshot you can always get back to. If this is the first time you've used git on this machine, the commit stops and asks who you are. Tell it once, with your own name and email, and commit again:</p>
+<pre class="cmd">git config --global user.name "Your Name"
+git config --global user.email "you@example.com"</pre>
 <p>If <code>cargo run</code> prints <code>Hello, world!</code> after compiling SQLite, you're set up. Week zero is next.</p>
 
 <!-- ===================================================== -->
