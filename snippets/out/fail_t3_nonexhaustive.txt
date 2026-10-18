@@ -20,4 +20,4 @@ help: ensure that all possible cases are being handled by adding a match arm wit
   |
 
 For more information about this error, try `rustc --explain E0004`.
-error: could not compile `kettle_creek` (bin "kettle_creek") due to 1 previous error
+error: could not compile `snippets` (bin "snippets") due to 1 previous error

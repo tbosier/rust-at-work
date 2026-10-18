@@ -1,0 +1,4 @@
+fines in cents: [0, 75, 300]
+Err("not a number")
+Some("2026-08-20")
+nobody, fined 25c a day

@@ -69,8 +69,11 @@ reviews can decide what they push on.
       anyone else to pick up.
 - [ ] Week zero's expected output lives on the page, not in `answer_key/`.
       An answer key entry for it would let reviews diff it like the tickets.
-- [ ] Another beginner read-through after the week zero rewrite, to find the
-      next place a Python-only learner gets stuck.
+- [x] Another beginner read-through after the week zero rewrite (October 18,
+      2026): a read-only audit of the whole page and a hands-on run of set up,
+      week zero and tickets 1 and 2. Their findings are fixed.
+- [ ] A hands-on beginner run of tickets 3 to 6. Only the read-only audit has
+      covered them, and it named ticket 3 as the likeliest place to quit.
 - [ ] The answer key sits in the same public repo as the course. Moving it to a
       private repo or a separate branch would make spoilers harder to stumble on.
 - [ ] No CI yet. A GitHub Action that runs `verify.py`, `build.py` and the

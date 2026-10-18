@@ -38,7 +38,7 @@
     <p class="sig">Dana</p>
   </div>
 </article>
-<p class="teaches"><strong>This ticket teaches</strong> enums that carry data, exhaustive <code>match</code>, derives, a money type of your own with operator traits, <code>HashSet</code>, <code>Option</code> combinators, <code>let</code>-<code>else</code> and lifetimes properly. <strong>Under the hood:</strong> how a float stores 0.1, big-O and the hash join, and what a database index is. <strong>Crates allowed:</strong> rusqlite, csv.</p>
+<p class="teaches"><strong>This ticket teaches</strong> enums that carry data, exhaustive <code>match</code> (on two values at once, too), <code>fold</code>, derives, a money type of your own with operator traits, <code>HashSet</code>, <code>Option</code> combinators, <code>let</code>-<code>else</code> and lifetimes properly. <strong>Under the hood:</strong> how a float stores 0.1, big-O and the hash join, and what a database index is. <strong>Crates allowed:</strong> rusqlite, csv.</p>
 
 <p class="wiki-crumb" id="t3-wiki">Engineering wiki / Rust / Types that model the business</p>
 <h3>Make wrong answers hard to write</h3>
@@ -58,7 +58,7 @@
 </ul>
 <pre>{{code:t3_enum#use}}</pre>
 <pre class="out">{{out:t3_enum#1}}</pre>
-<p><code>matches!(value, pattern)</code> is a one-line <code>match</code> that answers yes or no. <code>Overdue { .. }</code> means "the <code>Overdue</code> variant, whatever its fields are".</p>
+<p>Why <code>format!("{s:?}")</code> inside the <code>println!</code>? A derived <code>Debug</code> doesn't pad the value as a whole: <code>{:&lt;26?}</code> leaves <code>Lost</code> unpadded and pads the <code>3</code> inside <code>Overdue { days: 3 }</code>. So the line turns the value into a <code>String</code> first, and a <code>String</code> pads properly. <code>matches!(value, pattern)</code> is a one-line <code>match</code> that answers yes or no. <code>Overdue { .. }</code> means "the <code>Overdue</code> variant, whatever its fields are".</p>
 <p>The rule that makes enums worth it: a <code>match</code> must cover every variant. Leave one out and the program doesn't build:</p>
 <pre>{{fail:t3_nonexhaustive}}</pre>
 <pre class="out">{{failout:t3_nonexhaustive}}</pre>
@@ -72,6 +72,19 @@
   <li>Here the <code>_</code> arm belongs. Text can be anything, so "anything else" has to be handled, and it becomes <code>None</code>. That's the one place a catch-all is right: where the outside world comes in. Once you have a <code>LoanStatus</code>, every <code>match</code> on it lists the variants by name.</li>
   <li>The match is case-sensitive. <code>"Lost"</code> isn't <code>"lost"</code>. Whether that's right depends on the data, so look at what your column really holds.</li>
   <li><code>ok_or_else</code> turns <code>None</code> into an error, built by the closure only when it's needed. A <code>String</code> converts into a <code>Box&lt;dyn Error&gt;</code>, so <code>?</code> can return it from any function with that return type. Load the status as a <code>String</code>, as in ticket 1, and convert each row in a second step after loading. An unknown status then stops the program with a message that names the value.</li>
+</ul>
+
+<h4>Matching on two things at once</h4>
+<p>Some decisions depend on two values. Put them in a tuple and <code>match</code> on the tuple: each arm is a pattern for both at once. Here a loan's verdict depends on its status and on how its days out compare with the 14-day limit:</p>
+<pre>{{code:t3_tuple#tuple}}</pre>
+<pre>{{code:t3_tuple#tuple_use}}</pre>
+<pre class="out">{{out:t3_tuple#1}}</pre>
+<ul>
+  <li><code>a.cmp(&amp;b)</code> compares two values and returns a <a href="https://doc.rust-lang.org/std/cmp/enum.Ordering.html"><code>std::cmp::Ordering</code></a>: <code>Less</code>, <code>Equal</code> or <code>Greater</code>. It's an enum like any other, so it can go in a pattern.</li>
+  <li><code>Ordering::Less | Ordering::Equal</code> is an <em>or-pattern</em>: the arm matches either one.</li>
+  <li><code>(LoanStatus::Lost, _)</code> means "lost, and any <code>Ordering</code>". A <code>_</code> inside a tuple only waves through that one position. Every status is still named, so a new <code>LoanStatus</code> variant would still be a compile error here. That's different from a whole-arm <code>_ =&gt;</code>, which waves through everything.</li>
+  <li><code>-&gt; &amp;'static str</code> returns text written into the program itself, like <code>"bill the replacement"</code>. Text like that is never freed, and <code>'static</code> is the lifetime that says so. It needs no input to borrow from, which is why this function can return a <code>&amp;str</code> without a <code>'a</code>. <a href="#t6-wiki">Ticket 6</a> says more.</li>
+  <li>The compiler checks every combination. Delete the <code>Returned, Greater</code> arm and it names the missing pair: <code>(LoanStatus::Returned, Ordering::Greater)</code> not covered.</li>
 </ul>
 
 <h4>What each derive buys you</h4>
@@ -110,10 +123,14 @@
 <p><code>type Output = Cents</code> says what <code>Cents + Cents</code> produces. Now the fines again, in cents:</p>
 <pre>{{code:t3_cents#use}}</pre>
 <pre class="out">{{out:t3_cents#1}}</pre>
+<p>One more iterator method before the traits. <code>fold</code> walks an iterator and carries one value along: you give it a starting value and a closure that takes "the value so far" and the next item, and returns the new value so far. Its result is the last one. <code>sum()</code> is a <code>fold</code> that starts at 0 and adds:</p>
+<pre>{{code:t3_tuple#fold}}</pre>
+<pre class="out">{{out:t3_tuple#2}}</pre>
+<p><code>.iter()</code> hands out references, as <code>for x in &amp;v</code> did in <a href="#t0-refs">week zero</a>. In the second <code>fold</code>, <code>|most, &amp;days|</code> is a pattern in the parameter: "this is a reference; call the number it points at <code>days</code>". It's <code>*</code> done on the way in, and <code>max</code> needs the plain number. Clippy will tell you when a <code>fold</code> is just a <code>sum</code> in disguise.</p>
 <p>Two more traits will make your code read better, and writing them is yours to do:</p>
 <ul>
   <li><a href="https://doc.rust-lang.org/std/ops/trait.AddAssign.html"><code>AddAssign</code></a> is <code>+=</code>. With it, <code>*total = *total + x</code> becomes <code>*total += x</code>. One method, <code>add_assign(&amp;mut self, other: Cents)</code>.</li>
-  <li><a href="https://doc.rust-lang.org/std/iter/trait.Sum.html"><code>Sum</code></a> lets an iterator of <code>Cents</code> end in <code>.sum()</code>. Its one method has a generic signature, which ticket 6 explains properly: <code>fn sum&lt;I: Iterator&lt;Item = Cents&gt;&gt;(iter: I) -&gt; Cents</code>. Read <code>&lt;I: Iterator&lt;Item = Cents&gt;&gt;</code> as "<code>iter</code> can be any iterator that hands out <code>Cents</code>". Put that signature inside <code>impl std::iter::Sum for Cents { ... }</code> and write the body: start from <code>Cents(0)</code> and add each item. Look at <code>Iterator::fold</code>.</li>
+  <li><a href="https://doc.rust-lang.org/std/iter/trait.Sum.html"><code>Sum</code></a> lets an iterator of <code>Cents</code> end in <code>.sum()</code>. Its one method has a generic signature, which ticket 6 explains properly: <code>fn sum&lt;I: Iterator&lt;Item = Cents&gt;&gt;(iter: I) -&gt; Cents</code>. Read <code>&lt;I: Iterator&lt;Item = Cents&gt;&gt;</code> as "<code>iter</code> can be any iterator that hands out <code>Cents</code>". Put that signature inside <code>impl std::iter::Sum for Cents { ... }</code> and write the body: a <code>fold</code> that starts from <code>Cents(0)</code> and adds each item. This one is optional. A <code>for</code> loop with <code>+=</code> does the same job, and ticket 6 is where generic signatures stop being strange.</li>
 </ul>
 <p>Before you trust the <code>Display</code> above with your report, try it on negative amounts, because <code>difference</code> is often negative:</p>
 <pre>{{code:t3_cents#negative}}</pre>
@@ -132,6 +149,7 @@
 <p><code>map.get(&amp;key)</code> returns an <code>Option</code>, and <code>Option</code> has methods that save you writing a <code>match</code> each time:</p>
 <pre>{{code:t3_index#combinators}}</pre>
 <pre class="out">{{out:t3_index#2}}</pre>
+<p><code>title</code> and <code>n</code> are closures stored in variables, and they use <code>by_id</code> and <code>copies</code> from the code around them. A closure can do that and a <code>fn</code> can't; it's called <em>capturing</em>. Here they capture by reference, so the maps stay usable after.</p>
 <div class="table-wrap">
 <table>
   <thead><tr><th>Method</th><th>What it does</th></tr></thead>
@@ -200,7 +218,7 @@
   <p>Every report row has the same columns, so make one struct for a row, with a field for the kind. The blanks are <code>Option</code>s: <code>expected: Option&lt;Cents&gt;</code> is <code>None</code> on orphan and duplicate rows. Then <code>difference</code> doesn't need to be stored at all; it's a method that maps over <code>expected</code>.</p>
 </details>
 <details class="hint"><summary>Hint 3: matching on two things at once</summary>
-  <p>You can <code>match</code> on a tuple, and combine patterns with guards. Look up <code>std::cmp::Ordering</code>: <code>billed.cmp(&amp;expected)</code> gives you <code>Less</code>, <code>Equal</code> or <code>Greater</code>, which is an enum too, so it can sit in a pattern next to the PO's status. If your <code>status</code> is still a <code>String</code>, that's a sign it wants to be an enum as well.</p>
+  <p>The wiki's loan verdict is the shape: a tuple of the PO's status and <code>billed.cmp(&amp;expected)</code>. Guards can go on these arms too. If your <code>status</code> is still a <code>String</code>, that's a sign it wants to be an enum as well.</p>
 </details>
 
 <h3>Sanity checks</h3>

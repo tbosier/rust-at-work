@@ -28,6 +28,15 @@ QUIZZES.t3 = {
       explain: "An exhaustive <code>match</code> with no wildcard turns \"we forgot a case\" into a compile error. In code that decides what to report, that's the check you want.",
     },
     {
+      q: "A <code>match</code> on <code>(status, billed.cmp(&amp;expected))</code> has an arm <code>(Status::Cancelled, _) =&gt; ...</code> and no <code>_ =&gt;</code> arm. Someone adds <code>Status::OnHold</code>. What happens?",
+      options: [
+        { t: "It stops compiling until someone writes the <code>OnHold</code> arms", ok: true },
+        { t: "On-hold POs fall into the <code>(Status::Cancelled, _)</code> arm", why: "That arm only matches <code>Cancelled</code>. Its <code>_</code> covers the <code>Ordering</code> position, nothing else." },
+        { t: "Nothing: the <code>_</code> already covers new cases", why: "A <code>_</code> inside a tuple waves through one position. Only a whole-arm <code>_ =&gt;</code> waves through everything." },
+      ],
+      explain: "Every status is still named somewhere in the tuple patterns, so the compiler can see <code>(OnHold, Less)</code> and the rest aren't covered.",
+    },
+    {
       q: "<code>fn load_catalog&lt;'a&gt;() -&gt; Catalog&lt;'a&gt;</code> builds a <code>Vec</code> of books inside itself and returns a catalog that borrows from it. Why won't it compile?",
       code: "fn load_catalog<'a>() -> Catalog<'a> {\n    let books = vec![/* ... */];\n    Catalog::new(&books)\n}",
       options: [

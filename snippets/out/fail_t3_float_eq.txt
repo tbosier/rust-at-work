@@ -19,4 +19,4 @@ error[E0599]: the method `get` exists for struct `HashMap<f64, &str>`, but its t
           `f64: Hash`
 
 For more information about this error, try `rustc --explain E0599`.
-error: could not compile `kettle_creek` (bin "kettle_creek") due to 2 previous errors
+error: could not compile `snippets` (bin "snippets") due to 2 previous errors

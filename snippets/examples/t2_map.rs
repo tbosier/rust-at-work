@@ -36,4 +36,22 @@ fn main() {
     sorted.sort();
     println!("{sorted:?}");
     // endregion
+    println!("---");
+    // region: borrowed
+    let stock: HashMap<&str, (u32, f64)> =
+        HashMap::from([("roller chain", (3, 41.5)), ("carriage bolt", (12, 9.0))]);
+    for (name, (count, value)) in &stock {
+        // Borrowing the map hands out references: `count` is a &u32 here.
+        if *count > 5 {
+            println!("{name}: {count} in stock, worth {value:.2}");
+        }
+    }
+    let mut pieces = 0;
+    for &(count, _) in stock.values() {
+        // `.values()` borrows just the values. The `&` in the pattern
+        // takes the numbers out of the reference.
+        pieces += count;
+    }
+    println!("{pieces} pieces in all");
+    // endregion
 }

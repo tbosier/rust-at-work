@@ -1,7 +1,11 @@
-use rusqlite::Connection;
 use snippets::library;
 use std::error::Error;
 
+// region: write
+use rusqlite::Connection;
+use rust_xlsxwriter::{Format, FormatBorder, Workbook, XlsxError};
+
+/// A fine in whole cents, as in ticket 3.
 struct Fine {
     loan_id: i64,
     cents: i64,
@@ -18,9 +22,6 @@ fn fines(db: &Connection) -> rusqlite::Result<Vec<Fine>> {
     })?;
     rows.collect()
 }
-
-// region: write
-use rust_xlsxwriter::{Format, FormatBorder, Workbook, XlsxError};
 
 fn write_fines(path: &str, fines: &[Fine]) -> Result<(), XlsxError> {
     let mut workbook = Workbook::new();

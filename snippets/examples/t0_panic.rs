@@ -22,8 +22,8 @@ fn main() {
             // region: overflow
             let stock: u8 = std::hint::black_box(250);
             let more = stock + 10;
-            // endregion
             println!("{more}");
+            // endregion
             return;
         }
         _ => {}

@@ -13,13 +13,13 @@ GKT-8         2.05
 CHN-40      129.95
 ---
 SKU          QTY      UNIT       LINE
-BRG-6204      40     12.99     519.60
+BRG-6204      41     12.99     532.59
 BLT-M10      500      0.18      90.00
 HSE-12        12     45.50     546.00
 GKT-8         75      2.10     157.50
 CHN-40         6    129.95     779.70
 
-total:   2092.80 over 5 lines
-average: 418.56
+total:   2105.79 over 5 lines
+average: 421.16
 biggest: CHN-40 at 779.70
 above average: 3

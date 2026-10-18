@@ -20,7 +20,7 @@
   <h1>Your first three weeks at Kettle Creek Supply</h1>
   <p class="lede">You have just started at Kettle Creek Supply, a distributor of bearings, bolts, hoses and other industrial parts. Your title says analyst. The job is writing software. Your manager will email you work, and each request needs a little more Rust than the last. This page teaches exactly that much, just before you need it. You write all the code yourself, in your own editor. When a ticket is done, a senior engineer reviews it the way a pull request is reviewed at a well-run company: what is wrong, what is unclear, and what will hurt in six months.</p>
   <div class="status">
-    <p><strong>What you need.</strong> Rust 1.89 or newer (<code>cargo --version</code>), git, an editor with rust-analyzer (Neovim or VS Code, both covered in set up), an internet connection for the first build, and the practice database, <code>kettle_creek.db</code> (in the course repository it's <code>data/kettle_creek.db</code>, and <code>python3 data/make_db.py</code> rebuilds it).</p>
+    <p><strong>What you need.</strong> Rust 1.89 or newer (<code>cargo --version</code>), git, an editor with rust-analyzer (Neovim or VS Code, both covered in set up), Claude Code for the reviews (it never writes your code; set up shows how to tell it so), an internet connection for the first build, and the practice database, <code>kettle_creek.db</code> (in the course repository it's <code>data/kettle_creek.db</code>, and <code>python3 data/make_db.py</code> rebuilds it).</p>
     <p><strong>What you have at the end of part 1.</strong> A tested Rust codebase of about a thousand lines, split into modules, that you wrote and can defend line by line. It reads the warehouse database, reconciles invoices against purchase orders, parses dirty data without crashing, and produces the monthly Excel pack for finance. Every program, output and compiler error on this page was run before it was written down.</p>
   </div>
   <div class="howto">
@@ -29,7 +29,7 @@
       <li>Read the email. Before scrolling, write three lines in your journal: what you think the program needs to do, and what you don't know how to do yet.</li>
       <li>Read the wiki page under it. That is the "just enough Rust" for this ticket. Type the examples, don't paste them: your fingers learn shapes that your eyes skim over.</li>
       <li>Do the warm-up drills. They're small practice on the same ideas, and from ticket 1 on they use the real database. Some take ten minutes, and the later ones can take an evening.</li>
-      <li>Read "Under the hood". It isn't optional: it explains why the Rust works the way it does, later tickets assume you've read it, and the quiz asks about it.</li>
+      <li>Read "Under the hood". It isn't optional: it explains why the Rust works the way it does, later tickets assume you've read it, and the quiz asks about it. The history in it (calendars, old papers) can be read lightly. The parts a ticket leans on are linked from its "Before you type" questions.</li>
       <li>Build the ticket. Open a hint only after twenty minutes of being properly stuck.</li>
       <li>Run the sanity checks, commit, and ask for a review.</li>
       <li>Fix what the review finds, yourself, and take the quiz. "Go deeper" is for when you want more.</li>

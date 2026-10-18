@@ -7,3 +7,6 @@ fiction: 415
 poetry, or 0: 0
 ---
 [("lost", 1), ("out", 3), ("returned", 2)]
+---
+carriage bolt: 12 in stock, worth 9.00
+15 pieces in all

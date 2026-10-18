@@ -33,10 +33,11 @@
 cargo add rusqlite --features bundled</pre>
   <p>Save the code below as <code>src/lib.rs</code>, beside <code>src/main.rs</code>. A package can hold a library and a program at once, and the program reaches the library by the package's name, so <code>use snippets::library;</code> at the top of <code>src/main.rs</code> brings the function in. (Ticket 5 explains libraries properly.) Then type an example into <code>src/main.rs</code> and <code>cargo run</code>. The database is built in memory each run, so nothing is saved.</p>
   <pre>{{code:lib#library}}</pre>
+  <p>Three things in it are new. <code>///</code> starts a <em>doc comment</em>, which describes the item below it; your editor shows it when you hover over the name. <code>use rusqlite::{Connection, Result};</code> imports two names from one crate at once: the braces hold a list. And this <code>Result</code> is rusqlite's own. It's a <em>type alias</em>, a short name for a longer type: <code>rusqlite::Result&lt;T&gt;</code> means <code>Result&lt;T, rusqlite::Error&gt;</code>. It's week zero's two-part <code>Result</code> with the error type already filled in.</p>
 </details>
 
 <h4>Describe a row with a struct</h4>
-<p>A <em>struct</em> is a named group of fields, each with a type. It is Python's <code>@dataclass</code>, except the types are checked when the program is compiled rather than ignored.</p>
+<p>A <em>struct</em> is a named group of fields, each with a type. Think of one row of a table with its column types written down. A <code>Vec</code> of them plays the part of a DataFrame's rows. (If you've met Python's <code>@dataclass</code>, a struct is that, except the types are checked when the program is compiled.)</p>
 <pre>{{code:t1_struct#struct}}</pre>
 <p>Pick each field's type from the column:</p>
 <ul>
@@ -57,12 +58,20 @@ cargo add rusqlite --features bundled</pre>
 <ul>
   <li><code>db.prepare(...)</code> compiles the SQL once and gives back a statement. It can fail (a typo in the SQL, say), so it returns a <code>Result</code>, and the <code>?</code> passes any error up to the caller.</li>
   <li><code>stmt.query_map([], |row| ...)</code> runs the query and calls the <em>closure</em> <code>|row| ...</code> once per row. A closure is an inline function, like Python's <code>lambda</code> but allowed to be as long as you like. The <code>[]</code> means "no parameters".</li>
+  <li>The closure ends in <code>Ok(Loan { ... })</code> because <code>query_map</code> wants each row's answer as a <code>Result</code>: a loan, or the error that stopped it. A <code>?</code> inside a closure returns from the closure, not from <code>load_loans</code>. It ends that one row's call with the error, and <code>query_map</code> passes the error on.</li>
   <li><code>row.get(0)?</code> reads column 0 and converts it to whatever type the field needs. The compiler works out the type from the struct field. If the conversion fails, for example a <code>NULL</code> going into a <code>String</code>, you get an error, not a silent empty string.</li>
   <li><code>rows.collect()</code> runs through every row and gathers the results. The function's return type, <code>rusqlite::Result&lt;Vec&lt;Loan&gt;&gt;</code>, tells <code>collect</code> what to build: either every row in a <code>Vec</code>, or the first error.</li>
   <li><code>fn main() -&gt; Result&lt;(), Box&lt;dyn Error&gt;&gt;</code> lets <code>main</code> use <code>?</code> too. On success it returns <code>Ok(())</code>, where <code>()</code> is Rust's "nothing". On failure it returns an error, and Rust prints it and exits with a failure code. For now, read <code>Box&lt;dyn Error&gt;</code> as "any kind of error". Ticket 6 explains what <code>dyn</code> means, and ticket 5 replaces it with an error type of your own. For a program this size, it is enough error handling.</li>
 </ul>
+<p>From here on, most examples are pieces of <code>main</code>. They use <code>?</code>, so type them into a <code>main</code> that returns <code>Result&lt;(), Box&lt;dyn Error&gt;&gt;</code>, like the one above, with <code>use std::error::Error;</code> at the top of the file. Forget the return type and you get one of the most common errors there is:</p>
+<pre>{{fail:t1_question}}</pre>
+<pre class="out">{{failout:t1_question}}</pre>
+
 <h4>Your own database file</h4>
-<p>The examples use <code>library()</code>. Your program opens the real file instead, by a path relative to the folder you run <code>cargo run</code> from:</p>
+<p>The examples use <code>library()</code>. Your program opens the real file instead, by a path relative to the folder you run <code>cargo run</code> from. Your <code>snippets</code> project has no database yet, so copy one in before you try this:</p>
+<pre class="cmd">cd ~/projects/snippets
+mkdir -p data
+cp ~/projects/kettle_creek/data/kettle_creek.db data/</pre>
 <pre>{{code:t1_open#open}}</pre>
 <pre class="out">{{out:t1_open#1}}</pre>
 <p>(<code>query_row</code> is for a query that returns exactly one row. It's here to keep the example short. Your loaders use <code>query_map</code>.) The path is relative, so it's looked up from the folder the program runs in. <code>cargo run</code> from the project folder finds <code>data/kettle_creek.db</code>. Run it from <code>src/</code> and it won't. Week zero's <a href="#t0">under the hood</a> has more on the working directory.</p>
@@ -72,9 +81,6 @@ cargo add rusqlite --features bundled</pre>
 <p>If you typed that in, it also left an empty file called <code>data_kettle_creek.db</code> in your project folder. Delete it (<code>rm data_kettle_creek.db</code>) so it doesn't end up in a commit. Opening read-only refuses a missing file at once, with the path in the message, and it guarantees your program can't change the warehouse data:</p>
 <pre>{{code:t1_open#readonly}}</pre>
 <pre class="out">{{out:t1_open#3}}</pre>
-<p>Forget <code>main</code>'s return type and you get one of the most common errors there is:</p>
-<pre>{{fail:t1_question}}</pre>
-<pre class="out">{{failout:t1_question}}</pre>
 <p>In Python you'd write <code>rows = cursor.execute(sql).fetchall()</code> and get a list of tuples. Here you get a <code>Vec</code> of structs whose fields have names and types. That costs you the struct definition, and pays you back every time you type <code>loan.</code> and your editor lists the fields.</p>
 
 <h4>Work on the rows</h4>
@@ -82,10 +88,18 @@ cargo add rusqlite --features bundled</pre>
 <pre>{{code:t1_filter#count}}</pre>
 <p><code>.iter()</code> walks the items one at a time without changing or consuming them. <code>.filter(...)</code> keeps the items its closure says yes to, and <code>.count()</code> counts them. Nothing runs until <code>count</code> asks for items. These chains are called <em>iterator adaptors</em>, and they're how most Rust code works through collections. The same thing as a loop:</p>
 <pre>{{code:t1_loop#loop}}</pre>
-<p>Both compile to essentially the same machine code. Use whichever reads better. Here the chain does: it says "count the out loans" in one line. In Python the chain is <code>sum(1 for loan in loans if loan.status == "out")</code>.</p>
+<p>Both compile to essentially the same machine code. Use whichever reads better. Here the chain does: it says "count the out loans" in one line. In Python the chain is <code>sum(1 for loan in loans if loan.status == "out")</code>, and in pandas it's <code>(df.status == "out").sum()</code>. <code>filter</code> does the job of a boolean mask.</p>
+<p>Closures can do more than <code>|x| x + 1</code>. Four things you'll see from here on:</p>
+<pre>{{code:t1_closure#closures}}</pre>
+<pre class="out">{{out:t1_closure}}</pre>
+<ul>
+  <li>A closure can use the variables around it. This is called <em>capturing</em>. <code>fine_per_day</code> isn't a parameter, but the closure can read it.</li>
+  <li><code>|_|</code> takes an argument and ignores it. <code>||</code> takes no arguments at all. <code>unwrap_or_else(|| ...)</code> calls its closure only when there's no value, so the <code>format!</code> doesn't run when it isn't needed.</li>
+  <li>The name of a function is a value you can hand over, without the parentheses. <code>.map(String::from)</code> is the same as <code>.map(|s| String::from(s))</code>.</li>
+</ul>
 
 <h4>Borrowing, in five minutes</h4>
-<p>Look at the parameter: <code>loans: &amp;[Loan]</code>, not <code>loans: Vec&lt;Loan&gt;</code>. The <code>&amp;</code> means <code>count_out</code> <em>borrows</em> the loans: it can read them, and the caller still has them afterwards. This is the idea that makes Rust Rust, so here is what happens without it:</p>
+<p>Look at the parameter: <code>loans: &amp;[Loan]</code>, not <code>loans: Vec&lt;Loan&gt;</code>. The <code>&amp;</code> means <code>count_out</code> <em>borrows</em> the loans: it can read them, and the caller still has them afterward. This is the idea that makes Rust Rust, so here is what happens without it:</p>
 <pre>{{fail:t1_move}}</pre>
 <pre class="out">{{failout:t1_move}}</pre>
 <p>Every value in Rust has exactly one owner. Passing a <code>Vec</code> by value <em>moves</em> it: <code>total_len</code> owns it now, frees it when it returns, and <code>main</code> can't touch it again. Python never has this problem because every variable is a shared reference and a garbage collector cleans up. Rust has no garbage collector. It frees memory at a moment the compiler can see, and ownership is how it sees that moment.</p>
@@ -96,12 +110,19 @@ cargo add rusqlite --features bundled</pre>
   <li><strong>Move it</strong> (<code>Vec&lt;Loan&gt;</code>) when the function keeps it or consumes it. Or <code>.clone()</code> it first if you need your own copy, which costs a full copy, every time.</li>
 </ul>
 <p>Write <code>&amp;[Loan]</code> rather than <code>&amp;Vec&lt;Loan&gt;</code>. A <em>slice</em>, <code>&amp;[T]</code>, is a view of some items in a row, and it accepts a borrowed <code>Vec</code>, an array or part of either. Clippy will tell you this too.</p>
+<p>There is one rule for borrows, and the compiler checks it everywhere: <strong>a value can have any number of <code>&amp;</code> borrows, or exactly one <code>&amp;mut</code>, but never both at once.</strong> Many readers, or one writer. Here a reference is still in use when the code tries to change the list:</p>
+<pre>{{fail:t1_borrow}}</pre>
+<pre class="out">{{failout:t1_borrow}}</pre>
+<p>The reason is concrete. When a <code>Vec</code> is full, <code>push</code> gets a bigger block of memory, may copy every item across to it, and gives the old block back (<a href="#t1-heap">under the hood</a> shows this happening). <code>first</code> would still point into the old block, at memory that's no longer the list's. Python can't get into this state, because its garbage collector keeps anything alive while something points at it. C can: the same program compiles and reads whatever is in that memory now. A borrow lasts until the last line that uses it, not to the end of the block, so moving the <code>println!</code> above the <code>push</code> fixes it: <code>first</code> is finished with by then.</p>
 
 <h4>Keep some of the rows</h4>
 <p>To keep the loans that went out before a date, return a <code>Vec</code> of references to the originals instead of copies. The date is fixed, so it lives in a <code>const</code> with a name and a comment, where the next person can find it:</p>
 <pre>{{code:t1_filter#early}}</pre>
 <p>Read the return type, <code>Vec&lt;&amp;Loan&gt;</code>, as "some of the same loans you gave me, borrowed, not copied". The compiler knows the references point into <code>loans</code>, because that is the only reference that came in. So the result can't outlive the <code>Vec</code> it borrows from, and the compiler will hold you to that.</p>
-<p><code>loan.loaned_on.as_str() &lt; CUTOFF</code> compares two pieces of text. <code>as_str()</code> borrows a <code>&amp;str</code> view of the <code>String</code> so both sides have the same type.</p>
+<p><code>loan.loaned_on.as_str() &lt; CUTOFF</code> compares two pieces of text. Leave out the <code>.as_str()</code> and the compiler stops you, with a suggestion:</p>
+<pre>{{fail:t1_compare}}</pre>
+<pre class="out">{{failout:t1_compare}}</pre>
+<p><code>&lt;</code> only works between two types that someone has told Rust how to compare, and a <code>String</code> on the left with a <code>&amp;str</code> on the right isn't one of those pairs. <code>loaned_on</code> is a <code>String</code> and <code>CUTOFF</code> is a <code>&amp;str</code>. The suggested <code>CUTOFF.to_string()</code> compiles, and it makes a fresh copy of the date for every loan it checks, only to compare it and throw it away. (Week zero has more on <a href="#t0-help-wrong">when the compiler's help is wrong</a>.) The cheap fix is on the other side: <code>.as_str()</code> borrows a <code>&amp;str</code> view of the <code>String</code>, so both sides are <code>&amp;str</code> and nothing is copied.</p>
 <details>
   <summary>If you pass the date in as a parameter, the compiler asks for a lifetime</summary>
   <p>With two references coming in, the compiler can't tell which one the results point into:</p>
@@ -127,16 +148,25 @@ cargo add rusqlite --features bundled</pre>
 
 <h4>Write a file</h4>
 <pre>{{code:t1_write#write}}</pre>
-<pre class="out">{{out:t1_write}}</pre>
+<p>Called with the sorted loans from the example above:</p>
+<pre>{{code:t1_write#call}}</pre>
+<pre class="out">{{out:t1_write#1}}</pre>
 <ul>
   <li><code>File::create</code> makes or empties the file. <code>BufWriter</code> collects your small writes in memory and hands them to the operating system in big chunks. Without it, every <code>writeln!</code> is a separate request to the OS, which is much slower.</li>
   <li><code>writeln!</code> works like <code>println!</code>, but into anything you can write to. Writing can fail (disk full, no permission), so it returns a <code>Result</code> and needs a <code>?</code>.</li>
   <li><code>flush</code> pushes out whatever is still buffered. A <code>BufWriter</code> also flushes when it's dropped, but it has to ignore errors when it does that. Flushing yourself means an error reaches you.</li>
-  <li><code>std::io::Result&lt;()&gt;</code> is the I/O module's own <code>Result</code>, with its error type filled in.</li>
+  <li><code>std::io::Result&lt;()&gt;</code> is the I/O module's own <code>Result</code>, a type alias like rusqlite's, with its error type filled in.</li>
+  <li><code>use std::io::Write</code> is there because <code>writeln!</code> into a file and <code>flush</code> come from <code>Write</code>, a <em>trait</em>: a named set of methods that many types share (ticket 3 explains traits). A trait's methods only work where the trait is imported. Forget the line and the error says "items from traits can only be used if the trait is in scope", and its help gives you the <code>use</code> line to add.</li>
 </ul>
+<p><code>File::create</code> makes a file, not the folders it goes in. Point it at a folder that doesn't exist and it fails, with an error that doesn't name the path:</p>
+<pre>{{code:t1_write#missing}}</pre>
+<pre class="out">{{out:t1_write#2}}</pre>
+<p>Through <code>main</code>'s <code>?</code> that prints as <code>Error: Os { code: 2, kind: NotFound, ... }</code>. That's why the call above runs <code>std::fs::create_dir_all("out")?</code> first: it makes the folder, and does nothing if it's already there. Set up made an <code>out</code> folder in <code>kettle_creek</code>, but a fresh clone of your repository won't have one, because <code>.gitignore</code> leaves it out, so let your program make it too.</p>
 <p>Writing CSV by hand works because nothing in this ticket's columns contains a comma. That's a fragile assumption, and ticket 2 replaces it.</p>
 
 <h3>Warm-up drills</h3>
+<p>From here on, the drills and the ticket go in your work project. Wiki examples, in this ticket and later ones, still go in <code>snippets</code>.</p>
+<pre class="cmd">cd ~/projects/kettle_creek</pre>
 <p>Keep drills out of your real program by giving them a program of their own. Cargo treats every file in <code>src/bin/</code> as a separate program, so put them in <code>src/bin/drills.rs</code> and run <code>cargo run --bin drills</code> from the project folder. With two programs in the project, a bare <code>cargo run</code> no longer knows which one you mean. Tell it, by adding <code>default-run = "kettle_creek"</code> under <code>[package]</code> in <code>Cargo.toml</code>.</p>
 <p>Give each drill its own function, such as <code>fn drill_1(db: &amp;Connection) -&gt; Result&lt;(), Box&lt;dyn Error&gt;&gt;</code>, and have <code>main</code> open the database and call them in turn. Drills then don't share variables, and you can comment out the call to a drill you've finished. A compile error anywhere still stops the whole file from building, so undo each break-it mistake once you've read the error.</p>
 <div class="drill">
@@ -180,8 +210,8 @@ cargo add rusqlite --features bundled</pre>
 <h3>Sanity checks</h3>
 <p>These check that you loaded the data properly, not that your answer is right. The review checks the answer.</p>
 <ul>
-  <li>Your <code>Vec</code> holds 2,017 purchase orders.</li>
-  <li>There are 56 POs with status <code>cancelled</code>. If you count those, your loading and filtering work, and the open count uses the same idea.</li>
+  <li>Your <code>Vec</code> holds 2,017 purchase orders. To check counts like these, print them for a moment, <code>println!("{}", pos.len())</code> or <code>dbg!(pos.len())</code>, and delete the line once they agree.</li>
+  <li>There are 56 POs with status <code>cancelled</code>. Count those with the same <code>.iter().filter(...).count()</code> shape. If you get 56, your loading and filtering work, and the open count uses the same idea.</li>
   <li>If your program prints 2,017 open POs, the filter isn't running.</li>
   <li>The CSV's first line is exactly <code>po_id,supplier_id,buyer,order_date</code>, and its dates go up as you read down.</li>
 </ul>
@@ -194,7 +224,7 @@ my names would make sense to someone who has never seen the ticket.</pre>
 <p>Then reply to Dana. A real reply: the two numbers and one sentence on what you'd check next. (Hint: a stale open PO might still be waiting for parts. What column would tell you?)</p>
 
 <h3>Under the hood</h3>
-<h4>Where your data lives: the stack and the heap</h4>
+<h4 id="t1-heap">Where your data lives: the stack and the heap</h4>
 <p>A running program gets memory in two places. The <em>stack</em> holds each function's local variables. It is fast, because making room is just moving a pointer, and limited: every value on it must have a size known when the program is compiled. The <em>heap</em> is a big pool for anything else. You ask for a block of any size while running, and someone has to give it back.</p>
 <p>A <code>Vec</code> is both. A <code>Vec</code> in a local variable is three numbers on the stack: a pointer to a block on the heap, how many items are in it (<em>length</em>), and how many fit before it needs a bigger block (<em>capacity</em>). The items themselves sit side by side in that heap block. A <code>String</code> has the same three numbers, pointing at bytes of text.</p>
 <figure>
@@ -236,7 +266,7 @@ my names would make sense to someone who has never seen the ticket.</pre>
 <p>When a <code>Vec</code> runs out of room, it asks the allocator for a bigger block, and today's implementation roughly doubles it. The standard library doesn't promise the factor. The allocator may grow the block where it is, or hand back a new one and copy everything across. Pushing 2,017 IDs one at a time:</p>
 <pre>{{code:t1_memory#growth}}</pre>
 <pre class="out">{{out:t1_memory#2}}</pre>
-<p>Ten trips to the allocator for 2,017 pushes. Growing by a constant factor means the total copying is at most a small multiple of the final size, so a push costs a constant amount <em>on average</em>, even though the occasional push may copy everything. That's called <em>amortized O(1)</em>, and it's the same reason Python's <code>list.append</code> is fast. If you know the size up front, <code>Vec::with_capacity(n)</code> skips the copying entirely. Ticket 8 measures whether that matters.</p>
+<p>Ten trips to the allocator for 2,017 pushes. Growing by a constant factor means the total copying is at most a small multiple of the final size, so a push costs a constant amount <em>on average</em>, even though the occasional push may copy everything. That's called <em>amortized O(1)</em>. O(1), said "order one", means the cost doesn't grow as the list grows; ticket 3's under the hood explains the notation properly. It's the same reason Python's <code>list.append</code> is fast. If you know the size up front, <code>Vec::with_capacity(n)</code> skips the copying entirely. Ticket 8 measures whether that matters.</p>
 <p>Moves now make sense too. Moving a <code>Vec</code> copies its 24 bytes and leaves the heap block where it is. What must never happen is two owners both freeing the same block, and that is the mistake the move error stopped.</p>
 
 <h4>Why the dates sort as text</h4>

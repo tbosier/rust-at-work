@@ -64,7 +64,7 @@ fn main() {
     println!("---");
     // The ticket
     let lines = [
-        OrderLine::new("BRG-6204", 40, 1_299),
+        OrderLine::new("BRG-6204", 41, 1_299),
         OrderLine::new("BLT-M10", 500, 18),
         OrderLine::new("HSE-12", 12, 4_550),
         OrderLine::new("GKT-8", 75, 210),

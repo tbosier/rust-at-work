@@ -15,12 +15,12 @@
     <p class="sig">See you Monday, Dana</p>
   </div>
 </article>
-<p class="teaches"><strong>This page teaches</strong> what compiling is, how a Rust program is laid out, variables and number types, macros and formatting, <code>dbg!</code>, loops and conditions, tuples, arrays, vectors and slices, references, functions, structs with methods, <code>Option</code> and <code>Result</code>, imports and how to read the docs. <strong>Under the hood:</strong> how integers are stored, what memory is, how text becomes bytes, and what a process is. <strong>Crates allowed:</strong> none.</p>
+<p class="teaches"><strong>This page teaches</strong> what compiling is, how a Rust program is laid out, variables and number types, macros and formatting, <code>dbg!</code>, loops and conditions, tuples, arrays, vectors and slices, references, functions, structs with methods, <code>Option</code> and <code>Result</code>, closures and iterator methods, imports, how to read the docs, and when to distrust the compiler's suggestions. <strong>Under the hood:</strong> how integers are stored, what memory is, how text becomes bytes, and what a process is. <strong>Crates allowed:</strong> none.</p>
 
 <p class="wiki-crumb" id="t0-wiki">Engineering wiki / Rust / Start here</p>
 <h3>Rust from the ground up</h3>
 
-<p>This page assumes you can program in Python and have never had to think about what happens underneath. Every word is defined before it's used. Where Python does the same thing differently, the page says so, because the differences are where your instincts will mislead you.</p>
+<p>This page assumes you can program in Python and have never had to think about what happens underneath. Each new word is in italics where it's first explained, and the machine words (memory, addresses, processes) get a fuller explanation in <a href="#t0-bits">under the hood</a> at the end. Where Python does the same thing differently, the page says so, because the differences are where your instincts will mislead you.</p>
 <p>You need a scratch project to type examples into. Make one next to where your work project will go:</p>
 <pre class="cmd">cd ~/projects
 cargo new snippets
@@ -33,8 +33,9 @@ cargo run</pre>
 <p>Rust is <em>compiled</em>. A program called the compiler, <code>rustc</code>, reads all your source first, checks it, and translates it into <em>machine code</em>: the instructions your processor runs directly. The result is a file called a <em>binary</em> (or executable). <code>cargo run</code> is two steps: <code>cargo build</code> calls the compiler and writes the binary to <code>target/debug/snippets</code>, then cargo runs that file. You can run it yourself:</p>
 <pre class="cmd">cargo build
 ./target/debug/snippets</pre>
-<p>Three things follow from this. Mistakes in types, names and spelling are found before the program ever runs, anywhere in the file, including in branches that rarely run. The binary runs without Rust installed, so you can copy it to another Linux machine and run it there. And nothing changes until you build again: edit the source, forget to rebuild, and the old binary still does the old thing. <code>cargo run</code> always rebuilds what changed, which is why you'll use it most of the time.</p>
+<p>Three things follow from this. Mistakes in types, names and spelling are found before the program ever runs, anywhere in the file, including in branches that rarely run. The binary runs without Rust installed, so you can copy it to another machine of the same kind (here, 64-bit Intel or AMD Linux with a similar system library) and run it there. And nothing changes until you build again: edit the source, forget to rebuild, and the old binary still does the old thing. <code>cargo run</code> always rebuilds what changed, which is why you'll use it most of the time.</p>
 <p>The <code>debug</code> in the path is the build profile. A debug build compiles fast and keeps extra checks in. <code>cargo run --release</code> compiles slowly and makes a binary that's often many times faster, written to <code>target/release/</code>. Use debug while you write, and release when you measure speed or ship.</p>
+<p>The compiler prints two kinds of message. An <em>error</em> stops the build: there is no new binary until you fix it. A <em>warning</em> doesn't: the program builds and runs, and the compiler is pointing at something that's probably a mistake. The two you'll see most in this page's examples are <code>unused variable</code> (you made a variable and never read it) and <code>field is never read</code> or <code>function is never used</code>, together called <em>dead code</em>. While you're typing examples piece by piece they're expected, because the next piece usually uses the thing. In real work, read each one: a name that starts with <code>_</code>, like <code>_spare</code>, tells the compiler the variable is unused on purpose. Clippy, the linter you'll run before every review, adds warnings of its own.</p>
 
 <h4 id="t0-anatomy">The shape of a program</h4>
 <pre>{{code:t0_hello#hello}}</pre>
@@ -60,6 +61,7 @@ cargo run</pre>
   <li><code>let sku = sku.trim();</code> makes a new variable with the same name, which hides the old one. That's <em>shadowing</em>. It's how Rust code says "the cleaned-up version of this from now on" without inventing a name like <code>sku_trimmed</code>.</li>
   <li><code>const</code> is a fixed value with a name, written in capitals. Its type is always written out. Put rules like "five to a box" in one, at the top of the file, so the next person can find them.</li>
 </ul>
+<p>A <em>type</em> is what kind of value something is, which decides what you can do with it: you can divide numbers and you can trim text, and not the other way round. Python checks types while the program runs, and only on the line that's running. That's called <em>dynamic typing</em>, and it's why <code>"12" + 1</code> fails in Python only when that line is reached. Rust checks every type of every variable before the program runs, which is <em>static typing</em>. Each variable has exactly one type for its whole life. If you've used pandas, you've met the idea already: every column has a dtype, and <code>int64</code> and <code>float64</code> there are <code>i64</code> and <code>f64</code> here. Rust gives every variable one.</p>
 
 <h4 id="t0-numbers">Numbers have sizes</h4>
 <p>Python has one integer type that grows as big as it needs to. Rust has several, each with a fixed size, and you choose. The ones you'll use:</p>
@@ -70,8 +72,8 @@ cargo run</pre>
     <tr><td><code>i64</code></td><td>Whole numbers, about &plusmn;9.2 &times; 10<sup>18</sup></td><td>IDs and amounts from the database. SQLite's integers are this size</td></tr>
     <tr><td><code>i32</code></td><td>Whole numbers, about &plusmn;2.1 billion</td><td>What a bare <code>12</code> becomes if nothing says otherwise</td></tr>
     <tr><td><code>u32</code>, <code>u8</code></td><td>Whole numbers that can't be negative, up to about 4.3 billion and up to 255</td><td>Counts, and bytes</td></tr>
-    <tr><td><code>usize</code></td><td>A non-negative whole number the size of a memory address (8 bytes on your machine)</td><td>Lengths and positions: <code>.len()</code> returns one, and indexing takes one</td></tr>
-    <tr><td><code>f64</code></td><td>A floating-point number, Python's <code>float</code></td><td>Measurements and averages. Not money: ticket 3 shows why</td></tr>
+    <tr><td><code>usize</code></td><td>A non-negative whole number the size of a memory <em>address</em>, a byte's position in memory (8 bytes on your machine; <a href="#t0-memory">under the hood</a> explains)</td><td>Lengths and positions: <code>.len()</code> returns one, and indexing takes one</td></tr>
+    <tr><td><code>f64</code></td><td>A floating-point number, Python's <code>float</code>, with the same <code>NaN</code> you know from pandas</td><td>Measurements and averages. Not money: ticket 3 shows why</td></tr>
     <tr><td><code>bool</code>, <code>char</code></td><td><code>true</code> or <code>false</code>; one character, in single quotes</td><td>Flags; single letters</td></tr>
   </tbody>
 </table>
@@ -85,14 +87,17 @@ cargo run</pre>
 <p>Rust never converts between number types on its own. An <code>f64</code> total divided by a <code>usize</code> count, which is what every average looks like, doesn't compile:</p>
 <pre>{{fail:t0_mixed}}</pre>
 <pre class="out">{{failout:t0_mixed}}</pre>
+<p>The <code>help</code> line uses a word you'll see in errors long before ticket 3 teaches it properly. A <em>trait</em> is a named ability that a type can have. <code>Div&lt;usize&gt;</code> is the ability "can be divided by a <code>usize</code>", <code>Display</code> is "can be printed with <code>{}</code>", <code>Ord</code> is "can be put in order". A type <em>implements</em> a trait when it has that ability. So "the trait <code>Div&lt;usize&gt;</code> is not implemented for <code>f64</code>" reads as "an <code>f64</code> can't be divided by a <code>usize</code>", and the list under it shows what does work: an <code>f64</code> divided by an <code>f64</code>. Read every "trait <code>X</code> is not implemented for <code>Y</code>" error that way: <code>Y</code> can't do <code>X</code>, so either change the type or use a different operation.</p>
 <p>You convert with <code>as</code>:</p>
 <pre>{{code:t0_numbers#cast}}</pre>
 <pre class="out">{{out:t0_numbers#3}}</pre>
 <p><code>as</code> never fails, and that's the danger in it. <code>3.99 as i64</code> drops the fraction. <code>300 as u8</code> can't fit, so it keeps what fits and gives 44 (<a href="#t0-bits">under the hood</a> shows why 44). <code>-1 as u32</code> gives four billion. Use <code>as</code> where nothing can be lost: a whole number into an <code>f64</code> for an average (exact for any whole number up to about nine quadrillion, far past any count you'll have), or a small count into a bigger type. When a conversion can fail, use one that says so: <code>u8::try_from(x)</code> returns an error for 300 instead of guessing.</p>
+<p>Two integer types don't mix either. A <code>u32</code> quantity times an <code>i64</code> price is three errors at once, because the compiler can't tell which one you meant to change. Convert the smaller type up to the bigger one before the arithmetic: <code>i64::from(qty) * price</code>, or <code>qty as i64 * price</code>. <code>i64::from</code> only exists for conversions that can't lose anything, which makes it the safer habit.</p>
 
 <h4 id="t0-macros">The <code>!</code> means macro</h4>
 <p><code>println!</code> isn't a function. The <code>!</code> marks a <em>macro</em>: code that writes code. Before compiling, the compiler expands <code>println!("{ordered} bolts", ...)</code> into the longer code that does the printing. Macros exist for things a function can't do. A Rust function takes a fixed number of arguments of fixed types, and <code>println!</code> takes any number of any type. It also reads your format text while compiling, so a <code>{}</code> with no value to fill it, or a misspelled variable name inside the braces, is a compile error and not a surprise at run time.</p>
-<p>You'll meet a dozen. These are the ones in this course:</p>
+<p>A running program has two output channels. <em>Standard output</em> is for its results, and <em>standard error</em> is for messages about how it's going: warnings, errors, debugging. Both appear in your terminal. They separate when you send output somewhere: <code>cargo run &gt; out.txt</code> puts standard output in the file and still shows standard error on screen, so a report file never fills up with complaints.</p>
+<p>You'll meet a dozen macros. These are the ones in this course:</p>
 <div class="table-wrap">
 <table>
   <thead><tr><th>Macro</th><th>What it does</th><th>First used</th></tr></thead>
@@ -102,7 +107,7 @@ cargo run</pre>
     <tr><td><code>format!</code></td><td>Like <code>println!</code>, but gives you the text as a <code>String</code></td><td>Here</td></tr>
     <tr><td><code>vec!</code></td><td>Makes a vector from a list: <code>vec![1, 2, 3]</code></td><td>Here</td></tr>
     <tr><td><code>dbg!</code></td><td>Prints an expression and its value while you debug</td><td>Here</td></tr>
-    <tr><td><code>writeln!</code></td><td><code>println!</code> into a file or anything else you can write to</td><td><a href="#t1">Ticket 1</a></td></tr>
+    <tr><td><code>writeln!</code>, <code>write!</code></td><td><code>println!</code> and <code>print!</code> into a file, or anything else you can write to</td><td><a href="#t1">Ticket 1</a></td></tr>
     <tr><td><code>matches!</code></td><td>Yes or no: does this value fit this pattern?</td><td><a href="#t3">Ticket 3</a></td></tr>
     <tr><td><code>assert_eq!</code></td><td>Stops a test if two values differ</td><td><a href="#t4">Ticket 4</a></td></tr>
   </tbody>
@@ -163,9 +168,10 @@ cargo run</pre>
 <p>Reading items:</p>
 <pre>{{code:t0_collections#get}}</pre>
 <pre class="out">{{out:t0_collections#2}}</pre>
-<p><code>skus[0]</code> reads a position, starting from 0. There are no negative positions: Python's <code>skus[-1]</code> is <code>skus[skus.len() - 1]</code>, or better, <code>skus.last()</code>. A position past the end doesn't raise an exception you can catch. It stops the program. That's called a <em>panic</em>: the program prints where and why, and exits with status 101.</p>
+<p><code>skus[0]</code> reads a position, starting from 0. There are no negative positions: Python's <code>skus[-1]</code> is <code>skus[skus.len() - 1]</code>, or better, <code>skus.last()</code>. A position past the end doesn't raise an exception you can catch. It stops the program. That's called a <em>panic</em>: the program prints where and why, and stops with exit status 101, a number that tells the shell it failed (<a href="#t0-process">under the hood</a> has more).</p>
 <pre>{{code:t0_panic#index}}</pre>
 <pre class="out">{{out:t0_panic#1}}</pre>
+<p>This example ran from the course's <code>examples/</code> folder, and the <code>exit code</code> line was printed by the program that started it. Yours will name <code>src/main.rs</code> and stop at the <code>note</code> line. One more difference you may hit: when the compiler can see the position is past the end, as with <code>week[7]</code> on the five-item array above, it refuses to build at all, with <code>this operation will panic at runtime</code>. The panic above happens while running because a <code>Vec</code>'s length is only known then.</p>
 <p>A panic means "the program itself is wrong". When a position might not exist, ask with <code>.get(i)</code>, which can't panic. It returns <code>Some(item)</code> when there's an item there and <code>None</code> when there isn't, and <code>first()</code> and <code>last()</code> do the same. That's an <code>Option</code>, coming up <a href="#t0-option">shortly</a>.</p>
 <p>A <em>slice</em> is a view of a run of items, written with a range:</p>
 <pre>{{code:t0_collections#slices}}</pre>
@@ -184,7 +190,7 @@ cargo run</pre>
 <p>A slice that runs past the end panics, like an index. Python would hand you a shorter list without a word. Walking a list:</p>
 <pre>{{code:t0_collections#walk}}</pre>
 <pre class="out">{{out:t0_collections#4}}</pre>
-<p><code>.iter()</code> hands out the items one at a time. <code>.enumerate()</code> pairs each with its position, like Python's <code>enumerate</code>. <code>.take(3)</code> stops after three, and <code>.rev()</code> goes from the end. <code>.sum()</code> adds them up. It can produce several number types, so you name the one you want on the variable: <code>let total: i64</code>. <code>.max()</code> returns an <code>Option</code>, because an empty list has no biggest item. Ticket 1 builds on this with <code>filter</code> and <code>count</code>.</p>
+<p><code>.iter()</code> makes an <em>iterator</em>: something that hands out the items one at a time. The methods you call on it, such as the ones below, are called <em>iterator methods</em>. <code>.enumerate()</code> pairs each with its position, like Python's <code>enumerate</code>. <code>.take(3)</code> stops after three, and <code>.rev()</code> goes from the end. <code>.sum()</code> adds them up. It can produce several number types, so you name the one you want on the variable: <code>let total: i64</code>. <code>.max()</code> returns an <code>Option</code>, because an empty list has no biggest item. <a href="#t0-closures">Closures</a>, further down, let you do this on a list of your own structs.</p>
 
 <h4 id="t0-refs">References: <code>&amp;</code> and <code>*</code></h4>
 <p>A <em>reference</em> lets code look at a value without taking it. <code>&amp;qty</code> is a reference to <code>qty</code>. Making one is called <em>borrowing</em>. Following a reference to the value it points at is written <code>*</code>:</p>
@@ -197,17 +203,19 @@ cargo run</pre>
 <pre>{{fail:t0_for_move}}</pre>
 <pre class="out">{{failout:t0_for_move}}</pre>
 <p>Without the <code>&amp;</code>, the loop takes the vector itself and uses it up, so it's gone afterward. That's called a <em>move</em>. Python never does this, and it's the idea at the center of Rust, which ticket 1 explains properly. For now: loop over <code>&amp;list</code> unless you're finished with the list.</p>
+<p>Some values don't move, because copying them is as cheap as moving them. Numbers, <code>bool</code>, <code>char</code> and <code>&amp;str</code> are like that, and so is an array made only of them. Those types are called <code>Copy</code>: using one by value hands over a copy and leaves the original usable. So <code>for q in qty</code> over an array of numbers leaves <code>qty</code> usable after the loop. A <code>Vec</code> is never <code>Copy</code>, even a <code>Vec</code> of numbers, because it owns a block of memory stored elsewhere, so the loop in the error above moved it. A <code>String</code> is the same.</p>
 
 <h4 id="t0-structs">Structs and methods</h4>
-<p>A <em>struct</em> is a named group of fields, each with a type: Python's <code>@dataclass</code>. An <code>impl</code> block ("implementation") holds the functions that belong to it:</p>
+<p>A <em>struct</em> is a named group of fields, each with a type. It's the shape of one row of a DataFrame, with the column types written down, or a <code>@dataclass</code> if you've used one. An <code>impl</code> block ("implementation") holds the functions that belong to it:</p>
 <pre>{{code:t0_struct#struct}}</pre>
 <pre>{{code:t0_struct#use}}</pre>
 <pre class="out">{{out:t0_struct}}</pre>
 <ul>
   <li><code>Self</code> means "the type this <code>impl</code> is for", here <code>Bin</code>. <code>new</code> is a plain function that builds one. Rust has no constructors and no <code>__init__</code>; <code>new</code> is only a naming habit, and everyone follows it.</li>
+  <li><code>location: &amp;str</code> takes borrowed text, and <code>.to_string()</code> makes the bin its own copy, a <code>String</code>, to keep. <a href="#t0-text">Text, briefly</a> explains the two text types.</li>
   <li>In <code>Bin { location: ..., capacity, on_hand: 0 }</code>, a bare <code>capacity</code> is short for <code>capacity: capacity</code>.</li>
   <li>A function whose first parameter is some form of <code>self</code> is a <em>method</em>. <code>&amp;self</code> borrows the bin to read it. <code>&amp;mut self</code> borrows it to change it. Python's <code>self</code> is always the second kind; Rust makes you say which, so the signature tells you whether a call can change the value. That's why <code>bin</code> must be <code>let mut</code>: <code>put_away</code> takes <code>&amp;mut self</code>.</li>
-  <li><code>Bin::new(...)</code> uses <code>::</code>, because <code>new</code> belongs to the type and there's no bin yet. <code>bin.put_away(30)</code> uses a dot, because it's called on a value. In general <code>::</code> walks into a type or a module, and <code>.</code> reaches into a value.</li>
+  <li><code>Bin::new(...)</code> uses <code>::</code>, because <code>new</code> belongs to the type and there's no bin yet. <code>bin.put_away(30)</code> uses a dot, because it's called on a value. In general <code>::</code> walks into a type or a module (a named group of code, <a href="#t0-paths">below</a>), and <code>.</code> reaches into a value.</li>
   <li><code>qty.min(...)</code> is a method too, on <code>u32</code>. Numbers have dozens.</li>
   <li><code>#[derive(Debug)]</code> asks the compiler to write the code that makes <code>{:?}</code> work for <code>Bin</code>. Ticket 3 explains what else <code>derive</code> can write.</li>
 </ul>
@@ -231,6 +239,18 @@ cargo run</pre>
 <pre class="out">{{out:t0_panic#2}}</pre>
 <p>That's why the tickets ban it on anything that came from outside the program. A month-end run that panics on one mistyped row has lost every row after it. Bad data is a <code>Result</code> to handle, and a panic is for bugs. Ticket 1 shows <code>?</code>, the short way to pass an error up to the caller.</p>
 
+<h4 id="t0-closures">Closures: doing something to every item</h4>
+<p>A <code>Vec</code> of your own structs is the Rust shape of a DataFrame: one struct per row. Picking a column, or the row with the biggest value, takes a small function that says what to look at:</p>
+<pre>{{code:t0_closures#closures}}</pre>
+<pre class="out">{{out:t0_closures}}</pre>
+<ul>
+  <li><code>|item| item.qty</code> is a <em>closure</em>: a function with no name, written where it's used. The parameters go between the bars and the body follows. Python's <code>lambda item: item.qty</code> is the same idea.</li>
+  <li><code>.map(...)</code> runs the closure on each item and hands out the results, so <code>.map(|item| item.qty)</code> is the quantity column. <code>.sum()</code> adds it up.</li>
+  <li><code>.max_by_key(...)</code> returns the item whose closure value is biggest, as an <code>Option</code>, because an empty list has none. On a tie it returns the last of the tied items.</li>
+  <li><code>Vec::new()</code> makes an empty vector. The compiler works out what it holds from what you <code>push</code>, here <code>&amp;String</code>, references to each item's SKU.</li>
+</ul>
+<p>That's enough to use them this week. Ticket 1 explains closures properly, along with <code>filter</code>, <code>count</code> and the rest.</p>
+
 <h4 id="t0-text">Text, briefly</h4>
 <pre>{{code:t0_text#text}}</pre>
 <pre class="out">{{out:t0_text#1}}</pre>
@@ -244,7 +264,7 @@ cargo run</pre>
 
 <h4 id="t0-docs">Reading the docs</h4>
 <p>You will spend more time in the documentation than in any book. The standard library's is at <a href="https://doc.rust-lang.org/std/">doc.rust-lang.org/std</a>, and <code>rustup doc --std</code> opens a copy offline. Every published crate has its docs at <a href="https://docs.rs/">docs.rs</a>, and <code>cargo doc --open</code> builds the docs for your project and every crate it uses. Your editor's hover shows the same text for whatever is under the cursor.</p>
-<p>On a type's page, such as <a href="https://doc.rust-lang.org/std/vec/struct.Vec.html"><code>Vec</code></a>, the search box at the top finds anything by name. Below the description are the type's methods, then "Trait Implementations", which lists the things the type can do through traits: abilities shared between types, which ticket 3 explains. A method you can't find among the methods is often in there. A <code>Vec</code> also has every method of a slice, listed under "Methods from Deref&lt;Target = [T]&gt;": that's where <code>first</code>, <code>last</code> and <code>get</code> live. Each method starts with its signature, and reading one is a skill worth practicing:</p>
+<p>On a type's page, such as <a href="https://doc.rust-lang.org/std/vec/struct.Vec.html"><code>Vec</code></a>, the search box at the top finds anything by name. Below the description are the type's methods, then "Trait Implementations", which lists the things the type can do through <a href="#t0-numbers">traits</a>. Ticket 3 shows how to give your own types traits. A method you can't find among the methods is often in there. A <code>Vec</code> also has every method of a slice, listed under "Methods from Deref&lt;Target = [T]&gt;": that's where <code>first</code>, <code>last</code> and <code>get</code> live. Each method starts with its signature, and reading one is a skill worth practicing:</p>
 <ul>
   <li><code>pub fn push(&amp;mut self, value: T)</code> on <code>Vec</code>. <code>pub</code> means anyone can call it. <code>&amp;mut self</code> means it changes the vector, so your variable needs <code>mut</code>. It takes one item of the vector's item type, <code>T</code>, and there's no <code>-&gt;</code>, so it returns nothing. You know all that before reading a word of the description.</li>
   <li><code>pub fn trim(&amp;self) -&gt; &amp;str</code> on <code>str</code>. It only reads the text, and it returns a borrowed view, so it doesn't copy anything.</li>
@@ -252,8 +272,26 @@ cargo run</pre>
 </ul>
 <p>Some signatures look worse than they are. <code>get</code>'s is full of angle brackets because it accepts a range as well as a position. On a first read, skip what's inside the angle brackets and read the rest. One more piece of syntax you'll see in signatures and examples: <code>_</code> means "something I'm not naming". In a <code>match</code>, <code>_ =&gt;</code> matches anything left over. <code>let _ = ...;</code> throws a value away on purpose. <code>Vec&lt;_&gt;</code> means "a vector of whatever the compiler works out". The <a href="#syntax">symbol lookup</a> at the end of this page lists every piece of punctuation in the course, for when you meet one and can't remember it.</p>
 
+<h4 id="t0-help-wrong">When the compiler's help is wrong</h4>
+<p>The <code>help</code> line is right most of the time. It's a suggestion for making the code compile, though, not for making it correct, and a few suggestions compile while doing the wrong thing. Before you take one, check it against what you know. The ones in this course:</p>
+<ul>
+  <li><strong><code>(total / count) as f64</code>.</strong> It divides as integers first, dropping the fraction, then converts. Convert each side: <code>total as f64 / count as f64</code>.</li>
+  <li><strong><code>(qty * price).into()</code></strong> for a <code>u32</code> times an <code>i64</code>. The multiplication is what fails, so converting its result can't help. Convert <code>qty</code> before multiplying.</li>
+  <li><strong><code>.to_string()</code></strong> when you compare a <code>String</code> with a <code>&amp;str</code>. It compiles by copying the text every time. Compare <code>my_string.as_str()</code> with the <code>&amp;str</code> instead. Ticket 1 explains why that works.</li>
+  <li><strong>"consider removing the borrow".</strong> Taking the <code>&amp;</code> off often turns a type error into a move error a moment later. When it does, the <code>&amp;</code> was right and something else needs to change.</li>
+  <li><strong><code>.clone()</code></strong>, suggested to get past a move or borrow error. It works by copying, and it hides the question the error was asking: who should own this value? Ticket 1 is about answering it.</li>
+</ul>
+
 <h3>Warm-up drills</h3>
-<p>Put drills in a program of their own. Cargo treats every file in <code>src/bin/</code> as a separate program named after the file, so make <code>src/bin/drills.rs</code> with its own <code>main</code> and run it with <code>cargo run --bin drills</code>. Once there's more than one program, plain <code>cargo run</code> stops and asks which one you mean. Keep it running <code>src/main.rs</code> by adding <code>default-run = "snippets"</code> under <code>[package]</code> in <code>Cargo.toml</code>. Give each drill its own function (<code>fn drill_1()</code> and so on) and call them from <code>main</code>, so drills don't share variables. A compile error anywhere in the file still stops the whole program from building, so undo each break-it mistake as soon as you've read its error.</p>
+<p>Put drills in a program of their own. Cargo treats every file in <code>src/bin/</code> as a separate program named after the file, so make <code>src/bin/drills.rs</code> with its own <code>main</code> and run it with <code>cargo run --bin drills</code>. Once there's more than one program, plain <code>cargo run</code> stops and asks which one you mean. Keep it running <code>src/main.rs</code> by adding <code>default-run = "snippets"</code> under <code>[package]</code> in <code>Cargo.toml</code>, the project's settings file. <code>[package]</code> starts a section, and each line under it is a setting. After the edit, the whole file is:</p>
+<pre>[package]
+name = "snippets"
+version = "0.1.0"
+edition = "2024"
+default-run = "snippets"
+
+[dependencies]</pre>
+<p>Give each drill its own function (<code>fn drill_1()</code> and so on) and call them from <code>main</code>, so drills don't share variables. A compile error anywhere in the file still stops the whole program from building, so undo each break-it mistake as soon as you've read its error.</p>
 <div class="drill">
   <p><strong>Drill 1.</strong> Eight days of orders for one part: <code>let qty = [12, 0, 7, 45, 3, 18, 0, 22];</code>. With one <code>for</code> loop and no iterator methods, print how many days there are, how many had orders, the total, the biggest day, and the average over the days that had orders, with two decimals.</p>
   <pre class="out">{{out:drill_t0#1}}</pre>
@@ -263,11 +301,11 @@ cargo run</pre>
   <pre class="out">{{out:drill_t0#2}}</pre>
 </div>
 <div class="drill">
-  <p><strong>Drill 3.</strong> Prices are whole cents: <code>let prices = [("BRG-6204", 1_299), ("BLT-M10", 18), ("GKT-8", 205), ("CHN-40", 12_995)];</code>. Print a price list with the SKU left-aligned in 10 characters and the price in dollars and cents, without any <code>f64</code>. Integer division and the remainder give you the two halves. Print the cents with a plain <code>{}</code> first, look at what happens to 205, then fix it with a format spec from above.</p>
+  <p><strong>Drill 3.</strong> Prices are whole cents: <code>let prices = [("BRG-6204", 1_299), ("BLT-M10", 18), ("GKT-8", 205), ("CHN-40", 12_995)];</code>. Print a price list with the SKU left-aligned in 10 characters, then the dollars right-aligned in 5, a dot and the cents, without any <code>f64</code>. Integer division and the remainder give you the two halves. Print the cents with a plain <code>{}</code> first, look at what happens to 205, then fix it with a format spec from above.</p>
   <pre class="out">{{out:drill_t0#3}}</pre>
 </div>
 <div class="drill">
-  <p><strong>Drill 4: break it.</strong> One at a time, make each of these mistakes in a drill, read the whole error, and undo it. Put a semicolon after a function's last line. Remove a <code>mut</code>. Loop over a vector without <code>&amp;</code> and use it after the loop. Read <code>skus[10]</code>, then <code>skus.get(10)</code>. Write <code>let first = skus[0][0];</code> to get the first letter of a SKU. Divide an integer total by <code>skus.len()</code> into an <code>f64</code>. In your journal, write one line per mistake: did it fail when compiling or when running, and what did the message tell you to do?</p>
+  <p><strong>Drill 4: break it.</strong> One at a time, make each of these mistakes in a drill, read the whole error, and undo it. Put a semicolon after a function's last line. Remove a <code>mut</code>. Make a <code>vec!</code> of <code>String</code>s, loop over it without <code>&amp;</code> and use it after the loop. Read <code>skus[10]</code> on drill 2's array, then on a <code>vec!</code> with the same SKUs, then <code>skus.get(10)</code>. Write <code>let first = skus[0][0];</code> to get the first letter of a SKU. Divide an integer total by <code>skus.len()</code> into an <code>f64</code>, and check the compiler's suggestion against <a href="#t0-help-wrong">the list above</a>. In your journal, write one line per mistake: did it fail when compiling or when running, and what did the message tell you to do?</p>
 </div>
 
 <h3>The ticket</h3>
@@ -276,7 +314,7 @@ cargo run</pre>
 <table>
   <thead><tr><th>SKU</th><th>Quantity</th><th>Unit price (cents)</th></tr></thead>
   <tbody>
-    <tr><td><code>BRG-6204</code></td><td>40</td><td>1299</td></tr>
+    <tr><td><code>BRG-6204</code></td><td>41</td><td>1299</td></tr>
     <tr><td><code>BLT-M10</code></td><td>500</td><td>18</td></tr>
     <tr><td><code>HSE-12</code></td><td>12</td><td>4550</td></tr>
     <tr><td><code>GKT-8</code></td><td>75</td><td>210</td></tr>
@@ -293,25 +331,25 @@ cargo run</pre>
   <li><label><input type="checkbox" class="crit-box" id="c-t0-6"><span>No <code>.unwrap()</code>. If something returns an <code>Option</code>, handle both cases.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t0-7"><span><code>cargo fmt</code> and <code>cargo clippy --all-targets</code> are clean.</span></label></li>
 </ul>
-<p><strong>Before you type,</strong> answer these in your journal. What type is each field, and why? Which of the summary numbers need the list of lines walked once, and can one loop compute several of them? The average is a fraction of a cent: where does the program stop being integers, and why only there? What should "biggest" mean if two lines tie? While you build it, wrap at least one expression in <code>dbg!</code> to check a value, then take it out.</p>
+<p><strong>Before you type,</strong> answer these in your journal. What type is each field, and why? Which of the summary numbers need the list of lines walked once, and can one loop compute several of them? The average isn't a whole number of cents: where does the program stop being integers, and why only there? What should "biggest" mean if two lines tie? While you build it, wrap at least one expression in <code>dbg!</code> to check a value, then take it out.</p>
 
 <h3>Stuck?</h3>
 <details class="hint"><summary>Hint 1: where the data lives</summary>
   <p>Build the five lines in <code>main</code> with your <code>new</code> function, inside <code>vec![...]</code> or an array. A method like <code>fn line_cents(&amp;self) -&gt; i64</code> keeps the multiplication in one place, so the table, the total and the average all agree.</p>
 </details>
 <details class="hint"><summary>Hint 2: printing cents as dollars</summary>
-  <p>51960 cents is <code>51960 / 100</code> dollars and <code>51960 % 100</code> cents. Print the cents with a spec that pads to two digits with zeros, or 90 dollars prints as <code>90.0</code>. To make the dollars-and-cents pair fill a 10-character column, give the dollars part a width of 7: seven, plus the dot, plus two.</p>
+  <p>53259 cents is <code>53259 / 100</code> dollars and <code>53259 % 100</code> cents. Print the cents with a spec that pads to two digits with zeros, or 90 dollars prints as <code>90.0</code>. To make the dollars-and-cents pair fill a 10-character column, give the dollars part a width of 7: seven, plus the dot, plus two.</p>
 </details>
 <details class="hint"><summary>Hint 3: the biggest line</summary>
-  <p>Keep a reference to the best line so far, starting with the first one, and replace it inside the loop when a line beats it. <code>&amp;lines[0]</code> is safe here because you wrote five lines into the code yourself. Or use <code>.iter().max()</code> on the line values, and handle the <code>Option</code> it returns with <code>match</code> or <code>if let</code>.</p>
+  <p>Keep a reference to the best line so far, starting with the first one, and replace it inside the loop when a line beats it. <code>&amp;lines[0]</code> is safe here because you wrote five lines into the code yourself. Or use <code>.iter().max_by_key(...)</code> from <a href="#t0-closures">closures</a>, which keeps the whole line, SKU included, and handle the <code>Option</code> it returns with <code>match</code> or <code>if let</code>. Check what each way does on a tie.</p>
 </details>
 
 <h3 id="t0-sanity">Sanity checks</h3>
 <p>There's nothing to compare with in an answer key this time, so here is the whole expected output. Save it as <code>expected.txt</code>, then <code>cargo run --bin week0 &gt; mine.txt</code> and <code>diff expected.txt mine.txt</code>. No output from <code>diff</code> means they match, spaces included.</p>
 <pre class="out">{{out:drill_t0#4}}</pre>
 <ul>
-  <li>If the total prints as <code>2092.8</code>, the cents lost their zero padding.</li>
-  <li>If the average prints as <code>418</code>, the division happened in integers.</li>
+  <li>If the <code>BLT-M10</code> line prints as <code>90.0</code>, the cents lost their zero padding.</li>
+  <li>If the average prints as <code>421</code> or <code>421.15</code>, the division happened in integers and dropped the fraction.</li>
 </ul>
 
 <h3>Hand it in</h3>
@@ -335,19 +373,21 @@ panic, and whether a Python habit shows anywhere in the code.</pre>
 <p><code>checked_add</code> returns <code>None</code> when the result doesn't fit. <code>wrapping_add</code> goes round like a car's odometer: 250 + 10 is 260, minus 256 is 4. <code>saturating_add</code> stops at the maximum. A plain <code>+</code> that overflows panics in a debug build:</p>
 <pre>{{code:t0_panic#overflow}}</pre>
 <pre class="out">{{out:t0_panic#3}}</pre>
-<p>Built with <code>--release</code>, the same line doesn't panic: it wraps, and prints 4. That's a choice made for speed, and it's why code that adds up numbers from outside the program uses <code>checked_add</code>. (<code>black_box</code> only stops the compiler from noticing the overflow while compiling, which it otherwise would.) Python never overflows because its integers grow, and pays for that with speed and memory on every operation.</p>
+<p>Built with <code>--release</code>, the same lines don't panic: the addition wraps, and it prints 4. That's a choice made for speed, and it's why code that adds up numbers from outside the program uses <code>checked_add</code>. (<code>black_box</code> only stops the compiler from noticing the overflow while compiling, which it otherwise would.) Python never overflows because its integers grow, and pays for that with speed and memory on every operation.</p>
 
 <h4 id="t0-memory">Memory is a long row of numbered bytes</h4>
 <p>While your program runs, its data lives in memory, which you can picture as one very long row of bytes, each with a number called its <em>address</em>. A variable is a name for a few bytes in that row. How many depends on the type:</p>
 <pre>{{code:t0_bits#sizes}}</pre>
 <pre class="out">{{out:t0_bits#3}}</pre>
-<p>A <code>char</code> takes four bytes because it can hold any character in any language. A reference such as <code>&amp;i64</code> is an address: eight bytes on a 64-bit machine, whatever it points at. That's also why <code>usize</code> is eight bytes here: it's defined as the size of an address, so it can count as far as memory goes. The addresses themselves change every run, because the operating system shuffles where a program's memory starts, as a defense against attacks. Ticket 1 shows where a <code>Vec</code> and a <code>String</code> keep their contents.</p>
+<p>A <code>char</code> takes four bytes because it can hold any single Unicode code point, the numbered symbols that cover every writing system. A reference such as <code>&amp;i64</code> is an address: eight bytes on a 64-bit machine, whatever it points at. That's also why <code>usize</code> is eight bytes here: it's defined as the size of an address, so it can count as far as memory goes. The addresses themselves change every run, because the operating system shuffles where a program's memory starts, as a defense against attacks. Ticket 1 shows where a <code>Vec</code> and a <code>String</code> keep their contents.</p>
+<p>A value that holds an address is called a <em>pointer</em>, and a reference is a pointer with rules. Rust checks that every reference points at a live value. There is no <em>null</em> reference, the "points at nothing" value that crashes C and Java programs: where something might be missing, Rust uses <code>Option</code>, and the compiler makes you check.</p>
+<p>Getting memory for a value is <em>allocating</em> it, and handing it back when you're done is <em>freeing</em> it. In C you free by hand, and freeing too early or twice is a classic crash. Python has a <em>garbage collector</em>, a part of the running program that finds values nothing uses anymore and frees them. Rust has neither. Every value has one owner, usually a variable, and when the owner's block ends at its closing brace, its <em>scope</em> ends and the value is <em>dropped</em>: freed, right there. That's the rule behind every borrow error you'll meet: a reference can't outlive the value it points at.</p>
 
 <h4 id="t0-text-bytes">Text is bytes</h4>
 <p>Text is stored as numbers too. ASCII, from the 1960s, numbers 128 characters (English letters, digits, punctuation), each fitting in one byte. Unicode numbers every character in every script, about 150,000 so far. Each one's number is its <em>code point</em>. <em>UTF-8</em> is the standard way to store code points as bytes: ASCII characters take one byte, as before, and everything else takes two to four. Rust's text is always UTF-8.</p>
 <pre>{{code:t0_text#utf8}}</pre>
 <pre class="out">{{out:t0_text#2}}</pre>
-<p><code>é</code> is two bytes, 195 and 169, so <code>café</code> is four characters and five bytes. Python's <code>len("café")</code> is 4 because Python counts code points. Rust's <code>.len()</code> counts bytes, because that's what the computer stores and what it costs to copy, and <code>.chars().count()</code> counts characters. Since characters have different widths, finding the fifth one means reading from the start, so Rust won't let you write <code>sku[0]</code>:</p>
+<p><code>é</code> is two bytes, 195 and 169, so <code>café</code> is four characters and five bytes. Python's <code>len("café")</code> is 4 because Python counts code points. Rust's <code>.len()</code> counts bytes, because that's what the computer stores and what it costs to copy, and <code>.chars().count()</code> counts code points. (Those usually match what you'd call characters. Not always: an accent can be stored as its own code point after the letter, and some emoji are several joined together.) Since characters have different widths, finding the fifth one means reading from the start, so Rust won't let you write <code>sku[0]</code>:</p>
 <pre>{{fail:t0_strindex}}</pre>
 <pre class="out">{{failout:t0_strindex}}</pre>
 <p><code>.chars().next()</code> gets the first character. <code>&amp;sku[..3]</code> is a slice by byte position, which is fine for ASCII codes like SKUs and panics if the position falls in the middle of a character. Hand-typed data is full of characters you didn't expect, as ticket 4 finds out.</p>
@@ -356,7 +396,7 @@ panic, and whether a Python habit shows anywhere in the code.</pre>
 <p>A running program is a <em>process</em>. The operating system gives each one its own memory, the arguments it was started with, and a <em>current working directory</em>: the folder it counts as "here". A relative path like <code>data/kettle_creek.db</code> is looked up from that folder, not from where the source file is:</p>
 <pre>{{code:t0_cwd#cwd}}</pre>
 <pre class="out">{{out:t0_cwd}}</pre>
-<p>The program makes a folder with a file in it, then moves into the folder. The same relative path that found the file a moment ago finds nothing, because "here" changed. <code>cargo run</code> runs your program from wherever you typed it, so run it from the project folder, where <code>data/</code> is. In Python the same thing happens, and it's why a notebook that works stops working when you move it.</p>
+<p><code>fn main() -&gt; std::io::Result&lt;()&gt;</code> lets <code>main</code> fail with a file-system error, and the <code>?</code> after each call means "if this failed, stop here and pass the error on". Ticket 1 explains both. The program makes a folder with a file in it, then moves into the folder. The same relative path that found the file a moment ago finds nothing, because "here" changed. <code>cargo run</code> runs your program from wherever you typed it, so run it from the project folder, where <code>data/</code> is. In Python the same thing happens, and it's why a notebook that works stops working when you move it.</p>
 <p>When a process ends, it hands back one number, its <em>exit status</em>: 0 for success, anything else for failure. A panic exits with 101, as you saw above. Your shell keeps the last one:</p>
 <pre class="cmd">cargo run --bin week0
 echo $?</pre>

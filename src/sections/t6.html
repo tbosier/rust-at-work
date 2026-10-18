@@ -35,13 +35,21 @@ cargo add clap --features derive</pre>
 <h4>A trait is a promise</h4>
 <p>A <em>trait</em> names a set of methods that a type promises to have. You've been using traits since ticket 1: <code>Debug</code>, <code>Display</code>, <code>Ord</code> and <code>Iterator</code> are all traits. Now you write one. Here is a trait for anything that can be one row of a table, on the library toy:</p>
 <pre>{{code:t6_trait#trait}}</pre>
-<p><code>headers</code> has no <code>self</code>: it belongs to the type, not to any one row, because every book has the same columns. It's called an <em>associated function</em>, and you call it on the type, as <code>Book::headers()</code>. Its return type, <code>&amp;'static [&amp;'static str]</code>, is a borrowed list of borrowed text where every borrow lasts for the whole run of the program. <code>'static</code> is the longest lifetime there is. String literals have it, because they're stored inside the program file itself, so a list of literals can be handed out without anyone needing to own it. <code>cells</code> takes <code>&amp;self</code>, so it's an ordinary method that reads one row. Implementing the trait is where each type keeps its promise:</p>
+<p><code>headers</code> has no <code>self</code>: it belongs to the type, not to any one row, because every book has the same columns. It's called an <em>associated function</em>, and you call it on the type, as <code>Book::headers()</code>, the same way you've called <code>Bin::new</code> since week zero.</p>
+<p>Its return type, <code>&amp;'static [&amp;'static str]</code>, reads from the inside out:</p>
+<ul>
+  <li><code>&amp;str</code> is borrowed text, and <code>&amp;[&amp;str]</code> is a borrowed list of those: a slice, as in week zero.</li>
+  <li><code>'static</code> is a lifetime, like ticket 3's <code>'a</code>, but a fixed one: "good for the whole run of the program". It's the longest there is.</li>
+  <li>String literals such as <code>"title"</code> are <code>&amp;'static str</code>, because they're stored inside the program file itself and never freed. A list written out of literals, <code>&amp;["book_id", "title"]</code>, is <code>'static</code> too.</li>
+</ul>
+<p>So <code>headers</code> can hand out its list without anyone owning it, and the caller can keep it as long as it likes. <code>cells</code> takes <code>&amp;self</code>, so it's an ordinary method that reads one row. Implementing the trait is where each type keeps its promise:</p>
 <pre>{{code:t6_trait#impls}}</pre>
 <p>Python's nearest relative is a <code>Protocol</code> from <code>typing</code>, or an abstract base class. The difference is that Python checks a protocol only if you run a type checker, and only as a hint. Rust checks every use of the trait, at compile time, every time.</p>
 
 <h4>One function, many types</h4>
 <pre>{{code:t6_trait#generic}}</pre>
 <p><code>&lt;T: TableRow&gt;</code> says "<code>T</code> can be any type, as long as it implements <code>TableRow</code>". <code>T</code> is a <em>type parameter</em>, and <code>: TableRow</code> is its <em>bound</em>. Inside the function you can use exactly what the bound promises and nothing else: <code>T::headers()</code> and <code>row.cells()</code>. Calling it with two different types:</p>
+<p><code>books</code> and <code>loans</code> below are loaders you could write by now: one <code>SELECT</code> into a <code>Vec</code>, as in ticket 1, with <code>Book</code> holding an <code>author</code> as well this time.</p>
 <pre>{{code:t6_trait#use}}</pre>
 <pre class="out">{{out:t6_trait}}</pre>
 <p>The bound isn't a formality. Hand the function a type that never made the promise, and the compiler says so at the call:</p>
@@ -134,7 +142,7 @@ cargo add clap --features derive</pre>
   <p>The wiki's <code>cells</code> returns <code>Vec&lt;String&gt;</code>, which loses the difference between text and numbers. Your sheets need that difference, because money must be written with <code>write_number_with_format</code>. So let the row write itself: a method that takes the worksheet, the row number and the money format, and writes its own cells. Look at what <code>&amp;mut Worksheet</code> lets a method do.</p>
 </details>
 <details class="hint"><summary>Hint 2: rows that borrow</summary>
-  <p>A discrepancy row needs the supplier's name, which lives in your suppliers <code>Vec</code>. Rather than cloning every name into a new struct, a small struct with a <code>&amp;'a Discrepancy</code> and a <code>&amp;'a str</code> can implement the trait. Implementing a trait for a type with a lifetime looks like <code>impl TableRow for DiscrepancyRow&lt;'_&gt;</code>.</p>
+  <p>A discrepancy row needs the supplier's name, which lives in your suppliers <code>Vec</code>. Rather than cloning every name into a new struct, a small struct with a <code>&amp;'a Discrepancy</code> and a <code>&amp;'a str</code> can implement the trait. Implementing a trait for a type with a lifetime looks like <code>impl TableRow for DiscrepancyRow&lt;'_&gt;</code>. The <code>'_</code> means "some lifetime, and I don't need to name it", because nothing in the impl has to say how it relates to anything else. Most of the time Rust works lifetimes out without being told, and <code>'_</code> marks a spot where you let it.</p>
 </details>
 <details class="hint"><summary>Hint 3: no half-finished file</summary>
   <p>Do all the loading, parsing and reconciling first, and build the <code>Workbook</code> in memory. <code>save</code> is the only call that touches the output file, so if anything before it fails, nothing is written. Validate the month in clap's <code>value_parser</code>, and it fails before the database is even opened.</p>
@@ -161,11 +169,11 @@ formats and lookups are built once rather than per cell.</pre>
 
 <h3>Under the hood</h3>
 <h4 id="t6-dispatch">Generics and trait objects, compiled</h4>
-<p>When you call <code>print_table(&amp;books)</code> and <code>print_table(&amp;loans)</code>, the compiler writes two copies of <code>print_table</code>, one with <code>T</code> replaced by <code>Book</code> and one by <code>Loan</code>. That's <em>monomorphization</em>, from "one shape". Each copy calls its type's <code>cells</code> directly, and the optimizer can inline it as if you'd written two separate functions by hand. The price is size and build time: a generic used with fifty types becomes fifty functions in the binary. This is <em>static dispatch</em>, because which method runs is fixed when the program is compiled.</p>
+<p>When you call <code>print_table(&amp;books)</code> and <code>print_table(&amp;loans)</code>, the compiler writes two copies of <code>print_table</code>, one with <code>T</code> replaced by <code>Book</code> and one by <code>Loan</code>. That's <em>monomorphization</em>, from "one shape". Each copy calls its type's <code>cells</code> directly, and the optimizer can inline it as if you'd written two separate functions by hand. The price is size and build time: a generic used with fifty types is compiled fifty times. (The optimizer may then inline some copies into their callers or merge identical ones, so the final count can be lower.) This is <em>static dispatch</em>, because which method runs is fixed when the program is compiled.</p>
 <p>A trait object works the other way. The compiler builds one table per type, the <em>vtable</em>, listing that type's implementation of each method, and a <code>&amp;dyn Describe</code> carries two pointers: one to the value and one to its type's vtable. A method call reads the function's address out of the vtable and jumps there. You can see the second pointer:</p>
 <pre>{{code:t6_dispatch#sizes}}</pre>
 <pre class="out">{{out:t6_dispatch#2}}</pre>
-<p>A <em>fat pointer</em>, twice the size of an ordinary reference. This is <em>dynamic dispatch</em>: one copy of the code, decided at run time, and the optimizer can't see through the jump to inline it. For a monthly report, the speed difference between the two is far too small to measure. Choose by what the code needs to say: a fixed type per call means generics, a mixed collection means <code>dyn</code>. C++ templates and virtual functions make the same trade. Java's and Python's generics only give you the dynamic kind.</p>
+<p>A <em>fat pointer</em>, twice the size of an ordinary reference. This is <em>dynamic dispatch</em>: one copy of the code, decided at run time. The optimizer usually can't see through the jump to inline it, though it sometimes works out which method it must be. For a monthly report, the speed difference between the two is far too small to measure. Choose by what the code needs to say: a fixed type per call means generics, a mixed collection means <code>dyn</code>. C++ templates and virtual functions make the same trade. Java's and Python's generics only give you the dynamic kind.</p>
 
 <h4>An .xlsx file is a folder of XML</h4>
 <p>Office Open XML, the format behind <code>.xlsx</code>, <code>.docx</code> and <code>.pptx</code>, is a ZIP archive of XML files. A one-fine workbook made the same way as the wiki's example, listed with <code>unzip -l</code> (dates and times blanked here):</p>

@@ -1,6 +1,15 @@
 QUIZZES.t4 = {
   questions: [
     {
+      q: "Why does <code>Shelf</code> have a <code>new(aisle, number)</code> that checks, as well as <code>parse(text)</code>?",
+      options: [
+        { t: "So code that already has a letter and a number gets the same check as code that has text", ok: true },
+        { t: "Because <code>parse</code> can't return a <code>Result</code>", why: "It does return one. It just leaves the rule about each aisle's size to <code>new</code>." },
+        { t: "So tests can build a shelf without any check", why: "Tests go through <code>new</code> too. The private fields mean nothing outside the module can skip it." },
+      ],
+      explain: "With the fields private and every road through <code>new</code>, \"a <code>Shelf</code> exists\" means \"that shelf exists in the building\". A date type works the same way.",
+    },
+    {
       q: "What does <code>\"+42\".parse::&lt;u32&gt;()</code> return?",
       options: [
         { t: "<code>Ok(42)</code>", ok: true },
@@ -31,7 +40,7 @@ QUIZZES.t4 = {
       q: "A column loads as <code>Option&lt;String&gt;</code> and your parser takes <code>&amp;str</code>. Which call gets you there without copying the text?",
       options: [
         { t: "<code>row.vendor.as_deref().unwrap_or(\"\")</code>", ok: true },
-        { t: "<code>row.vendor.clone().unwrap_or_default()</code>", why: "That works, but <code>clone</code> copies the whole <code>String</code> first. <code>as_deref</code> borrows it." },
+        { t: "<code>row.vendor.clone().unwrap_or_default()</code>", why: "That gives a <code>String</code>, not a <code>&amp;str</code>, so you'd still need <code>&amp;</code> in front of it to call the parser. And <code>clone</code> copies the whole text first. <code>as_deref</code> borrows it." },
         { t: "<code>row.vendor.unwrap().as_str()</code>", why: "<code>unwrap</code> panics on <code>NULL</code>, which the schema allows. It also moves the <code>String</code> out of the row." },
       ],
       explain: "<code>as_deref</code> turns <code>&amp;Option&lt;String&gt;</code> into <code>Option&lt;&amp;str&gt;</code>. <code>unwrap_or(\"\")</code> then can't panic: a missing value becomes empty text, which your parser already rejects.",

@@ -63,8 +63,9 @@
 
 <h3>Check your tools</h3>
 <pre class="cmd">cargo --version
-rustup component list --installed</pre>
-<p>You want cargo 1.89 or newer (<code>rustup update</code> gets it) and, in the component list, <code>clippy</code>, <code>rustfmt</code> and <code>rust-analyzer</code>. On this machine all three are installed.</p>
+rustup component list --installed
+claude --version</pre>
+<p>You want cargo 1.89 or newer (<code>rustup update</code> gets it) and, in the component list, <code>clippy</code>, <code>rustfmt</code> and <code>rust-analyzer</code>. On this machine all three are installed. The last line checks for Claude Code, the command-line Claude that does your reviews. If it's missing, Anthropic's Claude Code documentation says how to install it.</p>
 
 <h3>Make the project</h3>
 <pre class="cmd">cd ~/projects
@@ -74,7 +75,8 @@ mkdir data out
 cp ~/projects/space_sim/learning/data/kettle_creek.db data/   # or wherever your copy is
 cargo add rusqlite --features bundled
 printf '/out\n/data/*.db\n' &gt;&gt; .gitignore</pre>
-<p><code>cargo new</code> makes <code>Cargo.toml</code>, <code>src/main.rs</code> and a git repository with a <code>.gitignore</code> that already skips <code>target/</code>. The last line adds two more: your program's output files, which are rebuilt every run, and your copy of the database, which you can always copy again.</p>
+<p><code>cargo new</code> makes <code>Cargo.toml</code>, <code>src/main.rs</code> and a git repository with a <code>.gitignore</code> that already skips <code>target/</code>. The last line adds two more: your program's output files, which are rebuilt every run, and your copy of the database, which you can always copy again. <code>printf</code> prints the text, with <code>\n</code> as a line break, and <code>&gt;&gt;</code> adds it to the end of the file. A single <code>&gt;</code> would replace the file instead.</p>
+<p>Because <code>out/</code> is ignored, git never stores it, and a fresh clone of your project won't have one. Writing to <code>out/report.csv</code> then fails with <code>No such file or directory</code>, a message that doesn't say which path. So have your program make the folder before it writes there: <code>std::fs::create_dir_all("out")?</code> creates it, and does nothing if it already exists.</p>
 <p><code>cargo add rusqlite --features bundled</code> adds the SQLite crate. A <em>crate</em> is one unit of compiled Rust, a library or a program, and a <em>package</em> is what cargo downloads and builds, holding one or more crates. Day to day, people say crate for both. <code>bundled</code> compiles SQLite itself from C source into your program, so SQLite doesn't have to be installed on the machine. It does need a C compiler. On Linux and macOS, Rust normally links programs through the system's C toolchain, so you usually have one already. If the first build fails with an error that mentions <code>cc</code>, install your system's C build tools and try again. That makes the first build slow, a minute or so, and every build after it fast. <code>Cargo.toml</code> now ends with something like:</p>
 <pre>[dependencies]
 rusqlite = { version = "0.40.2", features = ["bundled"] }</pre>
@@ -102,9 +104,9 @@ rusqlite = { version = "0.40.2", features = ["bundled"] }</pre>
 <table>
   <thead><tr><th>Command</th><th>What it does</th><th>Python's nearest</th></tr></thead>
   <tbody>
-    <tr><td><code>cargo check</code></td><td>Type-checks without building a program. Fastest way to see errors.</td><td>Running mypy</td></tr>
+    <tr><td><code>cargo check</code></td><td>Type-checks without building a program. Fastest way to see errors.</td><td>mypy, a type checker for Python, if you've used one</td></tr>
     <tr><td><code>cargo run</code></td><td>Builds, then runs <code>src/main.rs</code>. Arguments after <code>--</code> go to your program.</td><td><code>python main.py</code></td></tr>
-    <tr><td><code>cargo clippy --all-targets</code></td><td>The linter: hundreds of checks for code that works but could be clearer, faster or more correct.</td><td>ruff or pylint</td></tr>
+    <tr><td><code>cargo clippy --all-targets</code></td><td>The linter: hundreds of checks for code that works but could be clearer, faster or more correct.</td><td>ruff or pylint, the Python tools that flag code that runs but looks wrong</td></tr>
     <tr><td><code>cargo fmt</code></td><td>Formats every file the one standard way. Nobody argues about style in Rust.</td><td>black</td></tr>
     <tr><td><code>cargo test</code></td><td>Builds and runs every test. From ticket 4.</td><td>pytest</td></tr>
     <tr><td><code>cargo doc --open</code></td><td>Builds HTML docs for your code and every crate you use, offline.</td><td>pydoc, sort of</td></tr>
@@ -146,7 +148,7 @@ rusqlite = { version = "0.40.2", features = ["bundled"] }</pre>
 <p>On a Mac, <kbd>Ctrl</kbd> is <kbd>Cmd</kbd>. The full compiler message is always in the terminal: when the editor's one-line summary isn't enough, run <code>cargo build</code> and read it there. Where this page names a Neovim key, the VS Code row above does the same job.</p>
 
 <h3>How to read a compiler error</h3>
-<p>Rust's compiler is the best teacher you'll have, if you read what it says. Here is a small mistake and the message it produces:</p>
+<p>Rust's compiler is the best teacher you'll have, if you read what it says. Here is a small mistake and the message it produces. You don't need to type this one: it's the kind of error you'll meet in ticket 1, in the <code>kettle_creek</code> project, so the last line names that project. Errors in <code>snippets</code> name <code>snippets</code>.</p>
 <pre>{{fail:t1_mut}}</pre>
 <pre class="out">{{failout:t1_mut}}</pre>
 <ul>
@@ -197,6 +199,7 @@ git commit -m "Start kettle_creek: empty binary, rusqlite, rules for Claude"</pr
 <pre class="cmd">git add -A
 git commit -m "Ticket 1: count open POs and list stale ones"
 git tag t1-submitted</pre>
+<p>A <em>tag</em> is a name stuck on one commit, so you and the reviewer can say "the code as handed in" without copying a commit's long ID. <code>git tag</code> lists them, and <code>git diff t1-final t2-submitted</code> shows everything that changed between two of them. A tag stays on its commit when you commit again. If you fix something before the review and want to hand in the new version, move the tag with <code>git tag -f t1-submitted</code>; without <code>-f</code>, git says the tag already exists.</p>
 
 <h3>What to paste</h3>
 <p>Start <code>claude</code> in the project folder and paste this, with the ticket number filled in. Each ticket adds a line or two of its own to focus the review.</p>

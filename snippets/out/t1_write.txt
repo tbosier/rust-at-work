@@ -1,3 +1,5 @@
 loan_id,member,loaned_on
-2,Grace,2026-08-11
 3,Alan,2026-09-01
+2,Grace,2026-08-11
+---
+Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })

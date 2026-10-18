@@ -12,11 +12,20 @@ QUIZZES.t1 = {
     {
       q: "Why does <code>count_open</code> take <code>pos: &amp;[PurchaseOrder]</code> rather than <code>pos: Vec&lt;PurchaseOrder&gt;</code>?",
       options: [
-        { t: "Slices are faster to iterate than vectors", why: "Iterating is the same speed. The difference is who owns the data afterwards." },
+        { t: "Slices are faster to iterate than vectors", why: "Iterating is the same speed. The difference is who owns the data afterward." },
         { t: "So the caller keeps the purchase orders and can use them again", ok: true },
         { t: "Because a <code>Vec</code> can't be passed to a function", why: "It can. It's moved, and the caller loses it, which is exactly the problem." },
       ],
       explain: "A function that only reads should borrow. Taking the <code>Vec</code> by value moves it in, and it's freed when the function returns.",
+    },
+    {
+      q: "<code>let first = &amp;ids[0];</code>, then <code>ids.push(9);</code>, then <code>println!(\"{first}\");</code>. Why won't it compile?",
+      options: [
+        { t: "<code>push</code> may move the items to a bigger block of memory, and <code>first</code> would point at the old one", ok: true },
+        { t: "You can't take a reference to an element of a <code>Vec</code>", why: "You can, and it's common. The trouble is changing the <code>Vec</code> while that reference is still in use." },
+        { t: "<code>ids</code> wasn't declared <code>mut</code>", why: "That's a different error. Even with <code>let mut ids</code>, this fails: a value can have many <code>&amp;</code> borrows or one <code>&amp;mut</code>, never both at once." },
+      ],
+      explain: "Many readers or one writer. Move the <code>println!</code> above the <code>push</code> and it compiles, because a borrow ends at its last use.",
     },
     {
       q: "What does the <code>?</code> in <code>let pos = load(&amp;db)?;</code> do?",

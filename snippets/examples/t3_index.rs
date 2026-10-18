@@ -4,6 +4,7 @@ use std::collections::{HashMap, HashSet};
 // endregion
 use std::error::Error;
 
+// region: index
 struct Book {
     book_id: i64,
     title: String,
@@ -13,6 +14,7 @@ struct Loan {
     loan_id: i64,
     book_id: i64,
 }
+// endregion
 
 fn main() -> Result<(), Box<dyn Error>> {
     let db = library()?;
@@ -34,12 +36,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             })
         })?
         .collect::<Result<_, _>>()?;
+    // region: index
+    // `books` and `loans` (a `let mut`) were loaded as in ticket 1.
     loans.push(Loan {
         loan_id: 8,
         book_id: 999,
-    }); // a book nobody catalogued
+    }); // a loan for a book nobody catalogued
 
-    // region: index
     let by_id: HashMap<i64, &Book> = books.iter().map(|b| (b.book_id, b)).collect();
 
     let mut borrowed_before: HashSet<i64> = HashSet::new();

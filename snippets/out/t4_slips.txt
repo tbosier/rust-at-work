@@ -1,0 +1,14 @@
+"B-12": aisle B, shelf 12
+" D-12 ": aisle D, shelf 12
+"D-13": aisle D has no shelf 13
+"E-1": there's no aisle E
+"B12": "B12" isn't written like B-12
+"B-0": aisle B has no shelf 0
+---
+2 accepted, 4 rejected
+  R-01: shelf A-3, 14 days
+  R-05: shelf B-40, 21 days
+  R-02  shelf     "D-30"         aisle D has no shelf 30
+  R-03  asked_for "a fortnight"  "a fortnight" doesn't start with a number
+        slip      ""             missing
+  R-06  shelf     ""             "" isn't written like B-12

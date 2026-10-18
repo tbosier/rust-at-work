@@ -125,7 +125,32 @@
 <p>The field <code>u32</code> has no <code>pub</code>, so code outside the <code>card</code> module can't build a <code>CardNumber</code> directly:</p>
 <pre>{{fail:t4_newtype}}</pre>
 <pre class="out">{{failout:t4_newtype}}</pre>
-<p>This is a case where the compiler's help is wrong for you. Making the field public would compile, and it would throw away the guarantee. The error is the design doing its job. A date type with private year, month and day fields and a constructor that checks the calendar works the same way.</p>
+<p>This is a case where the compiler's help is wrong for you. Making the field public would compile, and it would throw away the guarantee. The error is the design doing its job.</p>
+<p>A card number is one field. Most real values have several, and whether one field is good depends on another. Our library's shelf marks look like <code>B-12</code>: aisles A to C have 40 shelves, and D, the short one by the door, has 12. So <code>D-12</code> exists and <code>D-13</code> doesn't, though <code>B-13</code> does. The check belongs in a constructor that returns a <code>Result</code>, and the fields stay private so nothing can skip it:</p>
+<pre>{{code:t4_slips#shelf}}</pre>
+<pre>{{code:t4_slips#shelf_use}}</pre>
+<pre class="out">{{out:t4_slips#1}}</pre>
+<ul>
+  <li><code>Shelf::new</code> checks the parts and <code>Shelf::parse</code> only cuts text into parts. Keeping them apart means code that already has a letter and a number, from a form or a test, gets the same check.</li>
+  <li><code>shelves_in</code> isn't <code>pub</code>, so it's a helper only the module can use.</li>
+  <li><code>ok_or</code> is <code>ok_or_else</code> for an error that's cheap to build up front. <code>"B".parse::&lt;char&gt;()</code> works only on text that's exactly one character, which is the rule we want.</li>
+  <li><code>bad</code> is a closure that takes no arguments, written <code>||</code>. It's handed to <code>ok_or_else</code> as a value and called directly as <code>bad()</code> in the next two lines.</li>
+  <li><code>aisle()</code> and <code>number()</code> are <em>getters</em>: other code can read the fields, never set them.</li>
+</ul>
+<p>A date has the same shape: three fields, where how big the day may be depends on the month, and for February on the year. <a href="#t4-leap">Under the hood</a> has the year rule.</p>
+
+<h4>From a row to a reject</h4>
+<p>Parsers answer for one field. A whole row needs one more layer: call the parsers in order, and turn the first failure into a reject that says which field it was and what was typed. Here are renewal slips, each with a slip number, a shelf mark and a loan length, any of them possibly <code>NULL</code>. The code uses <code>Shelf</code> from above and <code>parse_duration</code> from earlier on this page, so put it in the same file as both:</p>
+<pre>{{code:t4_slips#reject}}</pre>
+<pre>{{code:t4_slips#reject_use}}</pre>
+<pre class="out">{{out:t4_slips#2}}</pre>
+<ul>
+  <li>Each parser keeps its own error type. <code>map_err</code> turns that error into a <code>Reject</code> carrying the field's name, the raw text and the parser's message, and <code>?</code> returns it. That's where "report only the first problem" comes from: the first <code>?</code> that fails ends the function.</li>
+  <li><code>check</code> never panics and never prints. It returns a <code>Result</code>, and the loop decides what to do with each outcome. Testing <code>check</code> needs no database, only a <code>RawSlip</code>.</li>
+  <li><code>raw.shelf.as_deref().unwrap_or("")</code> treats a <code>NULL</code> as empty text, so the parser reports it like a blank. Whether a missing value and a blank one deserve different reasons is your call on the ticket.</li>
+  <li><code>value</code> keeps the text exactly as typed, spaces and all, because the people fixing it at the source need to see what they sent.</li>
+  <li><code>field: &amp;'static str</code> holds text written into the program itself, such as <code>"shelf"</code>, which never goes away. That's what <code>'static</code> means; <a href="#t6-wiki">ticket 6</a> says more.</li>
+</ul>
 
 <h4>Unit tests</h4>
 <p>Each parser is a function from <code>&amp;str</code> to <code>Result</code>, with no database and no files. That is the easiest code there is to test. Tests live at the bottom of the same file:</p>
@@ -197,7 +222,7 @@ mod tests {
   <p>Two rules can't be checked by looking at one row alone. Duplicate refs need a <code>HashSet</code> of refs seen so far, and every row's ref goes in it, accepted or not. Vendor matching needs your supplier list, normalized once into a <code>HashMap</code> from normalized name to <code>supplier_id</code>. A small struct holding both, with a method that checks one row, keeps that state in one place.</p>
 </details>
 <details class="hint"><summary>Hint 3: from a row to a reason</summary>
-  <p>Have each parser return a <code>Result</code> whose error can say what was wrong. The row-level function calls them in Dana's order, and for each one turns a parser's error into a reject that also names the field and keeps the raw value. <code>map_err</code> does that turning, and <code>?</code> then returns the reject. The function's return type is something like <code>Result&lt;BranchInvoice, Reject&gt;</code>, and the loop over rows pushes each outcome onto one of two <code>Vec</code>s.</p>
+  <p>The renewal slips in the wiki are the shape. Yours has five fields instead of three, and two of its checks need the memory from hint 2, so the row checker is a method on that struct. Its return type is something like <code>Result&lt;BranchInvoice, Reject&gt;</code>.</p>
 </details>
 
 <h3>Sanity checks</h3>
@@ -233,7 +258,7 @@ d    = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"</pre>
 <h4>Parse, don't validate</h4>
 <p>A validator answers yes or no: <code>fn is_valid_date(s: &amp;str) -> bool</code>. The caller then carries on with the same <code>String</code> it had before, and every function further down has to trust that someone, somewhere, checked it. A parser answers with a value: <code>fn parse(s: &amp;str) -> Result&lt;Date, DateError&gt;</code>. What it learned is now part of the type. Code that takes a <code>Date</code> can't be handed February 30, because no <code>Date</code> like that can exist. Alexis King's essay <a href="https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/">"Parse, don't validate"</a> makes this argument in full, and it changes how you design types. The <code>CardNumber</code> above, ticket 3's <code>Cents</code> and the <code>Date</code> you're about to write are all this idea.</p>
 
-<h4>Leap years</h4>
+<h4 id="t4-leap">Leap years</h4>
 <p>The rule you need is: a year is a leap year if it divides by 4, except years that divide by 100, except years that divide by 400. So 2024 is a leap year, 2025 isn't, 1900 wasn't and 2000 was. The exceptions exist because the solar year is about 365.2422 days, not 365.25. The Julian calendar's every-fourth-year rule ran about eleven minutes long each year, and by 1582 the spring equinox had drifted about ten days from the date the church had fixed for it in 325. The Gregorian reform dropped ten days and added the century exceptions, giving an average year of 365.2425 days. Britain and its colonies only switched in 1752, by which point the gap was eleven days. Your terminal remembers:</p>
 <pre class="cmd">cal 9 1752</pre>
 <p>September 1752 goes 1, 2, 14. Don't handle that in this ticket. It's here as a reminder that dates are a domain where the edge cases are real history, which is why mature code uses a tested date library. You're writing your own this once, to learn why.</p>

@@ -54,6 +54,20 @@
 <pre class="out">{{out:t2_map#3}}</pre>
 <p><code>counts.entry(w)</code> finds the slot for <code>w</code>. <code>.or_insert(0)</code> fills it with 0 if it's empty and hands back a mutable reference to the value, and the <code>*</code> in front reaches through that reference so <code>+= 1</code> changes the number in the map. <code>.or_default()</code> does the same with the type's default, which is 0 for numbers. Python's version is <code>counts[w] = counts.get(w, 0) + 1</code>, or <code>Counter</code>.</p>
 <p>A <code>HashMap</code> has no order. To print or write one predictably, collect it into a <code>Vec</code> and sort that. <code>counts.into_iter()</code> walks the map by value: each item is an owned (key, value) pair, and the map is used up, so you can't touch <code>counts</code> afterward. <code>counts.iter()</code> would borrow instead and hand out references, the way <code>for x in &amp;list</code> does. More on why under the hood.</p>
+<p>Borrowing a map is what you do when you want to keep it. Each item is then a pair of references, which matters as soon as you compare or add:</p>
+<pre>{{code:t2_map#borrowed}}</pre>
+<pre class="out">{{out:t2_map#4}}</pre>
+<p>In the first loop the tuple pattern reaches through the reference, so <code>name</code>, <code>count</code> and <code>value</code> are all references, and comparing needs <code>*count</code>. Printing doesn't care. In the second, <code>&amp;(count, _)</code> matches the reference itself and copies the numbers out, so <code>count</code> is a plain <code>u32</code>. Either works. The three ways to walk any collection, a <code>Vec</code> or a <code>HashMap</code>:</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Write</th><th>Each item is</th><th>Afterward</th></tr></thead>
+  <tbody>
+    <tr><td><code>for x in &amp;v</code>, or <code>v.iter()</code></td><td>a reference, <code>&amp;T</code>. From a map, a pair of references, <code>(&amp;K, &amp;V)</code></td><td><code>v</code> is unchanged and still yours</td></tr>
+    <tr><td><code>for x in &amp;mut v</code>, or <code>v.iter_mut()</code></td><td>a mutable reference, <code>&amp;mut T</code>, so <code>*x += 1</code> changes the item. From a map, <code>(&amp;K, &amp;mut V)</code>: values can change, keys never can, so write <code>for (k, v) in &amp;mut map</code> and <code>*v += 1</code></td><td><code>v</code> is still yours, with changed items</td></tr>
+    <tr><td><code>for x in v</code>, or <code>v.into_iter()</code></td><td>the item itself, <code>T</code>. From a map, the pair <code>(K, V)</code></td><td><code>v</code> is used up</td></tr>
+  </tbody>
+</table>
+</div>
 
 <h4>Owned text and borrowed text</h4>
 <p>Look at the key type: <code>&amp;str</code>, not <code>String</code>. That choice matters more than it looks.</p>
@@ -65,7 +79,11 @@
 <pre>{{fail:t2_drop}}</pre>
 <pre class="out">{{failout:t2_drop}}</pre>
 <p><code>per_shelf</code> holds views into <code>books</code>, so <code>books</code> can't be thrown away while <code>per_shelf</code> is still in use. The same program in C would compile, then read freed memory and maybe print garbage. Python never has the problem, because its garbage collector keeps the strings alive as long as anything points at them. Rust rejects it before it runs. Ticket 3 gives this rule its proper name.</p>
-<p>The same thinking applies to function parameters. Take <code>&amp;str</code> when you only read text, because a <code>&amp;String</code> turns into a <code>&amp;str</code> automatically and a string literal already is one.</p>
+<p>Switch a map to <code>String</code> keys and the first try usually looks like this:</p>
+<pre>{{fail:t2_move_out}}</pre>
+<pre class="out">{{failout:t2_move_out}}</pre>
+<p><code>p</code> is a <code>&amp;Product</code>, a borrow. Handing <code>p.category</code> to <code>entry</code> would move the <code>String</code> out of a product you only borrowed and leave it with a hole where its category was. You can't give away what you borrowed. Here the help is right: <code>.clone()</code> makes the map its own copy of the text. That copy, made once per product, is the cost of an owned key. If the map doesn't need to outlive the rows, keep <code>&amp;str</code> keys and copy nothing.</p>
+<p>The same thinking applies to function parameters. Take <code>&amp;str</code> when you only read text, because a string literal already is one and a <code>&amp;String</code> turns into a <code>&amp;str</code> automatically. That conversion is called <em>deref coercion</em>: where the code expects a <code>&amp;str</code> and gets a <code>&amp;String</code>, the compiler lends out the text inside. It's why <code>entry(&amp;p.category)</code> works on a map with <code>&amp;str</code> keys. It only goes that way. A <code>&amp;str</code> never becomes a <code>String</code> without a <code>.to_string()</code>.</p>
 
 <h4>Putting it together</h4>
 <p>Total fines per library member. Fines belong to loans, and loans belong to members, so it takes two maps: one to look up a loan's member, and one for the running totals.</p>
@@ -82,13 +100,13 @@
 <p>The sort line uses <code>total_cmp</code>, not <code>sort_by_key</code>. Here's why:</p>
 <pre>{{fail:t2_sortf64}}</pre>
 <pre class="out">{{failout:t2_sortf64}}</pre>
-<p><code>sort_by_key</code> needs a key that implements <code>Ord</code>, a <em>total order</em>, where any two values compare as less, equal or greater. Floats don't have one, because of <code>NaN</code> ("not a number", what <code>0.0 / 0.0</code> gives you). <code>NaN</code> is not less than, equal to or greater than anything, itself included. Python sorts floats anyway and quietly gives you a wrong order if a <code>NaN</code> sneaks in. Rust makes you choose. <code>a.total_cmp(&amp;b)</code> is a total order on floats that puts <code>NaN</code> at the ends, which is what you want for sorting. <code>.then_with(|| ...)</code> breaks ties with a second comparison, just like the tuple keys in ticket 1.</p>
+<p><code>sort_by_key</code> needs a key that implements <code>Ord</code>, a <em>total order</em>, where any two values compare as less, equal or greater. Floats don't have one, because of <code>NaN</code> ("not a number", what <code>0.0 / 0.0</code> gives you). <code>NaN</code> is not less than, equal to or greater than anything, itself included. Python sorts floats anyway and gives you a wrong order, without a word, if a <code>NaN</code> sneaks in. Rust makes you choose. <code>a.total_cmp(&amp;b)</code> is a total order on floats that puts <code>NaN</code> at the ends, which is what you want for sorting. <code>.then_with(|| ...)</code> breaks ties with a second comparison, just like the tuple keys in ticket 1.</p>
 
 <h4>Formatting money</h4>
 <p>The output above prints each total twice: <code>{total:&gt;6.2}</code> right-aligns it in six characters with two decimals, and plain <code>{total}</code> prints the shortest decimal that reads back as exactly the same float. On this tiny library they agree. On a quarter's invoices they won't, and you'll see digits like <code>...55000000002</code>. That's not a bug in your code: it's what floating point does. For this report, format with two decimals and move on. Ticket 3 is where it stops being cosmetic.</p>
 
 <h4>Writing real CSV</h4>
-<p>To try this in your <code>snippets</code> project, run <code>cargo add csv</code> there first. The crate handles quoting for you. Any field with a comma, a quote or a line break gets wrapped in quotes, and quotes inside get doubled, which is the rule every spreadsheet program expects:</p>
+<p>To try this in your <code>snippets</code> project, run <code>cargo add csv</code> there first. Every line ends in <code>?</code>, so it goes in a <code>main</code> that returns <code>Result&lt;(), Box&lt;dyn Error&gt;&gt;</code>, as in ticket 1. The crate handles quoting for you. Any field with a comma, a quote or a line break gets wrapped in quotes, and quotes inside get doubled, which is the rule every spreadsheet program expects:</p>
 <pre>{{code:t2_csv#csv}}</pre>
 <pre class="out">{{out:t2_csv}}</pre>
 <p><code>write_record</code> takes any list of things that look like text, such as string literals or <code>String</code>s, as long as every field in one record has the same type. That's why the last record turns everything into a <code>String</code>. <code>format!</code> is <code>println!</code> that gives you the <code>String</code> instead of printing it. The csv crate can also write structs directly through serde, but that's more machinery than this ticket needs.</p>
@@ -137,7 +155,7 @@
 </details>
 <details class="hint"><summary>Hint 3: the missing supplier</summary>
   <p>The choices are: skip the invoice (and the total no longer ties to the ledger), keep it under a placeholder name like <code>"(unknown supplier 99)"</code>, or stop the program with an error. Which one would Priya want? <code>names.get(&amp;id)</code> gives you an <code>Option</code> to make that choice with.</p>
-  <p>If you choose the placeholder and write <code>names.get(&amp;id).copied().unwrap_or(&amp;format!(...))</code>, the compiler says "temporary value dropped while borrowed". <code>format!</code> makes a new <code>String</code> that nothing keeps, so it's freed at the end of the statement, and the <code>&amp;str</code> you borrowed from it can't outlive it. One way out is to make the name owned at the point where you write each output row: one <code>String</code> per supplier row is a couple of dozen small copies at most, which is nothing. Criterion 6 is about the loop over invoices, which runs once per invoice, not about the few rows you write.</p>
+  <p>If you choose the placeholder and write <code>names.get(&amp;id).copied().unwrap_or(&amp;format!(...))</code>, the compiler refuses. Which message you get depends on where the name goes. Used later in the same function, it's "temporary value dropped while borrowed" (E0716). Returned from a function, it's "cannot return value referencing temporary value" (E0515). The cause is the same: <code>format!</code> makes a new <code>String</code> that nothing keeps, so it's freed at the end of the statement, and the <code>&amp;str</code> you borrowed from it can't outlive it. One way out is to make the name owned at the point where you write each output row: one <code>String</code> per supplier row is a couple of dozen small copies at most, which is nothing. Criterion 6 is about the loop over invoices, which runs once per invoice, not about the few rows you write.</p>
 </details>
 
 <h3>Sanity checks</h3>

@@ -1,0 +1,13 @@
+error[E0507]: cannot move out of `p.category` which is behind a shared reference
+  --> src/main.rs:10:23
+   |
+10 |         *counts.entry(p.category).or_default() += 1;
+   |                       ^^^^^^^^^^ move occurs because `p.category` has type `String`, which does not implement the `Copy` trait
+   |
+help: consider cloning the value if the performance cost is acceptable
+   |
+10 |         *counts.entry(p.category.clone()).or_default() += 1;
+   |                                 ++++++++
+
+For more information about this error, try `rustc --explain E0507`.
+error: could not compile `snippets` (bin "snippets") due to 1 previous error

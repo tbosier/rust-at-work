@@ -10,13 +10,13 @@ QUIZZES.t6 = {
       explain: "An associated function is called on the type, <code>T::headers()</code>. Inside a generic function the type is known, so that works. Through <code>dyn</code> it isn't, so it doesn't.",
     },
     {
-      q: "<code>fn print_table&lt;T: TableRow&gt;(rows: &amp;[T])</code> is called with <code>&amp;books</code> and with <code>&amp;loans</code>. How many copies of <code>print_table</code> end up in the program?",
+      q: "<code>fn print_table&lt;T: TableRow&gt;(rows: &amp;[T])</code> is called with <code>&amp;books</code> and with <code>&amp;loans</code>. How many copies of <code>print_table</code> does the compiler generate?",
       options: [
         { t: "Two, one for each type", ok: true },
         { t: "One, which looks up the right <code>cells</code> at run time", why: "That's how <code>dyn TableRow</code> works, through a vtable. Generics are monomorphized: the compiler writes a copy per type, each calling its type's method directly." },
         { t: "None: generic functions are interpreted", why: "Rust has no interpreter. Generic code is compiled, once per type it's used with." },
       ],
-      explain: "Monomorphization: fast calls the optimizer can inline, paid for in binary size and compile time.",
+      explain: "Monomorphization: fast calls the optimizer can inline, paid for in binary size and compile time. The optimizer may later inline or merge copies, so the finished binary can hold fewer.",
     },
     {
       q: "Priya says a column \"is useless if I can't SUM it\". Which way of writing <code>Cents(120450)</code> keeps her happy?",

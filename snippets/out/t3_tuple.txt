@@ -1,0 +1,7 @@
+Out        3 days: out, not due yet
+Out       20 days: overdue: send a reminder
+Returned  14 days: returned on time
+Returned  15 days: returned late: fine it
+Lost       2 days: bill the replacement
+---
+fines: 400 cents, longest: 12 days

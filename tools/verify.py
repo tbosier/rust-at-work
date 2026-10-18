@@ -45,7 +45,13 @@ def main():
             bad += 1
         (OUT / f"{ex.stem}.txt").write_text(r.stdout)
     crate = SNIP / "failcrate"
+    manifest = (crate / "Cargo.toml").read_text()
+    lockfile = (crate / "Cargo.lock").read_text()
     for f in sorted((SNIP / "fail").glob("*.rs")):
+        # Wiki examples are typed in the learner's snippets project. The one
+        # error in set up comes from their ticket project.
+        name = "kettle_creek" if f.stem == "t1_mut" else "snippets"
+        (crate / "Cargo.toml").write_text(re.sub(r'name = "\w+"', f'name = "{name}"', manifest, count=1))
         shutil.copy(f, crate / "src" / "main.rs")
         r = run(["cargo", "build"], crate)
         if r.returncode == 0:
@@ -57,6 +63,8 @@ def main():
         text = re.sub(r"\(/[^)]*\)", "", text)
         text = text.replace(str(Path.home()), "~")
         (OUT / f"fail_{f.stem}.txt").write_text(text)
+    (crate / "Cargo.toml").write_text(manifest)
+    (crate / "Cargo.lock").write_text(lockfile)
     print(f"{len(list((SNIP / 'examples').glob('*.rs')))} examples, "
           f"{len(list((SNIP / 'fail').glob('*.rs')))} expected failures, {bad} problems")
     sys.exit(1 if bad else 0)
