@@ -1,6 +1,6 @@
 // A loan length typed on a renewal slip: "14d", "2w", " 3 weeks ".
 // Shown in the guide in regions; also compiled as module `duration`
-// of snippets/t4_crate, which runs the tests below.
+// of snippets/t5_crate, which runs the tests below.
 
 // region: error
 use std::fmt;

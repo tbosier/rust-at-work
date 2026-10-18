@@ -1,0 +1,25 @@
+8 days, 6 with orders
+107 units, biggest day 45
+average 17.83 units per ordering day
+---
+0: BRG-6204
+3: BRG-6305
+last two: ["BRG-6305", "GKT-8"]
+first has 8 bytes
+---
+BRG-6204     12.99
+BLT-M10       0.18
+GKT-8         2.05
+CHN-40      129.95
+---
+SKU          QTY      UNIT       LINE
+BRG-6204      40     12.99     519.60
+BLT-M10      500      0.18      90.00
+HSE-12        12     45.50     546.00
+GKT-8         75      2.10     157.50
+CHN-40         6    129.95     779.70
+
+total:   2092.80 over 5 lines
+average: 418.56
+biggest: CHN-40 at 779.70
+above average: 3

@@ -1,5 +1,7 @@
+// region: hash
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+// endregion
 
 fn main() {
     // region: hash

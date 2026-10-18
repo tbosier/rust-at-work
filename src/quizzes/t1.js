@@ -25,7 +25,7 @@ QUIZZES.t1 = {
         { t: "On error, returns that error from the current function; otherwise unwraps the value", ok: true },
         { t: "Panics with the error message", why: "That's <code>.unwrap()</code> or <code>.expect(...)</code>. <code>?</code> hands the error to the caller instead." },
       ],
-      explain: "It's an early return for errors. That's why the function using it must itself return a <code>Result</code>.",
+      explain: "It's an early return for errors. That's why the function using it must itself return a <code>Result</code>. (Ticket 4 shows that <code>?</code> works the same way on an <code>Option</code>, in a function that returns <code>Option</code>.)",
     },
     {
       q: "What does this print?",

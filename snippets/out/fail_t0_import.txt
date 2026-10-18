@@ -1,0 +1,13 @@
+error[E0433]: failed to resolve: use of undeclared type `HashMap`
+ --> src/main.rs:2:21
+  |
+2 |     let mut stock = HashMap::new();
+  |                     ^^^^^^^ use of undeclared type `HashMap`
+  |
+help: consider importing this struct
+  |
+1 + use std::collections::HashMap;
+  |
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `kettle_creek` (bin "kettle_creek") due to 1 previous error

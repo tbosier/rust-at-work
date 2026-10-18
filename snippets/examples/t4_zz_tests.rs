@@ -1,6 +1,6 @@
-// Hidden. Runs `cargo test` in the two tiny crates the ticket 4 page
-// shows, prints the output for the page, and checks that every
-// <pre data-file="..."> on the page matches the file it claims to show.
+// Hidden. Runs `cargo test` in the failing card crate ticket 4 shows,
+// prints the output for the page, and checks that every
+// <pre data-file="..."> in any section matches the file it claims to show.
 use std::process::Command;
 
 fn cargo_test(dir: &str) -> String {
@@ -46,8 +46,20 @@ fn unescape(s: &str) -> String {
 }
 
 fn check_shown_files() -> Result<(), String> {
-    let page = std::fs::read_to_string("../../src/sections/t4.html").map_err(|e| e.to_string())?;
-    let mut rest = page.as_str();
+    let mut n = 0;
+    let dir = std::fs::read_dir("../../src/sections").map_err(|e| e.to_string())?;
+    let mut paths: Vec<_> = dir.filter_map(|e| e.ok()).map(|e| e.path()).collect();
+    paths.sort();
+    for p in paths {
+        let page = std::fs::read_to_string(&p).map_err(|e| e.to_string())?;
+        n += check_page(&page)?;
+    }
+    eprintln!("{n} shown files match");
+    Ok(())
+}
+
+fn check_page(page: &str) -> Result<usize, String> {
+    let mut rest = page;
     let mut n = 0;
     while let Some(i) = rest.find("<pre data-file=\"") {
         rest = &rest[i + 16..];
@@ -63,8 +75,7 @@ fn check_shown_files() -> Result<(), String> {
         n += 1;
         rest = &after[body_end..];
     }
-    eprintln!("ticket 4: {n} shown files match");
-    Ok(())
+    Ok(n)
 }
 
 fn main() {
@@ -72,7 +83,5 @@ fn main() {
         eprintln!("{e}");
         std::process::exit(1);
     }
-    println!("{}", cargo_test("../t4_crate"));
-    println!("---");
     println!("{}", cargo_test("../t4_failing"));
 }

@@ -1,0 +1,7 @@
+nothing at position 5
+the first is BRG-6204
+---
+"40" is 40
+"forty" is no good: invalid digit found in string
+" 40" is no good: invalid digit found in string
+12 per case

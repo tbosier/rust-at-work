@@ -1,0 +1,20 @@
+BRG-6204: 40 at 1299
+by position: BRG-6204 40
+5 days, first 12, last 3
+["BRG-6204", "BLT-M10", "HSE-12"]: 3 items, empty: false
+---
+Some("BLT-M10")
+None
+Some("BRG-6204") Some("HSE-12")
+HSE-12
+---
+[0, 7]
+[12, 0]
+[3, 18]
+---
+line 0: 12
+line 1: 0
+line 2: 7
+from the end: 18
+from the end: 3
+total 85, biggest Some(45), smallest Some(0)

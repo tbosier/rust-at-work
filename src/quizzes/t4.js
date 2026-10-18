@@ -28,22 +28,22 @@ QUIZZES.t4 = {
       explain: "Bad input is an expected outcome, not a bug in your program. It belongs in a <code>Result</code>, and from there in the rejects file.",
     },
     {
-      q: "Your function returns <code>Result&lt;u32, SlipError&gt;</code> and uses <code>?</code> on a <code>Result&lt;u32, ParseIntError&gt;</code>. What makes that compile?",
+      q: "A column loads as <code>Option&lt;String&gt;</code> and your parser takes <code>&amp;str</code>. Which call gets you there without copying the text?",
       options: [
-        { t: "<code>impl From&lt;ParseIntError&gt; for SlipError</code>", ok: true },
-        { t: "<code>impl Display for SlipError</code>", why: "<code>Display</code> is about printing. <code>?</code> converts errors with <code>From</code>." },
-        { t: "<code>#[derive(Debug)]</code> on <code>SlipError</code>", why: "<code>Debug</code> is needed for <code>{:?}</code> and for returning errors from <code>main</code>, but it doesn't convert anything." },
+        { t: "<code>row.vendor.as_deref().unwrap_or(\"\")</code>", ok: true },
+        { t: "<code>row.vendor.clone().unwrap_or_default()</code>", why: "That works, but <code>clone</code> copies the whole <code>String</code> first. <code>as_deref</code> borrows it." },
+        { t: "<code>row.vendor.unwrap().as_str()</code>", why: "<code>unwrap</code> panics on <code>NULL</code>, which the schema allows. It also moves the <code>String</code> out of the row." },
       ],
-      explain: "<code>?</code> on <code>Err(e)</code> returns <code>Err(From::from(e))</code>. Use <code>map_err</code> instead when the conversion needs context that <code>From</code> can't know, such as a row number.",
+      explain: "<code>as_deref</code> turns <code>&amp;Option&lt;String&gt;</code> into <code>Option&lt;&amp;str&gt;</code>. <code>unwrap_or(\"\")</code> then can't panic: a missing value becomes empty text, which your parser already rejects.",
     },
     {
-      q: "Which functions can a test in <code>tests/millbrook.rs</code> call?",
+      q: "What does <code>\"  a   b \".split_whitespace().collect::&lt;Vec&lt;_&gt;&gt;().join(\" \")</code> give?",
       options: [
-        { t: "Only the library's <code>pub</code> items, imported by the package name", ok: true },
-        { t: "Anything in the project, private or not", why: "That's true of unit tests in a <code>mod tests</code> inside the file, through <code>use super::*</code>. Integration tests are separate programs and see what outside code sees." },
-        { t: "Only <code>main</code>", why: "Integration tests can't call a binary's <code>main</code>. That's one reason the logic belongs in <code>lib.rs</code>." },
+        { t: "<code>\"a b\"</code>", ok: true },
+        { t: "<code>\" a b \"</code>", why: "<code>split_whitespace</code> skips the empty pieces at both ends, so nothing is left to join there." },
+        { t: "<code>\"a   b\"</code>", why: "Splitting throws the spaces away entirely. <code>join</code> puts back exactly one between each pair of pieces." },
       ],
-      explain: "Integration tests use your library the way a stranger would. If something is hard to test from there, your public interface may be the problem.",
+      explain: "Split, then join, is the usual way to trim the ends and squeeze every run of spaces down to one, in a single line.",
     },
     {
       q: "Every one of your 40 tests passes. What do you now know?",

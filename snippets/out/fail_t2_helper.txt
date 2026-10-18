@@ -1,0 +1,20 @@
+error[E0277]: `?` couldn't convert the error to `std::io::Error`
+ --> src/main.rs:6:42
+  |
+5 | fn count_report(path: &str, typed: &str) -> std::io::Result<()> {
+  |                                             ------------------- expected `std::io::Error` because of this
+6 |     let count: u32 = typed.trim().parse()?;
+  |                                   -------^ the trait `From<ParseIntError>` is not implemented for `std::io::Error`
+  |                                   |
+  |                                   this can't be annotated with `?` because it has type `Result<_, ParseIntError>`
+  |
+  = note: the question mark operation (`?`) implicitly performs a conversion on the error value using the `From` trait
+  = help: the following other types implement trait `From<T>`:
+            `std::io::Error` implements `From<ErrorKind>`
+            `std::io::Error` implements `From<IntoInnerError<W>>`
+            `std::io::Error` implements `From<NulError>`
+            `std::io::Error` implements `From<TryReserveError>`
+            `std::io::Error` implements `From<std::fs::TryLockError>`
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `kettle_creek` (bin "kettle_creek") due to 1 previous error

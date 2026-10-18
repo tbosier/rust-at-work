@@ -1,0 +1,9 @@
+Carriage bolt M10, 17 bytes
+---
+M10    3 bytes, 3 chars
+Ø25mm  6 bytes, 5 chars
+5µm    4 bytes, 3 chars
+café   5 bytes, 4 chars
+[99, 97, 102, 195, 169]
+Some('c')
+BRG

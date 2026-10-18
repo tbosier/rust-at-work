@@ -1,0 +1,17 @@
+
+thread 'main' panicked at examples/t0_panic.rs:10:31:
+index out of bounds: the len is 3 but the index is 3
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+exit code: Some(101)
+---
+
+thread 'main' panicked at examples/t0_panic.rs:16:44:
+called `Result::unwrap()` on an `Err` value: ParseIntError { kind: InvalidDigit }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+exit code: Some(101)
+---
+
+thread 'main' panicked at examples/t0_panic.rs:24:24:
+attempt to add with overflow
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+exit code: Some(101)

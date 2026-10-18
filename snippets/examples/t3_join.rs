@@ -1,7 +1,9 @@
 // Times a nested-loop join against a hash join on the real invoices and POs,
 // copied k times over. Run with --release; the shown output is a release run.
 use rusqlite::Connection;
+// region: joins
 use std::collections::HashMap;
+// endregion
 use std::error::Error;
 use std::time::Instant;
 

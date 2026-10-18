@@ -1,5 +1,7 @@
 use snippets::library;
+// region: trap
 use std::collections::HashMap;
+// endregion
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {

@@ -30,6 +30,18 @@ fn count_out(loans: &[Loan]) -> usize {
 // endregion
 
 // region: early
+/// Loans that went out before this date count as early.
+const CUTOFF: &str = "2026-09-15";
+
+fn out_before_cutoff(loans: &[Loan]) -> Vec<&Loan> {
+    loans
+        .iter()
+        .filter(|loan| loan.status == "out" && loan.loaned_on.as_str() < CUTOFF)
+        .collect()
+}
+// endregion
+
+// region: lifetime
 fn out_before<'a>(loans: &'a [Loan], cutoff: &str) -> Vec<&'a Loan> {
     loans
         .iter()
@@ -44,11 +56,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     // region: use
     println!("out right now: {}", count_out(&loans));
 
-    let mut early = out_before(&loans, "2026-09-15");
+    let mut early = out_before_cutoff(&loans);
     early.sort_by_key(|loan| (loan.member.as_str(), loan.loan_id));
     for loan in &early {
         println!("{} {} {}", loan.member, loan.loan_id, loan.loaned_on);
     }
     // endregion
+    // The two-parameter version gives the same answer.
+    assert_eq!(out_before(&loans, CUTOFF).len(), early.len());
     Ok(())
 }

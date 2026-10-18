@@ -1,0 +1,15 @@
+error[E0277]: cannot divide `f64` by `usize`
+ --> src/main.rs:4:25
+  |
+4 |     let average = total / count;
+  |                         ^ no implementation for `f64 / usize`
+  |
+  = help: the trait `Div<usize>` is not implemented for `f64`
+  = help: the following other types implement trait `Div<Rhs>`:
+            `&f64` implements `Div<f64>`
+            `&f64` implements `Div`
+            `f64` implements `Div<&f64>`
+            `f64` implements `Div`
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `kettle_creek` (bin "kettle_creek") due to 1 previous error

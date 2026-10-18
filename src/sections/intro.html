@@ -19,7 +19,7 @@
 <h3>House rules</h3>
 <p>These are the rules a good engineering team would give a new hire. Each one is here because breaking it costs you something later.</p>
 <ol>
-  <li><strong>You write every line.</strong> Claude can explain a compiler error, point you at a concept, or review finished work. It does not write your implementation. The <code>CLAUDE.md</code> you add on day one tells it so.</li>
+  <li><strong>You write every line.</strong> Claude can explain a compiler error, point you at a concept, or review finished work. It does not write your implementation. The <code>CLAUDE.md</code> you add during set up tells it so.</li>
   <li><strong>SQL stops at <code>SELECT columns FROM table</code>.</strong> No <code>WHERE</code>, <code>JOIN</code>, <code>GROUP BY</code> or <code>SUM</code>. Kettle Creek's IT team asks for this because business rules buried in SQL strings inside a program are easy to miss in review, awkward to test without a live database, and soon forgotten. For you there is a second reason: every filter, join and total you write in Rust is Rust you learn.</li>
   <li><strong>No crate until a ticket needs it.</strong> Each ticket names the crates it allows. Learning what the standard library already does is part of the job.</li>
   <li><strong>Clean before review.</strong> <code>cargo fmt</code>, then <code>cargo clippy --all-targets</code> with no warnings, then <code>cargo test</code>. A reviewer's time goes on design, not on things a tool can find.</li>
@@ -34,30 +34,32 @@
   <thead><tr><th>Ticket</th><th>The ask</th><th>Rust you learn</th><th>Computer science you learn</th></tr></thead>
   <tbody>
     <tr class="part"><th colspan="4">Part 1: reports (this page)</th></tr>
+    <tr><td><a href="#t0">0</a></td><td>Learn the basics before Monday</td><td>Compiling, variables and types, functions, control flow, structs and methods, <code>Option</code> and <code>Result</code>, formatting, reading the docs</td><td>Bits and bytes, memory, text encoding, processes</td></tr>
     <tr><td><a href="#t1">1</a></td><td>How many POs are open?</td><td>Cargo, structs, <code>Vec</code>, iterators, borrowing, <code>Result</code> and <code>?</code></td><td>Stack and heap, how text sorts</td></tr>
     <tr><td><a href="#t2">2</a></td><td>Spend by supplier, as a CSV</td><td><code>HashMap</code>, <code>String</code> and <code>&amp;str</code>, <code>Option</code>, sorting with tie-breaks, the csv crate</td><td>Hash tables, sort stability</td></tr>
     <tr><td><a href="#t3">3</a></td><td>Which invoices don't match their POs?</td><td>Enums with data, <code>match</code>, derives, a money type, lifetimes</td><td>Floating point, big-O, the hash join</td></tr>
-    <tr><td><a href="#t4">4</a></td><td>A newly acquired branch's messy data</td><td>Error types, parsing, unit and integration tests, modules</td><td>Parsing, calendars, what tests can and can't prove</td></tr>
-    <tr><td><a href="#t5">5</a></td><td>The monthly Excel pack</td><td>Traits, generics, a real command-line interface</td><td>Interfaces and dispatch, file formats, exit codes</td></tr>
+    <tr><td><a href="#t4">4</a></td><td>A newly acquired branch's messy data</td><td>Error types, parsing text, unit tests</td><td>Parsing, calendars, what tests can and can't prove</td></tr>
+    <tr><td><a href="#t5">5</a></td><td>Put that data in the reconciliation, in code someone else can maintain</td><td>Modules, <code>From</code> and <code>?</code>, integration tests, refactoring</td><td>Information hiding, how crates compile</td></tr>
+    <tr><td><a href="#t6">6</a></td><td>The monthly Excel pack</td><td>Traits, generics, a real command-line interface</td><td>Interfaces and dispatch, file formats, exit codes</td></tr>
     <tr class="part"><th colspan="4">Part 2: pipeline</th></tr>
-    <tr class="later"><td>6</td><td>Run it every 15 minutes as new invoices arrive</td><td>Long-running programs, logging, state on disk</td><td>Idempotency, clocks, at-least-once processing</td></tr>
-    <tr class="later"><td>7</td><td>We have a million invoices now</td><td>Benchmarks, profiling, fewer allocations, iterators that stream</td><td>Memory hierarchy, cache locality, streaming vs batch</td></tr>
+    <tr class="later"><td>7</td><td>Run it every 15 minutes as new invoices arrive</td><td>Long-running programs, logging, state on disk</td><td>Idempotency, clocks, at-least-once processing</td></tr>
+    <tr class="later"><td>8</td><td>We have a million invoices now</td><td>Benchmarks, profiling, fewer allocations, iterators that stream</td><td>Memory hierarchy, cache locality, streaming vs batch</td></tr>
     <tr class="part"><th colspan="4">Part 3: service</th></tr>
-    <tr class="later"><td>8</td><td>Other teams want the numbers over HTTP</td><td>axum, async and tokio, shared state</td><td>TCP and HTTP, concurrency vs parallelism</td></tr>
-    <tr class="later"><td>9</td><td>Prove the API works</td><td>Integration tests against a live server, error responses</td><td>Contracts, test pyramids, property-based tests</td></tr>
+    <tr class="later"><td>9</td><td>Other teams want the numbers over HTTP</td><td>axum, async and tokio, shared state</td><td>TCP and HTTP, concurrency vs parallelism</td></tr>
+    <tr class="later"><td>10</td><td>Prove the API works</td><td>Integration tests against a live server, error responses</td><td>Contracts, test pyramids, property-based tests</td></tr>
     <tr class="part"><th colspan="4">Part 4: math in the service</th></tr>
-    <tr class="later"><td>10</td><td>A demand forecast endpoint</td><td>Your own matrix type, then nalgebra</td><td>Least squares, conditioning, numerical stability</td></tr>
-    <tr class="later"><td>11</td><td>Which suppliers will bill late or wrong?</td><td>Logistic regression by hand, train and test split</td><td>Gradient descent, overfitting, evaluation</td></tr>
-    <tr class="later"><td>12</td><td>The results weren't good enough</td><td>A stronger model and an honest comparison with the baseline</td><td>Bias and variance, cross-validation, leakage</td></tr>
+    <tr class="later"><td>11</td><td>A demand forecast endpoint</td><td>Your own matrix type, then nalgebra</td><td>Least squares, conditioning, numerical stability</td></tr>
+    <tr class="later"><td>12</td><td>Which suppliers will bill late or wrong?</td><td>Logistic regression by hand, train and test split</td><td>Gradient descent, overfitting, evaluation</td></tr>
+    <tr class="later"><td>13</td><td>The results weren't good enough</td><td>A stronger model and an honest comparison with the baseline</td><td>Bias and variance, cross-validation, leakage</td></tr>
     <tr class="later"><td>Capstone</td><td>Review someone else's messy Rust service</td><td>Reading code critically</td><td>Everything above</td></tr>
   </tbody>
 </table>
 </div>
 
 <!-- ===================================================== -->
-<h2 id="setup">Day one: set up</h2>
+<h2 id="setup">Set up</h2>
 
-<p>Most of this you already have. The point of today is a project you can build, a loop you can run in your sleep, and the rules written down where Claude will read them.</p>
+<p>Do this before week zero. The point is a project you can build, a loop you can run in your sleep, and the rules written down where Claude will read them.</p>
 
 <h3>Check your tools</h3>
 <pre class="cmd">cargo --version
@@ -69,11 +71,11 @@ rustup component list --installed</pre>
 cargo new kettle_creek
 cd kettle_creek
 mkdir data out
-cp ~/projects/space_sim/learning/data/kettle_creek.db data/
+cp ~/projects/space_sim/learning/data/kettle_creek.db data/   # or wherever your copy is
 cargo add rusqlite --features bundled
 printf '/out\n/data/*.db\n' &gt;&gt; .gitignore</pre>
 <p><code>cargo new</code> makes <code>Cargo.toml</code>, <code>src/main.rs</code> and a git repository with a <code>.gitignore</code> that already skips <code>target/</code>. The last line adds two more: your program's output files, which are rebuilt every run, and your copy of the database, which you can always copy again.</p>
-<p><code>cargo add rusqlite --features bundled</code> adds the SQLite crate. A <em>crate</em> is one unit of compiled Rust, a library or a program, and a <em>package</em> is what cargo downloads and builds, holding one or more crates. Day to day, people say crate for both. <code>bundled</code> compiles SQLite itself from C source into your program, so nothing has to be installed on the machine. That makes the first build slow, a minute or so, and every build after it fast. <code>Cargo.toml</code> now ends with something like:</p>
+<p><code>cargo add rusqlite --features bundled</code> adds the SQLite crate. A <em>crate</em> is one unit of compiled Rust, a library or a program, and a <em>package</em> is what cargo downloads and builds, holding one or more crates. Day to day, people say crate for both. <code>bundled</code> compiles SQLite itself from C source into your program, so SQLite doesn't have to be installed on the machine. It does need a C compiler. On Linux and macOS, Rust normally links programs through the system's C toolchain, so you usually have one already. If the first build fails with an error that mentions <code>cc</code>, install your system's C build tools and try again. That makes the first build slow, a minute or so, and every build after it fast. <code>Cargo.toml</code> now ends with something like:</p>
 <pre>[dependencies]
 rusqlite = { version = "0.40.2", features = ["bundled"] }</pre>
 <p>Your version may be newer. If an example on this page stops compiling with a newer rusqlite, pin the tested one with <code>version = "=0.40.2"</code>.</p>
@@ -93,7 +95,7 @@ rusqlite = { version = "0.40.2", features = ["bundled"] }</pre>
   </tbody>
 </table>
 </div>
-<p>To look around, <code>sqlite3 data/kettle_creek.db</code> opens a prompt. <code>.tables</code> lists tables, <code>.schema purchase_orders</code> shows one, and <code>SELECT * FROM suppliers LIMIT 5;</code> shows a few rows. Using SQL to look is fine. The rule is about what goes in your program.</p>
+<p>To look around, install the <code>sqlite3</code> command-line program from your package manager (the bundled feature puts SQLite inside your program, not on your machine). Then <code>sqlite3 data/kettle_creek.db</code> opens a prompt. <code>.tables</code> lists tables, <code>.schema purchase_orders</code> shows one, and <code>SELECT * FROM suppliers LIMIT 5;</code> shows a few rows. Using SQL to look is fine. The rule is about what goes in your program.</p>
 
 <h3>The loop you'll run a thousand times</h3>
 <div class="table-wrap">
@@ -111,7 +113,8 @@ rusqlite = { version = "0.40.2", features = ["bundled"] }</pre>
 </div>
 
 <h3>Your editor</h3>
-<p>Your Neovim already runs rust-analyzer through rustaceanvim, with clippy on every save, and shows inferred types as gray inlay hints. Start <code>nvim</code> from the project folder so it picks up the right project. The keys worth learning this week, all from your own config:</p>
+<p>Whatever editor you use, it should run <em>rust-analyzer</em>, the program that reads your code as you type and shows errors, types and docs in place. Without it you find every mistake at the next <code>cargo build</code>, and Rust is much harder to learn that way.</p>
+<p>Your Neovim already runs rust-analyzer through rustaceanvim, with clippy on every save, and shows inferred types as gray inlay hints. Start <code>nvim</code> from the project folder so it picks up the right project. The keys worth learning this week, all from your own config. <kbd>&lt;leader&gt;</kbd> is the prefix key your config sets. With a different Neovim setup the keys will differ, and the actions are what to look for:</p>
 <div class="table-wrap">
 <table>
   <thead><tr><th>Key</th><th>What it does</th></tr></thead>
@@ -127,6 +130,20 @@ rusqlite = { version = "0.40.2", features = ["bundled"] }</pre>
   </tbody>
 </table>
 </div>
+<p>If you'd rather use VS Code, install the <em>rust-analyzer</em> extension (from the rust-lang publisher) and open the project folder, not a single file. Then set <code>rust-analyzer.check.command</code> to <code>clippy</code> in the settings, so you see clippy's warnings on every save. The same jobs, VS Code's way:</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Key</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>Hover with the mouse, or <kbd>Ctrl+K</kbd> <kbd>Ctrl+I</kbd></td><td>The type and docs of whatever is under the cursor.</td></tr>
+    <tr><td><kbd>F12</kbd></td><td>Go to definition, including into a crate's source.</td></tr>
+    <tr><td><kbd>Ctrl+Shift+M</kbd></td><td>The Problems panel: every error and warning in the project. Click one to jump to it.</td></tr>
+    <tr><td><kbd>Ctrl+.</kbd></td><td>Quick fixes for the problem under the cursor, often the compiler's own suggestion.</td></tr>
+    <tr><td>The "Run" and "Debug" links</td><td>rust-analyzer puts them above <code>fn main</code> and above each test.</td></tr>
+  </tbody>
+</table>
+</div>
+<p>On a Mac, <kbd>Ctrl</kbd> is <kbd>Cmd</kbd>. The full compiler message is always in the terminal: when the editor's one-line summary isn't enough, run <code>cargo build</code> and read it there. Where this page names a Neovim key, the VS Code row above does the same job.</p>
 
 <h3>How to read a compiler error</h3>
 <p>Rust's compiler is the best teacher you'll have, if you read what it says. Here is a small mistake and the message it produces:</p>
@@ -168,7 +185,7 @@ My Rust learning project. I am working through the guide at
 cargo run
 git add -A
 git commit -m "Start kettle_creek: empty binary, rusqlite, rules for Claude"</pre>
-<p>If <code>cargo run</code> prints <code>Hello, world!</code> after compiling SQLite, day one is done.</p>
+<p>If <code>cargo run</code> prints <code>Hello, world!</code> after compiling SQLite, you're set up. Week zero is next.</p>
 
 <!-- ===================================================== -->
 <h2 id="reviews">How reviews work</h2>

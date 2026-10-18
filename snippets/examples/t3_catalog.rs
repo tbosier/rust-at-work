@@ -1,4 +1,6 @@
+// region: catalog
 use std::collections::HashMap;
+// endregion
 
 struct Book {
     book_id: i64,

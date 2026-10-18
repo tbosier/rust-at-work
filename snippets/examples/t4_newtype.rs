@@ -1,5 +1,5 @@
+// region: newtype
 mod card {
-    // region: newtype
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct CardNumber(u32);
 
@@ -17,8 +17,8 @@ mod card {
             self.0
         }
     }
-    // endregion
 }
+// endregion
 
 fn main() {
     // region: use

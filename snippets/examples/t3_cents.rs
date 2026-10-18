@@ -1,8 +1,12 @@
 use snippets::library;
 use std::collections::HashMap;
 use std::error::Error;
+// region: display
 use std::fmt;
+// endregion
+// region: add
 use std::ops::Add;
+// endregion
 
 // region: newtype
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]

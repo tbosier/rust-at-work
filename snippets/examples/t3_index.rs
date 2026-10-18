@@ -1,5 +1,7 @@
 use snippets::library;
+// region: index
 use std::collections::{HashMap, HashSet};
+// endregion
 use std::error::Error;
 
 struct Book {

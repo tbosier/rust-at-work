@@ -52,6 +52,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Drill 3: an integer column read as String: a runtime error.
     let mut stmt = db.prepare("SELECT name, supplier_id FROM suppliers")?;
     let bad: rusqlite::Result<(i64, String)> = stmt.query_row([], |r| Ok((r.get(0)?, r.get(1)?)));
-    println!("{}", bad.unwrap_err());
+    let e = bad.unwrap_err();
+    // What `main` prints when it returns this error: "Error: " and the Debug form.
+    println!("Error: {e:?}");
+    println!("---");
+    // The Display form, for the page's explanation.
+    print!("{e}");
     Ok(())
 }

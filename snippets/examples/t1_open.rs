@@ -1,4 +1,9 @@
-use rusqlite::{Connection, OpenFlags};
+// region: open
+use rusqlite::Connection;
+// endregion
+// region: readonly
+use rusqlite::OpenFlags;
+// endregion
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -8,6 +13,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("{n} suppliers");
     // endregion
     println!("---");
+    // Run the next two in a scratch folder, so the stray file lands there.
     let dir = std::env::temp_dir().join("snip_t1_open");
     std::fs::create_dir_all(&dir)?;
     std::env::set_current_dir(&dir)?;
@@ -18,11 +24,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("{:?}", result.err().map(|e| e.to_string()));
     // endregion
     println!("---");
-    let _ = std::fs::remove_file("data_kettle_creek.db");
     // region: readonly
     let flags = OpenFlags::SQLITE_OPEN_READ_ONLY;
-    let result = Connection::open_with_flags("data_kettle_creek.db", flags);
+    let result = Connection::open_with_flags("data/kettle-creek.db", flags); // typo: - for _
     println!("{:?}", result.err().map(|e| e.to_string()));
     // endregion
+    let _ = std::fs::remove_file("data_kettle_creek.db");
     Ok(())
 }

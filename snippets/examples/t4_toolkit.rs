@@ -28,4 +28,23 @@ fn main() {
     println!("{}", (fine * 100.0) as i64);
     println!("{}", (fine * 100.0).round() as i64);
     // endregion
+    println!("---");
+    // region: words
+    let typed = "  the  PRAGMATIC   programmer ";
+    let lower = typed.to_lowercase();
+    println!("{lower:?}");
+    let words: Vec<&str> = lower.split_whitespace().collect();
+    println!("{words:?}");
+    println!("{:?}", words.join(" "));
+    println!("{:?}", "Kernighan, Ritchie".replace(", ", " and "));
+    println!("{}", "LIB-0042".starts_with("LIB-"));
+    // endregion
+    println!("---");
+    // region: deref
+    let shelf: Option<String> = Some(" A12 ".to_string());
+    let missing: Option<String> = None;
+    let s: Option<&str> = shelf.as_deref();
+    println!("{:?}", s.map(|t| t.trim()));
+    println!("{:?}", missing.as_deref().unwrap_or(""));
+    // endregion
 }

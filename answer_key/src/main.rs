@@ -23,7 +23,8 @@ enum Cmd {
     T2,
     T3,
     T4,
-    T5 {
+    T5,
+    T6 {
         #[arg(long, value_parser = parse_month)]
         month: String,
     },
@@ -135,7 +136,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             let fgrand: f64 = f.values().sum();
             println!("f64 grand total: {fgrand}");
         }
-        Cmd::T3 | Cmd::T4 | Cmd::T5 { .. } => {
+        Cmd::T3 | Cmd::T4 | Cmd::T5 | Cmd::T6 { .. } => {
             let suppliers = db::suppliers(&conn)?;
             let names: HashMap<i64, &str> = suppliers
                 .iter()
@@ -160,7 +161,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             };
             let ds = reconcile::reconcile(&input);
             let name_of = |id: i64| names.get(&id).copied().unwrap_or("");
-            if let Cmd::T5 { month } = &cli.cmd {
+            if let Cmd::T6 { month } = &cli.cmd {
                 let dup: HashSet<(i64, &str)> = ds
                     .iter()
                     .filter(|d| d.kind == reconcile::Kind::DuplicateInvoice)
@@ -205,39 +206,42 @@ fn main() -> Result<(), Box<dyn Error>> {
                 );
                 return Ok(());
             }
-            let mut w = csv::Writer::from_path(out("discrepancies.csv"))?;
-            w.write_record([
-                "kind",
-                "po_id",
-                "invoice_number",
-                "supplier",
-                "expected",
-                "billed",
-                "difference",
-            ])?;
-            for d in &ds {
+            let reconcile_too = !matches!(cli.cmd, Cmd::T4);
+            if reconcile_too {
+                let mut w = csv::Writer::from_path(out("discrepancies.csv"))?;
                 w.write_record([
-                    d.kind.to_string(),
-                    d.po_id.to_string(),
-                    d.invoice_number.clone().unwrap_or_default(),
-                    name_of(d.supplier_id).to_string(),
-                    d.expected.map(|c| c.to_string()).unwrap_or_default(),
-                    d.billed.to_string(),
-                    d.difference().map(|c| c.to_string()).unwrap_or_default(),
+                    "kind",
+                    "po_id",
+                    "invoice_number",
+                    "supplier",
+                    "expected",
+                    "billed",
+                    "difference",
                 ])?;
+                for d in &ds {
+                    w.write_record([
+                        d.kind.to_string(),
+                        d.po_id.to_string(),
+                        d.invoice_number.clone().unwrap_or_default(),
+                        name_of(d.supplier_id).to_string(),
+                        d.expected.map(|c| c.to_string()).unwrap_or_default(),
+                        d.billed.to_string(),
+                        d.difference().map(|c| c.to_string()).unwrap_or_default(),
+                    ])?;
+                }
+                w.flush()?;
+                for kind in reconcile::ALL_KINDS {
+                    let n = ds.iter().filter(|d| d.kind == kind).count();
+                    println!("{kind:<18} {n}");
+                }
+                let over: Cents = ds
+                    .iter()
+                    .filter(|d| d.kind == reconcile::Kind::Overbilled)
+                    .filter_map(|d| d.difference())
+                    .sum();
+                println!("total overbilled: {over}");
+                println!("rows: {}", ds.len());
             }
-            w.flush()?;
-            for kind in reconcile::ALL_KINDS {
-                let n = ds.iter().filter(|d| d.kind == kind).count();
-                println!("{kind:<18} {n}");
-            }
-            let over: Cents = ds
-                .iter()
-                .filter(|d| d.kind == reconcile::Kind::Overbilled)
-                .filter_map(|d| d.difference())
-                .sum();
-            println!("total overbilled: {over}");
-            println!("rows: {}", ds.len());
             if with_branch {
                 println!(
                     "branch accepted: {}  rejected: {}",
@@ -265,4 +269,26 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_month;
+
+    #[test]
+    fn months_must_be_yyyy_mm() {
+        assert_eq!(parse_month("2026-09"), Ok("2026-09".to_string()));
+        assert!(parse_month("2026-12").is_ok());
+        for bad in [
+            "2026-13",
+            "2026-00",
+            "2026-9",
+            "sept",
+            "",
+            "2026/09",
+            "2026-09-01",
+        ] {
+            assert!(parse_month(bad).is_err(), "{bad:?} should be rejected");
+        }
+    }
 }

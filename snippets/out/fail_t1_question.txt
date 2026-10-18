@@ -3,13 +3,13 @@ error[E0277]: the `?` operator can only be used in a function that returns `Resu
   |
 1 | fn main() {
   | --------- this function should return `Result` or `Option` to accept `?`
-2 |     let count: i64 = "70".parse()?;
+2 |     let count: i64 = "42".parse()?;
   |                                  ^ cannot use the `?` operator in a function that returns `()`
   |
 help: consider adding return type
   |
 1 ~ fn main() -> Result<(), Box<dyn std::error::Error>> {
-2 |     let count: i64 = "70".parse()?;
+2 |     let count: i64 = "42".parse()?;
 3 |     println!("{count}");
 4 +     Ok(())
   |

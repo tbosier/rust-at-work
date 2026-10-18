@@ -24,7 +24,7 @@
   </div>
 </article>
 <p class="teaches"><strong>This ticket teaches</strong> <code>HashMap</code> and its entry API, <code>Option</code> from a lookup, <code>String</code> and <code>&amp;str</code> properly, sorting numbers that aren't integers, and the csv crate. <strong>Under the hood:</strong> how a hash table works, why its order changes between runs, and what makes a sort stable. <strong>Crates allowed:</strong> rusqlite, csv (<code>cargo add csv</code>).</p>
-<p>Your program now does two jobs. Keep ticket 1 working: <code>cargo run</code> should write every report so far. That means moving ticket 1's steps into a function of its own, so <code>main</code> becomes a list of reports. If that move is uncomfortable, notice why. Ticket 4 is about it.</p>
+<p>Your program now does two jobs. Keep ticket 1 working: <code>cargo run</code> should write every report so far. That means moving ticket 1's steps into a function of its own, so <code>main</code> becomes a list of reports. The wiki's <a href="#t2-helpers">last section</a> shows the one snag you'll hit. If the move is uncomfortable in other ways, notice why. Ticket 5 is about it.</p>
 
 <p class="wiki-crumb" id="t2-wiki">Engineering wiki / Rust / Grouping and totals</p>
 <h3>Group by, without SQL</h3>
@@ -44,7 +44,7 @@
 <ul>
   <li><code>match</code> handles both cases and says what each one does.</li>
   <li><code>if let Some(n) = ...</code> is <code>match</code> when you only care about one case.</li>
-  <li><code>.copied().unwrap_or(0)</code> turns "maybe a reference to a number" into "a number, or 0". <code>copied</code> turns <code>Option&lt;&amp;u32&gt;</code> into <code>Option&lt;u32&gt;</code>. Look up <code>Option</code> in the docs and skim its methods. You'll use a dozen of them by ticket 5.</li>
+  <li><code>.copied().unwrap_or(0)</code> turns "maybe a reference to a number" into "a number, or 0". <code>copied</code> turns <code>Option&lt;&amp;u32&gt;</code> into <code>Option&lt;u32&gt;</code>. Look up <code>Option</code> in the docs and skim its methods. You'll use a dozen of them by ticket 6.</li>
   <li><code>map[&amp;key]</code> also works. It panics if the key is missing, just like Python's <code>d[key]</code>. Use it only where a missing key really is impossible, and you can say why.</li>
 </ul>
 
@@ -53,7 +53,7 @@
 <pre>{{code:t2_map#entry}}</pre>
 <pre class="out">{{out:t2_map#3}}</pre>
 <p><code>counts.entry(w)</code> finds the slot for <code>w</code>. <code>.or_insert(0)</code> fills it with 0 if it's empty and hands back a mutable reference to the value, and the <code>*</code> in front reaches through that reference so <code>+= 1</code> changes the number in the map. <code>.or_default()</code> does the same with the type's default, which is 0 for numbers. Python's version is <code>counts[w] = counts.get(w, 0) + 1</code>, or <code>Counter</code>.</p>
-<p>A <code>HashMap</code> has no order. To print or write one predictably, collect it into a <code>Vec</code> and sort that. More on why under the hood.</p>
+<p>A <code>HashMap</code> has no order. To print or write one predictably, collect it into a <code>Vec</code> and sort that. <code>counts.into_iter()</code> walks the map by value: each item is an owned (key, value) pair, and the map is used up, so you can't touch <code>counts</code> afterward. <code>counts.iter()</code> would borrow instead and hand out references, the way <code>for x in &amp;list</code> does. More on why under the hood.</p>
 
 <h4>Owned text and borrowed text</h4>
 <p>Look at the key type: <code>&amp;str</code>, not <code>String</code>. That choice matters more than it looks.</p>
@@ -88,10 +88,19 @@
 <p>The output above prints each total twice: <code>{total:&gt;6.2}</code> right-aligns it in six characters with two decimals, and plain <code>{total}</code> prints the shortest decimal that reads back as exactly the same float. On this tiny library they agree. On a quarter's invoices they won't, and you'll see digits like <code>...55000000002</code>. That's not a bug in your code: it's what floating point does. For this report, format with two decimals and move on. Ticket 3 is where it stops being cosmetic.</p>
 
 <h4>Writing real CSV</h4>
-<p>The csv crate handles quoting for you. Any field with a comma, a quote or a line break gets wrapped in quotes, and quotes inside get doubled, which is the rule every spreadsheet program expects:</p>
+<p>To try this in your <code>snippets</code> project, run <code>cargo add csv</code> there first. The crate handles quoting for you. Any field with a comma, a quote or a line break gets wrapped in quotes, and quotes inside get doubled, which is the rule every spreadsheet program expects:</p>
 <pre>{{code:t2_csv#csv}}</pre>
 <pre class="out">{{out:t2_csv}}</pre>
 <p><code>write_record</code> takes any list of things that look like text, such as string literals or <code>String</code>s, as long as every field in one record has the same type. That's why the last record turns everything into a <code>String</code>. <code>format!</code> is <code>println!</code> that gives you the <code>String</code> instead of printing it. The csv crate can also write structs directly through serde, but that's more machinery than this ticket needs.</p>
+
+<h4 id="t2-helpers">One function per report</h4>
+<p>When you move ticket 1 out of <code>main</code>, its function opens a file and reads the database, so it can fail in two ways: an I/O error or a rusqlite error. A function can only name one error type, and <code>?</code> refuses to pass along an error that doesn't fit it. The same thing on a smaller scale, a function that parses a number and writes a file:</p>
+<pre>{{fail:t2_helper}}</pre>
+<pre class="out">{{failout:t2_helper}}</pre>
+<p>The function promised <code>std::io::Result</code>, which can only carry an I/O error, and <code>parse</code> fails with a <code>ParseIntError</code>. The fix you already know from <code>main</code>: return <code>Box&lt;dyn Error&gt;</code>, "any kind of error", and <code>?</code> will box whichever error turns up.</p>
+<pre>{{code:t2_helper#helper}}</pre>
+<pre class="out">{{out:t2_helper}}</pre>
+<p>Use it for every report function this week. Ticket 5 replaces it with an error type of your own, which can say which kind of error happened.</p>
 
 <h3>Warm-up drills</h3>
 <div class="drill">
@@ -99,11 +108,11 @@
   <pre class="out">{{out:drill_t2#1}}</pre>
 </div>
 <div class="drill">
-  <p><strong>Drill 2.</strong> The three suppliers with the highest average list price across their products, with how many products each. You need a count and a sum per supplier, then a division, then a float sort. Look up supplier names with a second map.</p>
+  <p><strong>Drill 2.</strong> The three suppliers with the highest average list price across their products, with how many products each. You need a count and a sum per supplier, then a division, then a float sort. Look up supplier names with a second map. The division is an <code>f64</code> sum over a whole-number count, so one side needs <code>as f64</code> (from <a href="#t0">week zero</a>).</p>
   <pre class="out">{{out:drill_t2#2}}</pre>
 </div>
 <div class="drill">
-  <p><strong>Drill 3: break it.</strong> In drill 1, add <code>drop(products);</code> (or whatever you called the <code>Vec</code>) between building the map and printing it. Read the error, then change the map to <code>HashMap&lt;String, usize&gt;</code> so it owns its keys. What did you have to add inside the loop, and what does that cost for 176 products? For a million?</p>
+  <p><strong>Drill 3: break it.</strong> In drill 1's function, add <code>drop(products);</code> (or whatever you called the <code>Vec</code>) between building the map and printing it. <code>drop</code> frees a value right away instead of at the end of its block. Read the error, then change the map to <code>HashMap&lt;String, usize&gt;</code> so it owns its keys. What did you have to add inside the loop, and what does that cost for 176 products? For a million?</p>
 </div>
 
 <h3>The ticket</h3>
@@ -117,7 +126,7 @@
   <li><label><input type="checkbox" class="crit-box" id="c-t2-7"><span>Ticket 1's report still comes out of the same <code>cargo run</code>, and <code>main</code> is still short.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t2-8"><span><code>cargo fmt</code> and <code>cargo clippy --all-targets</code> are clean.</span></label></li>
 </ul>
-<p><strong>Before you type,</strong> answer these in your journal. What is the key of your grouping map, and what is the value? Should the key be the supplier's ID or its name, and what goes wrong with names? Do you need the supplier name during grouping, or only when writing? How will you test "July 1 through September 30" at the edges, and is <code>&lt;= "2026-09-30"</code> right for a date written as text?</p>
+<p><strong>Before you type,</strong> answer these in your journal. What is the key of your grouping map, and what is the value? Should the key be the supplier's ID or its name, and what goes wrong with names? Do you need the supplier name during grouping, or only when writing? How will you test "July 1 through September 30" at the edges, and is <code>&lt;= "2026-09-30"</code> right for a date written as text? (If you write the test as two comparisons joined by <code>&amp;&amp;</code>, clippy will suggest a range with <code>contains</code> instead. Week zero shows both.)</p>
 
 <h3>Stuck?</h3>
 <details class="hint"><summary>Hint 1: two maps</summary>
@@ -128,6 +137,7 @@
 </details>
 <details class="hint"><summary>Hint 3: the missing supplier</summary>
   <p>The choices are: skip the invoice (and the total no longer ties to the ledger), keep it under a placeholder name like <code>"(unknown supplier 99)"</code>, or stop the program with an error. Which one would Priya want? <code>names.get(&amp;id)</code> gives you an <code>Option</code> to make that choice with.</p>
+  <p>If you choose the placeholder and write <code>names.get(&amp;id).copied().unwrap_or(&amp;format!(...))</code>, the compiler says "temporary value dropped while borrowed". <code>format!</code> makes a new <code>String</code> that nothing keeps, so it's freed at the end of the statement, and the <code>&amp;str</code> you borrowed from it can't outlive it. One way out is to make the name owned at the point where you write each output row: one <code>String</code> per supplier row is a couple of dozen small copies at most, which is nothing. Criterion 6 is about the loop over invoices, which runs once per invoice, not about the few rows you write.</p>
 </details>
 
 <h3>Sanity checks</h3>

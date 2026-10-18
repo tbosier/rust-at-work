@@ -4,3 +4,7 @@ Overdue { days: 40 }       40 days late: send a letter
 Out                        nothing yet
 Returned                   nothing
 2 overdue
+---
+Some(Out)
+None
+error: unknown loan status "Lost"

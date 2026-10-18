@@ -1,4 +1,6 @@
+// region: basics
 use std::collections::HashMap;
+// endregion
 
 fn main() {
     // region: basics

@@ -1,4 +1,4 @@
-//! Ticket 5: the monthly workbook.
+//! Ticket 6: the monthly workbook.
 
 use crate::branch::{BranchInvoice, Reject};
 use crate::money::Cents;
@@ -209,4 +209,46 @@ pub fn write(pack: &Pack, path: &str) -> Result<(), XlsxError> {
         &money,
     )?;
     wb.save(path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dates::Date;
+    use crate::model::Invoice;
+
+    fn invoice(id: i64, supplier_id: i64, date: &str, cents: i64) -> Invoice {
+        Invoice {
+            invoice_id: id,
+            invoice_number: format!("N{id}"),
+            supplier_id,
+            po_id: 1,
+            invoice_date: date.to_string(),
+            amount: Cents(cents),
+        }
+    }
+
+    #[test]
+    fn spend_counts_only_the_month_from_both_branches() {
+        let main = [
+            invoice(1, 1, "2026-08-31", 100),
+            invoice(2, 1, "2026-09-01", 200),
+            invoice(3, 2, "2026-09-30", 50),
+            invoice(4, 2, "2026-10-01", 999),
+        ];
+        let branch = [BranchInvoice {
+            reference: "MB-1".to_string(),
+            supplier_id: 2,
+            po_id: 1,
+            date: Date::parse("9/15/2026").expect("a real date"),
+            amount: Cents(300),
+        }];
+        let names = HashMap::from([(1, "Alpha"), (2, "Beta")]);
+        let rows = spend_rows("2026-09", &main, &branch, &names);
+        let got: Vec<_> = rows
+            .iter()
+            .map(|r| (r.supplier.as_str(), r.invoices, r.total))
+            .collect();
+        assert_eq!(got, [("Beta", 2, Cents(350)), ("Alpha", 1, Cents(200))]);
+    }
 }

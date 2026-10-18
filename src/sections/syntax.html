@@ -1,0 +1,40 @@
+<!-- ===================================================== -->
+<h2 id="syntax">Reading Rust: a symbol lookup</h2>
+<p>Rust packs a lot of meaning into punctuation, and none of it is searchable on its own. When you meet a symbol and can't remember what it does, look here, then follow the link to where it's taught.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Symbol</th><th>What it means</th><th>Example</th><th>Taught in</th></tr></thead>
+  <tbody>
+    <tr><td><code>;</code> at the end, or not</td><td>With it, a line is a statement and its value is thrown away. Without it, the last expression in a block is the block's value</td><td><code>fn two() -&gt; i64 { 1 + 1 }</code></td><td><a href="#t0-anatomy">Week zero</a></td></tr>
+    <tr><td><code>-&gt;</code></td><td>The type a function returns</td><td><code>fn len(&amp;self) -&gt; usize</code></td><td><a href="#t0-anatomy">Week zero</a></td></tr>
+    <tr><td><code>let</code>, <code>mut</code></td><td>Make a variable; allow it to change</td><td><code>let mut total = 0;</code></td><td><a href="#t0-vars">Week zero</a></td></tr>
+    <tr><td><code>as</code></td><td>Convert between number types. Never fails, so it can lose information</td><td><code>count as f64</code></td><td><a href="#t0-numbers">Week zero</a></td></tr>
+    <tr><td><code>'c'</code> and <code>"text"</code></td><td>Single quotes are one <code>char</code>; double quotes are text, a <code>&amp;str</code></td><td><code>'A'</code>, <code>"BRG-6204"</code></td><td><a href="#t0-numbers">Week zero</a>, <a href="#t0-text">text</a></td></tr>
+    <tr><td><code>name!</code></td><td>A macro: code that writes code while compiling</td><td><code>println!</code>, <code>vec!</code>, <code>dbg!</code></td><td><a href="#t0-macros">Week zero</a></td></tr>
+    <tr><td><code>{}</code>, <code>{:?}</code>, <code>{x:&gt;8.2}</code></td><td>In format text: display form, debug form, and a spec after the colon (alignment, width, decimals)</td><td><code>println!("{total:.2}")</code></td><td><a href="#t0-format">Week zero</a></td></tr>
+    <tr><td><code>&amp;&amp;</code>, <code>||</code>, <code>!x</code></td><td>Python's <code>and</code>, <code>or</code> and <code>not</code>. Conditions must be <code>bool</code></td><td><code>if !skus.is_empty()</code></td><td><a href="#t0-control">Week zero</a></td></tr>
+    <tr><td><code>a..b</code>, <code>a..=b</code></td><td>A range: <code>b</code> left out, or included. Also used for slices</td><td><code>for d in 1..=7</code>, <code>&amp;v[..2]</code></td><td><a href="#t0-control">Week zero</a>, <a href="#t0-collections">slices</a></td></tr>
+    <tr><td><code>[T; N]</code>, <code>v[i]</code></td><td>An array of exactly N items; reading position <code>i</code>, which panics if it's past the end</td><td><code>[u32; 5]</code>, <code>skus[0]</code></td><td><a href="#t0-collections">Week zero</a></td></tr>
+    <tr><td><code>t.0</code></td><td>The first field of a tuple, or of a struct with unnamed fields</td><td><code>line.0</code>, <code>cents.0</code></td><td><a href="#t0-collections">Week zero</a>, <a href="#t3-wiki">ticket 3</a></td></tr>
+    <tr><td><code>&amp;x</code></td><td>A reference: look at <code>x</code> without taking it (borrow it)</td><td><code>for q in &amp;qty</code></td><td><a href="#t0-refs">Week zero</a>, <a href="#t1-wiki">ticket 1</a></td></tr>
+    <tr><td><code>&amp;mut x</code></td><td>A reference that's allowed to change <code>x</code>. Only one can exist at a time</td><td><code>fn sort(v: &amp;mut Vec&lt;i64&gt;)</code></td><td><a href="#t0-structs">Week zero</a>, <a href="#t1-wiki">ticket 1</a></td></tr>
+    <tr><td><code>*r</code></td><td>Follow a reference to the value it points at</td><td><code>*q &gt; 10</code>, <code>*count += 1</code></td><td><a href="#t0-refs">Week zero</a>, <a href="#t2-wiki">ticket 2</a></td></tr>
+    <tr><td><code>::</code></td><td>Walk a path: into a module, or to something that belongs to a type</td><td><code>std::collections::HashMap</code>, <code>Bin::new(...)</code></td><td><a href="#t0-paths">Week zero</a></td></tr>
+    <tr><td><code>.</code></td><td>Reach into a value: a field or a method</td><td><code>bin.capacity</code>, <code>bin.put_away(5)</code></td><td><a href="#t0-structs">Week zero</a></td></tr>
+    <tr><td><code>self</code>, <code>Self</code></td><td>The value a method was called on; the type an <code>impl</code> block is for</td><td><code>fn new() -&gt; Self</code>, <code>self.on_hand</code></td><td><a href="#t0-structs">Week zero</a></td></tr>
+    <tr><td><code>impl</code></td><td>The functions that belong to a type. <code>impl Trait for Type</code> keeps a trait's promise for that type</td><td><code>impl Bin { ... }</code>, <code>impl Display for Cents</code></td><td><a href="#t0-structs">Week zero</a>, <a href="#t3-wiki">ticket 3</a></td></tr>
+    <tr><td><code>&lt;T&gt;</code></td><td>A type parameter: a type filled in later. <code>Vec&lt;u32&gt;</code> is a vector of <code>u32</code></td><td><code>Option&lt;String&gt;</code>, <code>fn f&lt;T: Trait&gt;(x: T)</code></td><td><a href="#t0-option">Week zero</a>, <a href="#t6-wiki">ticket 6</a></td></tr>
+    <tr><td><code>::&lt;T&gt;</code></td><td>The turbofish: says which type a generic function should produce</td><td><code>"40".parse::&lt;u32&gt;()</code></td><td><a href="#t0-option">Week zero</a></td></tr>
+    <tr><td><code>=&gt;</code></td><td>In a <code>match</code>: "if it has this shape, do this"</td><td><code>None =&gt; 0,</code></td><td><a href="#t0-option">Week zero</a>, <a href="#t3-wiki">ticket 3</a></td></tr>
+    <tr><td><code>_</code></td><td>Something not named: any leftover case, a value thrown away, a type to infer</td><td><code>_ =&gt; ...</code>, <code>let _ = ...;</code>, <code>Vec&lt;_&gt;</code></td><td><a href="#t0-docs">Week zero</a></td></tr>
+    <tr><td><code>{ .. }</code> in a pattern</td><td>"Whatever the other fields are"</td><td><code>Overdue { .. }</code></td><td><a href="#t3-wiki">Ticket 3</a></td></tr>
+    <tr><td><code>x?</code></td><td>If <code>x</code> is an error (or <code>None</code>, in a function that returns <code>Option</code>), return it from this function now; otherwise take the value out</td><td><code>let rows = load(&amp;db)?;</code></td><td><a href="#t1-wiki">Ticket 1</a></td></tr>
+    <tr><td><code>|x| ...</code></td><td>A closure: an inline function, like Python's <code>lambda</code></td><td><code>.filter(|po| po.status == "open")</code></td><td><a href="#t1-wiki">Ticket 1</a></td></tr>
+    <tr><td><code>'a</code></td><td>A lifetime: a name for how long a borrow lasts</td><td><code>struct Catalog&lt;'a&gt;</code></td><td><a href="#t1-wiki">Ticket 1</a>, <a href="#t3-wiki">ticket 3</a></td></tr>
+    <tr><td><code>'static</code></td><td>The lifetime that lasts the whole run, such as text written in the source</td><td><code>&amp;'static str</code></td><td><a href="#t6-wiki">Ticket 6</a></td></tr>
+    <tr><td><code>#[...]</code></td><td>An attribute: an instruction to the compiler about the next item</td><td><code>#[derive(Debug)]</code>, <code>#[test]</code>, <code>#[cfg(test)]</code></td><td><a href="#t0-structs">Week zero</a>, <a href="#t4-wiki">ticket 4</a></td></tr>
+    <tr><td><code>pub</code></td><td>Visible outside its module. Everything else is private</td><td><code>pub fn parse_amount(...)</code></td><td><a href="#t5-wiki">Ticket 5</a></td></tr>
+    <tr><td><code>dyn Trait</code></td><td>A value of some type that has this trait, decided while running</td><td><code>Box&lt;dyn Error&gt;</code></td><td><a href="#t1-wiki">Ticket 1</a>, <a href="#t6-wiki">ticket 6</a></td></tr>
+  </tbody>
+</table>
+</div>

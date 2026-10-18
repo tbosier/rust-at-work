@@ -2,4 +2,4 @@
 ---
 Some("no such table: suppliers")
 ---
-Some("unable to open database file: data_kettle_creek.db")
+Some("unable to open database file: data/kettle-creek.db")

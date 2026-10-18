@@ -18,3 +18,12 @@ true
 28.999999999999996
 28
 29
+---
+"  the  pragmatic   programmer "
+["the", "pragmatic", "programmer"]
+"the pragmatic programmer"
+"Kernighan and Ritchie"
+true
+---
+Some("A12")
+""

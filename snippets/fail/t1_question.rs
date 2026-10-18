@@ -1,4 +1,4 @@
 fn main() {
-    let count: i64 = "70".parse()?;
+    let count: i64 = "42".parse()?;
     println!("{count}");
 }

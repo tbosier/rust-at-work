@@ -1,0 +1,3 @@
+[examples/t0_dbg.rs:8:21] qty * price_cents = 51960
+[examples/t0_dbg.rs:9:9] total > 50_000 = true
+total is 51960

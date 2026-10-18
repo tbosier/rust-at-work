@@ -18,7 +18,7 @@
     <ol>
       <li><code>ORPHAN_INVOICE</code>: an invoice whose PO number doesn't exist at all. Usually a typo when it was keyed in.</li>
       <li><code>DUPLICATE_INVOICE</code>: the extra copies described above, one row per extra copy.</li>
-      <li><code>BILLED_CANCELLED</code>: a cancelled PO with any invoices. We owe nothing on those.</li>
+      <li><code>BILLED_CANCELLED</code>: a canceled PO with any invoices. We owe nothing on those.</li>
       <li><code>BILLED_OPEN</code>: an open PO that's been invoiced. Shouldn't happen. I want to know if it does.</li>
       <li><code>OVERBILLED</code>: a received PO billed more than it should cost.</li>
       <li><code>UNDERBILLED</code>: a received PO billed less. Often a short shipment, but I still want to see it.</li>
@@ -28,7 +28,7 @@
     <p>Send it as <code>discrepancies.csv</code> with columns <code>kind</code>, <code>po_id</code>, <code>invoice_number</code>, <code>supplier</code>, <code>expected</code>, <code>billed</code>, <code>difference</code>:</p>
     <ul>
       <li><code>supplier</code> is the name. <code>invoice_number</code> is only filled in on orphan and duplicate rows.</li>
-      <li><code>expected</code> is what the PO should cost. Put 0.00 for a cancelled PO, and leave it blank on orphan and duplicate rows, where there's nothing to compare.</li>
+      <li><code>expected</code> is what the PO should cost. Put 0.00 for a canceled PO, and leave it blank on orphan and duplicate rows, where there's nothing to compare.</li>
       <li><code>billed</code> is what we were billed for the PO. On an orphan or duplicate row, it's that one invoice's amount.</li>
       <li><code>difference</code> is billed minus expected, blank when expected is blank.</li>
       <li>Money with two decimals, no dollar sign. Sort by kind in the order above, then <code>po_id</code>, then <code>invoice_number</code>.</li>
@@ -57,12 +57,22 @@
   <li>A <code>match</code> is an expression. Each arm produces a value, and the whole <code>match</code> is the function's return value.</li>
 </ul>
 <pre>{{code:t3_enum#use}}</pre>
-<pre class="out">{{out:t3_enum}}</pre>
+<pre class="out">{{out:t3_enum#1}}</pre>
 <p><code>matches!(value, pattern)</code> is a one-line <code>match</code> that answers yes or no. <code>Overdue { .. }</code> means "the <code>Overdue</code> variant, whatever its fields are".</p>
 <p>The rule that makes enums worth it: a <code>match</code> must cover every variant. Leave one out and the program doesn't build:</p>
 <pre>{{fail:t3_nonexhaustive}}</pre>
 <pre class="out">{{failout:t3_nonexhaustive}}</pre>
 <p>This is the compiler keeping a list for you. Add a variant next month and every <code>match</code> that forgot about it becomes an error you have to fix before anything runs. Python's <code>match</code> statement doesn't check this when it runs (a type checker can, if you set it up), and an <code>if</code>/<code>elif</code> chain simply falls off the end. A catch-all arm, <code>_ =&gt; ...</code>, turns the check off for that <code>match</code>. Sometimes that's right. In code that decides what to report, it means a new case gets silently reported as nothing.</p>
+<h4>From text to an enum</h4>
+<p>The database stores a status as text, and your code wants an enum. The conversion is a <code>match</code> on the text:</p>
+<pre>{{code:t3_enum#from_text}}</pre>
+<pre>{{code:t3_enum#from_text_use}}</pre>
+<pre class="out">{{out:t3_enum#2}}</pre>
+<ul>
+  <li>Here the <code>_</code> arm belongs. Text can be anything, so "anything else" has to be handled, and it becomes <code>None</code>. That's the one place a catch-all is right: where the outside world comes in. Once you have a <code>LoanStatus</code>, every <code>match</code> on it lists the variants by name.</li>
+  <li>The match is case-sensitive. <code>"Lost"</code> isn't <code>"lost"</code>. Whether that's right depends on the data, so look at what your column really holds.</li>
+  <li><code>ok_or_else</code> turns <code>None</code> into an error, built by the closure only when it's needed. A <code>String</code> converts into a <code>Box&lt;dyn Error&gt;</code>, so <code>?</code> can return it from any function with that return type. Load the status as a <code>String</code>, as in ticket 1, and convert each row in a second step after loading. An unknown status then stops the program with a message that names the value.</li>
+</ul>
 
 <h4>What each derive buys you</h4>
 <p>The <code>#[derive(...)]</code> line asks the compiler to write standard behavior for your type. Each one is a <em>trait</em>, a named ability, that other code can rely on:</p>
@@ -93,7 +103,7 @@
 <p>Make cents a type of its own, a struct with one unnamed field. A wrapper like this is called a <em>newtype</em>:</p>
 <pre>{{code:t3_cents#newtype}}</pre>
 <p>The <code>.0</code> reaches the field inside. Why not just use <code>i64</code>? Because then a quantity, an ID and an amount are all <code>i64</code>, and adding a PO number to a price compiles. With <code>Cents</code>, the compiler only lets money combine with money.</p>
-<p>A new type starts with no abilities except the derived ones. You add the rest by implementing standard traits. <code>Display</code> is what <code>{}</code> uses:</p>
+<p>A new type starts with no abilities except the derived ones. You add the rest by implementing standard traits. You've written <code>impl Cents { ... }</code> blocks since <a href="#t0-structs">week zero</a>. <code>impl Display for Cents { ... }</code> is the same kind of block, with one difference: it keeps a trait's promise, so its methods are exactly the ones the trait lists, with the signatures the trait's docs give. <code>Display</code> is what <code>{}</code> uses:</p>
 <pre>{{code:t3_cents#display}}</pre>
 <p>And <code>Add</code> is what <code>+</code> uses:</p>
 <pre>{{code:t3_cents#add}}</pre>
@@ -103,7 +113,7 @@
 <p>Two more traits will make your code read better, and writing them is yours to do:</p>
 <ul>
   <li><a href="https://doc.rust-lang.org/std/ops/trait.AddAssign.html"><code>AddAssign</code></a> is <code>+=</code>. With it, <code>*total = *total + x</code> becomes <code>*total += x</code>. One method, <code>add_assign(&amp;mut self, other: Cents)</code>.</li>
-  <li><a href="https://doc.rust-lang.org/std/iter/trait.Sum.html"><code>Sum</code></a> lets an iterator of <code>Cents</code> end in <code>.sum()</code>. Its one method takes an iterator and folds it, starting from <code>Cents(0)</code>. Look at <code>Iterator::fold</code>.</li>
+  <li><a href="https://doc.rust-lang.org/std/iter/trait.Sum.html"><code>Sum</code></a> lets an iterator of <code>Cents</code> end in <code>.sum()</code>. Its one method has a generic signature, which ticket 6 explains properly: <code>fn sum&lt;I: Iterator&lt;Item = Cents&gt;&gt;(iter: I) -&gt; Cents</code>. Read <code>&lt;I: Iterator&lt;Item = Cents&gt;&gt;</code> as "<code>iter</code> can be any iterator that hands out <code>Cents</code>". Put that signature inside <code>impl std::iter::Sum for Cents { ... }</code> and write the body: start from <code>Cents(0)</code> and add each item. Look at <code>Iterator::fold</code>.</li>
 </ul>
 <p>Before you trust the <code>Display</code> above with your report, try it on negative amounts, because <code>difference</code> is often negative:</p>
 <pre>{{code:t3_cents#negative}}</pre>
@@ -163,18 +173,18 @@
   <p>Some categories agree and some don't. In your journal: why do some categories print cleanly and others don't, when none of the float sums is exact? (Plain <code>{}</code> prints the shortest decimal that reads back as the same float. Sometimes that hides the error and sometimes it can't.)</p>
 </div>
 <div class="drill">
-  <p><strong>Drill 3.</strong> Index the suppliers by ID in a <code>HashMap&lt;i64, &amp;Supplier&gt;</code>. Walk the products, look each one's supplier up with <code>let</code>-<code>else</code> (print a line and <code>continue</code> if the supplier is missing), and list the products whose supplier is inactive, sorted by SKU. Use a <code>HashSet</code> to count how many different suppliers that is.</p>
+  <p><strong>Drill 3.</strong> Index the suppliers by ID in a <code>HashMap&lt;i64, &amp;Supplier&gt;</code>. Walk the products, look each one's supplier up with <code>let</code>-<code>else</code> (print a line and <code>continue</code> if the supplier is missing), and collect the products whose supplier is inactive, sorted by SKU. Print how many there are, how many different suppliers that is (count them with a <code>HashSet</code>), and the first three.</p>
   <pre class="out">{{out:drill_t3#3}}</pre>
-  <p>No supplier was missing, so the <code>else</code> never ran. Make it run: change one product's ID in your <code>Vec</code> after loading and check the message appears. Code you've never seen run is code you don't know works.</p>
+  <p>No supplier was missing, so the <code>else</code> never ran. Make it run: change one product's supplier ID in your <code>Vec</code> after loading and check the message appears. Code you've never seen run is code you don't know works.</p>
 </div>
 
 <h3>The ticket</h3>
-<p>Still one program in <code>src/main.rs</code>. It will be long; that's fine for now, and ticket 4 is where it gets split up. You will need the csv crate from ticket 2 again.</p>
+<p>Still one program in <code>src/main.rs</code>. It will be long; that's fine for now, and ticket 5 is where it gets split up. You will need the csv crate from ticket 2 again.</p>
 <ul class="criteria">
   <li><label><input type="checkbox" class="crit-box" id="c-t3-1"><span>Loads <code>suppliers</code>, <code>purchase_orders</code>, <code>po_lines</code> and <code>invoices</code>, each with one plain <code>SELECT</code>.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-2"><span>Money becomes your <code>Cents</code> type while the rows load. No <code>f64</code> addition or comparison on money anywhere after that.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-3"><span>The seven kinds are one enum, and the report's order comes from the enum's derived <code>Ord</code>, not from a list of strings.</span></label></li>
-  <li><label><input type="checkbox" class="crit-box" id="c-t3-4"><span>The <code>match</code> that decides a PO's kind has no <code>_ =&gt;</code> arm, so adding a new PO status would be a compile error until you decide what it means.</span></label></li>
+  <li><label><input type="checkbox" class="crit-box" id="c-t3-4"><span>The <code>match</code> that decides a PO's kind has no <code>_ =&gt;</code> arm, so adding a new PO status would be a compile error until you decide what it means. (The one <code>_</code> you need is where the status text becomes an enum, as in the wiki.)</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-5"><span>Every lookup goes through a <code>HashMap</code> or <code>HashSet</code>. No loop over one table inside a loop over another.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-6"><span>Writes <code>out/discrepancies.csv</code> exactly as the email describes, and prints the count per kind (all seven, zeros included) and the total overbilled.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-7"><span>Negative amounts print as <code>-1234.50</code>, not <code>-1234.-50</code>.</span></label></li>
@@ -228,7 +238,7 @@ indexes are as simple as they can be.</pre>
 <p>The first, a <em>nested-loop join</em>, searches the whole PO list for every invoice: with <em>n</em> invoices and <em>m</em> POs, about <em>n</em> &times; <em>m</em> comparisons in the worst case. The second, a <em>hash join</em>, makes one pass to build an index and one pass to look things up: about <em>n</em> + <em>m</em> steps, because a <code>HashMap</code> lookup takes the same time on average however big the map is (ticket 2's under-the-hood section is why). In big-O notation, the nested loop is O(<em>nm</em>) and the hash join is O(<em>n</em> + <em>m</em>). Big-O ignores constant factors and asks only how the cost grows as the input grows.</p>
 <p>Here are both, timed on our real tables, then on copies made 4, 16 and 64 times bigger, built with <code>--release</code>:</p>
 <pre class="out">{{out:t3_join_release}}</pre>
-<p>At today's size the difference is 0.4 milliseconds against 0.08, and nobody would notice. Each time the data grows 4 times, the hash join takes about 4 times longer and the nested loop about 16 times longer. That's what O(<em>n</em>) and O(<em>n</em><sup>2</sup>) look like when you measure them. Carry the pattern on to the million invoices of ticket 7 and the nested loop takes minutes while the hash join takes a fraction of a second. These timings came from one desktop, an AMD Ryzen 9 5900X. Your milliseconds will be different. How they grow won't be, and that's why big-O is worth learning: it predicts the shape of a measurement you haven't made yet.</p>
+<p>At today's size the difference is 0.4 milliseconds against 0.08, and nobody would notice. Each time the data grows 4 times, the hash join takes about 4 times longer and the nested loop about 16 times longer. That's what O(<em>n</em>) and O(<em>n</em><sup>2</sup>) look like when you measure them. Carry the pattern on to the million invoices of ticket 8 and the nested loop takes minutes while the hash join takes a fraction of a second. These timings came from one desktop, an AMD Ryzen 9 5900X. Your milliseconds will be different. How they grow won't be, and that's why big-O is worth learning: it predicts the shape of a measurement you haven't made yet.</p>
 <p>A debug build, plain <code>cargo run</code>, runs this sort of loop many times slower than <code>--release</code>. Never time anything in debug.</p>
 
 <h4>What a database index is</h4>

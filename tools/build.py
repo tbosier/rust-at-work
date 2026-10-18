@@ -27,25 +27,38 @@ errors = []
 
 
 def region(path, name):
+    """The lines of a named region, or the whole file when name is None.
+
+    A region name may appear more than once in a file, for example around
+    the `use` lines at the top and again inside main. The pieces are shown
+    in file order with a blank line between them.
+    """
     lines = path.read_text().splitlines()
     if name is None:
-        body = lines
+        pieces = [lines]
     else:
-        try:
-            start = next(i for i, l in enumerate(lines) if l.strip() == f"// region: {name}")
-        except StopIteration:
+        pieces = []
+        i = 0
+        while i < len(lines):
+            if lines[i].strip() == f"// region: {name}":
+                end = next((j for j in range(i + 1, len(lines)) if lines[j].strip() == "// endregion"), None)
+                if end is None:
+                    errors.append(f"unclosed region {name!r} in {path.name}")
+                    return ""
+                pieces.append(lines[i + 1:end])
+                i = end
+            i += 1
+        if not pieces:
             errors.append(f"no region {name!r} in {path.name}")
             return ""
-        end = next((i for i in range(start + 1, len(lines)) if lines[i].strip() == "// endregion"), None)
-        if end is None:
-            errors.append(f"unclosed region {name!r} in {path.name}")
-            return ""
-        body = lines[start + 1:end]
-    body = [l for l in body if not re.match(r"\s*// (region: .*|endregion)$", l)]
-    # Remove the common indent so a region inside main() starts at column 0.
-    indents = [len(l) - len(l.lstrip()) for l in body if l.strip()]
-    cut = min(indents) if indents else 0
-    return "\n".join(l[cut:] for l in body).strip("\n")
+    out = []
+    for body in pieces:
+        body = [l for l in body if not re.match(r"\s*// (region: .*|endregion)$", l)]
+        # Remove the common indent so a region inside main() starts at column 0.
+        indents = [len(l) - len(l.lstrip()) for l in body if l.strip()]
+        cut = min(indents) if indents else 0
+        out.append("\n".join(l[cut:] for l in body).strip("\n"))
+    return "\n\n".join(out)
 
 
 def read(path):

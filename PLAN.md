@@ -3,9 +3,12 @@
 The deliverable is one HTML file, `dist/rust_at_work.html`, copied to
 `~/projects/space_sim/learning/rust_at_work.html`. The database
 `data/kettle_creek.db` (built by `data/make_db.py`) is copied to
-`~/projects/space_sim/learning/data/`. The learner (comfortable with
-Python and advanced math, new-ish to Rust) codes in their own project
-`~/projects/kettle_creek` in Neovim. Claude reviews; it never writes their code.
+`~/projects/space_sim/learning/data/`. The learner is comfortable with
+Python (mostly notebooks, newly writing .py files) and advanced math, new to
+Rust, and has no computer science background: define every term before it's
+used, and assume nothing about compilers, memory or types. They code in their
+own project `~/projects/kettle_creek` in Neovim (VS Code is covered too).
+Claude reviews; it never writes their code.
 
 ## Build and verify
 
@@ -20,18 +23,29 @@ Python and advanced math, new-ish to Rust) codes in their own project
   Cargo.toml fragments, prompts and data excerpts.
 - Name files by ticket: `t3_*.rs`, `drill_t3.rs` (hidden program that produces drill
   outputs from the real DB at `../../data/kettle_creek.db`; cwd is snippets/out).
+- A region name may appear more than once in a file; the build joins the pieces.
+  Wrap the `use` lines an example needs in the same region as its code, so every
+  example on the page shows its imports.
+- `<pre data-file="path">` shows a file from a small crate under snippets/ (for
+  example `t5_crate/src/main.rs`). `t4_zz_tests.rs` checks every such block in
+  every section against the real file.
 - Examples must pass `cargo clippy --examples -- -D warnings`.
 - Every claim about behavior, timing or output must come from something that ran.
 
 ## Page conventions
 
+- Week zero (`t0.html`) teaches the basics with inline data and no crates, in the
+  learner's `~/projects/snippets` scratch project. Its "ticket" is a small
+  program whose whole expected output is on the page. `syntax.html` is the
+  symbol lookup appendix.
 - Each ticket section `src/sections/tN.html`, in this order:
   h2#tN, email (`article.email`), `p.teaches`, `p.wiki-crumb#tN-wiki` + h3 wiki title,
   wiki subsections (h4), h3 Warm-up drills (`div.drill`), h3 The ticket
   (`ul.criteria` with checkbox ids `c-tN-k`, then a "Before you type" paragraph),
   h3 Stuck? (`details.hint`, 3 rungs, each a nudge not a solution), h3 Sanity checks,
   h3 Hand it in (ticket-specific review focus in `pre.prompt`, plus "reply to Dana"),
-  h3 Under the hood (CS, h4 subsections), h3 Go deeper (links list),
+  h3 Under the hood (CS, h4 subsections; required reading, later tickets build
+  on it), h3 Go deeper (optional links list),
   quiz section `data-quiz="tN"`.
 - Quizzes: `src/quizzes/tN.js` assigns `QUIZZES.tN = { questions: [...], tryit: "..." }`.
   Each question `{ q, code?, options: [{ t, ok?, why }], explain }`. 4 to 6 questions.
@@ -52,22 +66,30 @@ Python and advanced math, new-ish to Rust) codes in their own project
 
 | T | Rust | CS under the hood |
 |---|------|-------------------|
-| 1 | cargo, struct, String vs &str (light), Option for NULL, rusqlite prepare/query_map/get/collect, Result + ?, Box<dyn Error> main, Vec, iter/filter/count, closures, borrowing &[T], moves, a first lifetime, sort_by_key/sort_by stable, tuple keys, BufWriter + writeln!, const | stack vs heap, Vec ptr/len/cap, amortized growth, niche, lexicographic order of ISO dates |
-| 2 | HashMap (entry API, or_insert/or_default, get -> Option), &str keys borrowed from a Vec, String vs &str properly, clone cost, if let / match on Option, expect with a message, sorting with Ordering::then_with on totals, f64 formatting {:.2}, csv crate Writer (write_record, serialize w/ serde not used), HashMap iteration order | hash tables (hashing, buckets, collisions, load factor, O(1) average), SipHash + random seed (HashDoS) => why iteration order changes run to run, comparison sort O(n log n), stability |
-| 3 | enums with data, exhaustive match, derive Debug/Clone/Copy/PartialEq/Eq/PartialOrd/Ord/Hash, a Cents newtype with Display and Add/AddAssign/Sum, HashSet, Option combinators (map, copied, unwrap_or, unwrap_or_default), let-else, lifetimes properly (struct holding &'a, borrow checker error when the owner is dropped), matches!, sorting by derived Ord on an enum | IEEE 754 binary64 (0.1 not representable, why == fails, rounding once at the boundary, Goldberg), big-O, nested-loop join vs hash join with a measured timing in --release, what "index" means |
-| 4 | custom error enum, impl Display + std::error::Error, From + ? conversion, parsing text (trim, strip_prefix, split_once, bytes().all(is_ascii_digit), parse::<i64>), never panicking on input, #[cfg(test)] mod tests, #[test], assert_eq!, tests/ integration tests, lib.rs + main.rs, mod/pub/use crate::, visibility | parsing and grammars (formats are tiny languages), "parse, don't validate" (Alexis King), Gregorian leap rule, testing theory (boundaries, equivalence classes, tests show presence not absence of bugs, Dijkstra) |
-| 5 | traits (define + impl for several types), generics with trait bounds, static dispatch, clap derive CLI, rust_xlsxwriter, errors to stderr + exit codes, validating CLI input (--month YYYY-MM) | interfaces and dispatch (monomorphization vs vtables / dyn), xlsx = zip of XML (they can unzip it), processes: stdout vs stderr, exit status, why automation cares (sets up Part 2) |
+| 0 | compiling and cargo, program anatomy, statements vs expressions and implicit return, let/mut/shadowing/const, integer and float types, usize, integer division, `as`, macros and the `!`, the format mini-language, dbg!, if as an expression, for/while/loop, ranges and contains, tuples, arrays, Vec, indexing and panics, get/first/last, slices, iter/enumerate/take/rev/sum/max, & and *, for over &v vs v, functions, structs + impl + self/&self/&mut self + Self, `::` vs `.`, Option and Result with match/if let, unwrap/expect, parse and the turbofish, &str vs String (glimpse), use and the prelude, reading docs, `_` | bits and bytes, two's complement, overflow (checked/wrapping/saturating, debug panics vs release wraps), memory and addresses, size_of scalars, ASCII/Unicode/UTF-8 and why str can't be indexed, processes, working directory, exit status |
+| 1 | struct, String vs &str (light), Option for NULL, rusqlite prepare/query_map/get/collect, Result + ?, Box<dyn Error> main, iter/filter/count, closures, borrowing &[T], moves, a first lifetime (optional, in a details block), sort_by_key/sort_by stable, tuple keys, BufWriter + writeln!, const | stack vs heap, Vec ptr/len/cap, amortized growth, niche, lexicographic order of ISO dates |
+| 2 | HashMap (entry API, or_insert/or_default, get -> Option), &str keys borrowed from a Vec, String vs &str properly, clone cost, if let / match on Option, expect with a message, sorting with Ordering::then_with on totals, f64 formatting {:.2}, csv crate Writer, Box<dyn Error> in helper functions (one function per report) | hash tables (hashing, buckets, collisions, load factor, O(1) average), SipHash + random seed (HashDoS) => why iteration order changes run to run, comparison sort O(n log n), stability |
+| 3 | enums with data, exhaustive match, text into an enum (the one place `_` belongs), derive Debug/Clone/Copy/PartialEq/Eq/PartialOrd/Ord/Hash, impl Trait for Type, a Cents newtype with Display and Add/AddAssign/Sum (the Sum signature is given), HashSet, Option combinators (map, copied, unwrap_or, unwrap_or_default, ok_or_else), let-else, lifetimes properly (struct holding &'a, borrow checker error when the owner is dropped), matches!, sorting by derived Ord on an enum | IEEE 754 binary64 (0.1 not representable, why == fails, rounding once at the boundary, Goldberg), big-O, nested-loop join vs hash join with a measured timing in --release, what "index" means |
+| 4 | panics vs errors, custom error enum, impl Display + std::error::Error, parsing text (trim, strip_prefix, split_once, bytes().all(is_ascii_digit), parse, to_lowercase, split_whitespace, join, replace, as_deref), checked arithmetic, never panicking on input, a newtype behind a module wall, #[cfg(test)] mod tests, #[test], assert_eq! | parsing and grammars (formats are tiny languages), "parse, don't validate" (Alexis King), Gregorian leap rule, testing theory (boundaries, equivalence classes, tests show presence not absence of bugs, Dijkstra) |
+| 5 | refactoring with a golden-file diff, lib.rs + main.rs, mod vs use, pub/pub(crate)/private fields, use crate::, one error enum for the library with From + ?, map_err for context, tests/ integration tests, testing without the database | information hiding (Parnas 1972), deep modules (Ousterhout), crates as units of compilation, incremental builds, characterization tests (Feathers) |
+| 6 | traits (define + impl for several types), generics with trait bounds, static dispatch, dyn and dyn compatibility, 'static, clap derive CLI, rust_xlsxwriter, errors to stderr + exit codes, validating CLI input (--month YYYY-MM) | interfaces and dispatch (monomorphization vs vtables / dyn), xlsx = zip of XML (they can unzip it), processes: stdout vs stderr, exit status, why automation cares (sets up Part 2) |
 
 ## The story and dates
 
 - Company: Kettle Creek Supply, industrial parts distributor. Sim "today" = Mon 2026-10-05.
 - Dana Whitlock, Operations Manager (boss). Priya Raman, Accounts Payable lead (from T2).
 - Avoid pronouns for both (use names).
-- T1 Mon Oct 5 8:12 AM. T2 Wed Oct 7. T3 Mon Oct 12. T4 Thu Oct 15. T5 Mon Oct 19.
+- Week zero Thu Oct 1 (before the start). T1 Mon Oct 5 8:12 AM. T2 Wed Oct 7.
+  T3 Mon Oct 12. T4 Thu Oct 15. T5 Mon Oct 19. T6 Wed Oct 21. Part 2 preview Mon Oct 26.
 - Learner's project: ~/projects/kettle_creek, DB at data/kettle_creek.db, outputs in out/.
 - House rule: SQL is only `SELECT columns FROM table`. All logic in Rust.
 
-## Ticket specs (the answer key implements exactly these)
+## Ticket specs (the answer key's outputs match exactly these)
+
+The answer key is one program that serves every ticket at once, so its code is
+not a model of each ticket's design: for example it keeps a flag for the ticket 3
+scope and returns rusqlite's error type rather than the error enum ticket 5 asks
+for. Reviews compare the learner's outputs with it, never its code.
 
 Answer key: `answer_key/` (`cargo run -- tN`), outputs in `answer_key/out/tN/`.
 Sanity checks may reveal loading facts and partial counts, not the answers.
@@ -132,18 +154,26 @@ compare rejects by ref and field.
    optional "$"; commas removed; digits with optional "." and 0-2 decimals
    ("more than two decimal places" if 3+); anything else "not a number".
    Parse straight to cents, never via f64.
-`out/rejects.csv`: `ref,field,value,reason` (value = raw text).
-Then reconcile with Millbrook included (accepted branch rows add to billed for their
-PO; duplicates don't apply to branch rows beyond the duplicate-ref rule).
-`out/discrepancies.csv` again, same format, now both branches.
-Answer: accepted 143, rejected 40 (amount: missing 2, 3+ decimals 7, not a number 4;
-inv_date: missing 3, no such date 6; po_ref: not a PO number 13; ref: duplicate 1;
-vendor: unknown 4). Reconcile: ORPHAN 4, DUP 22, BILLED_CANCELLED 3, BILLED_OPEN 0,
-OVERBILLED 80, UNDERBILLED 37, NOT_INVOICED 69; total overbilled 9084.19; 215 rows.
-Also: refactor into lib.rs + modules, an error enum, unit tests for every parser,
-an integration test in tests/. Allowed crates: rusqlite, csv.
+`out/rejects.csv`: `ref,field,value,reason` (value = raw text). Print accepted and
+rejected counts. Answer: accepted 143, rejected 40 (amount: missing 2, 3+ decimals 7,
+not a number 4; inv_date: missing 3, no such date 6; po_ref: not a PO number 13;
+ref: duplicate 1; vendor: unknown 4).
+Still in main.rs; unit tests for every parser; T1 to T3 outputs unchanged.
+Allowed crates: rusqlite, csv.
 
-### T5 monthly pack
+### T5 Millbrook in the reconciliation
+Reconcile with Millbrook included: all POs in scope, accepted branch rows add to
+billed for their PO; duplicates don't apply to branch rows beyond the duplicate-ref
+rule. `out/discrepancies.csv` again, same format, now both branches; rejects.csv
+still written. Answer: ORPHAN 4, DUP 22, BILLED_CANCELLED 3, BILLED_OPEN 0,
+OVERBILLED 80, UNDERBILLED 37, NOT_INVOICED 69; total overbilled 9084.19; 215 rows.
+Every T3 row is still present, and all 47 new rows are Millbrook POs.
+Also: refactor into lib.rs + modules (T1 to T4 outputs byte-identical, checked with
+a saved copy and diff -r), one error enum for the library with From impls, an
+integration test in tests/ that doesn't open the database.
+Allowed crates: rusqlite, csv.
+
+### T6 monthly pack
 `cargo run -- --month 2026-09` (clap derive; also `--db` default data/kettle_creek.db,
 `--out` default out/kettle_pack_<month>.xlsx). Bad month -> message on stderr,
 non-zero exit, no file.
@@ -154,7 +184,7 @@ Workbook (rust_xlsxwriter), sheets in order:
 2. Spend: Supplier, Invoices, Total for invoices dated in the month (main invoices
    excluding duplicate copies; plus accepted Millbrook rows), sorted by total desc
    then name. Money as numbers with a currency format, not text.
-3. Discrepancies: the full T4 reconciliation (Kind, PO, Invoice number, Supplier,
+3. Discrepancies: the full T5 reconciliation (Kind, PO, Invoice number, Supplier,
    Expected, Billed, Difference).
 4. Rejects: Ref, Field, Value, Reason.
 Every table sheet: bold header, frozen header row, autofilter, sensible widths.

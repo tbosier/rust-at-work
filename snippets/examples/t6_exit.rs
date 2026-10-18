@@ -1,15 +1,18 @@
-use clap::Parser;
 use std::os::unix::process::CommandExt;
-use std::process::{Command, ExitCode};
+use std::process::Command;
+
+// region: main
+use clap::Parser;
+use std::process::ExitCode;
 
 #[derive(Parser)]
 #[command(name = "fines")]
 struct Cli {
+    /// The library database
     #[arg(long, default_value = "library.db")]
     db: String,
 }
 
-// region: main
 fn run(cli: &Cli) -> Result<usize, String> {
     if !std::path::Path::new(&cli.db).exists() {
         return Err(format!("database not found: {}", cli.db));

@@ -1,0 +1,23 @@
+error[E0382]: borrow of moved value: `skus`
+   --> src/main.rs:6:25
+    |
+2   |     let skus = vec![String::from("BRG-6204"), String::from("BLT-M10")];
+    |         ---- move occurs because `skus` has type `Vec<String>`, which does not implement the `Copy` trait
+3   |     for sku in skus {
+    |                ---- `skus` moved due to this implicit call to `.into_iter()`
+...
+6   |     println!("{} skus", skus.len());
+    |                         ^^^^ value borrowed here after move
+    |
+note: `into_iter` takes ownership of the receiver `self`, which moves `skus`
+   --> ~/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/iter/traits/collect.rs:310:18
+    |
+310 |     fn into_iter(self) -> Self::IntoIter;
+    |                  ^^^^
+help: consider iterating over a slice of the `Vec<String>`'s content to avoid moving into the `for` loop
+    |
+3   |     for sku in &skus {
+    |                +
+
+For more information about this error, try `rustc --explain E0382`.
+error: could not compile `kettle_creek` (bin "kettle_creek") due to 1 previous error

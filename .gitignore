@@ -7,3 +7,4 @@ __pycache__/
 # Files the snippet examples write while verify.py runs them
 snippets/out/*.xlsx
 snippets/out/*.csv
+snippets/out/orders/

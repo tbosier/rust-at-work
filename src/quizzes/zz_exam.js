@@ -1,9 +1,31 @@
 const SECTION_NAMES = {
-  setup: "Day one", t1: "Ticket 1", t2: "Ticket 2", t3: "Ticket 3", t4: "Ticket 4", t5: "Ticket 5",
+  setup: "Set up", t0: "Week zero", t1: "Ticket 1", t2: "Ticket 2", t3: "Ticket 3", t4: "Ticket 4", t5: "Ticket 5",
+  t6: "Ticket 6",
 };
 
 QUIZZES.exam = {
   questions: [
+    { sec: "t0", q: "<code>fn cents(d: i64) -&gt; i64 { d * 100; }</code> fails to compile. The fix is:",
+      options: [
+        { t: "Delete the semicolon", ok: true },
+        { t: "Add <code>mut</code> to <code>d</code>" },
+        { t: "Change the return type to <code>()</code>" },
+      ],
+      explain: "With the semicolon, the last line is a statement and the body produces <code>()</code>. Without it, <code>d * 100</code> is the function's value." },
+    { sec: "t0", q: "Why does Rust refuse <code>sku[0]</code> on a <code>&amp;str</code>?",
+      options: [
+        { t: "Text is UTF-8, where a character takes one to four bytes, so position 0 isn't always a whole character", ok: true },
+        { t: "Strings can't be changed" },
+        { t: "Indexing only works on <code>String</code>, not <code>&amp;str</code>" },
+      ],
+      explain: "Use <code>.chars().next()</code> for the first character, or a byte range like <code>&amp;sku[..3]</code> when the text is known to be ASCII." },
+    { sec: "t0", q: "Which turns text into a <code>u32</code> without risking a panic on bad input?",
+      options: [
+        { t: "<code>match raw.parse::&lt;u32&gt;() { Ok(n) =&gt; ..., Err(e) =&gt; ... }</code>", ok: true },
+        { t: "<code>raw.parse::&lt;u32&gt;().unwrap()</code>" },
+        { t: "<code>raw as u32</code>" },
+      ],
+      explain: "<code>unwrap</code> panics on bad text, and <code>as</code> only converts between number types, not from text." },
     { sec: "t1", q: "A function only reads a list of purchase orders. The best parameter type is:",
       options: [
         { t: "<code>Vec&lt;PurchaseOrder&gt;</code>" },
@@ -46,7 +68,7 @@ QUIZZES.exam = {
         { t: "<code>f64</code> can't hold numbers as big as a year's spend" },
       ],
       explain: "In our data, naive <code>f64</code> comparison flagged hundreds of POs that were billed exactly right. Round to cents once, at the boundary." },
-    { sec: "t3", q: "Your report's kinds must appear in a fixed order. The most robust way is:",
+    { sec: "t3", q: "Your report's kinds must appear in a fixed order. The safest way is:",
       options: [
         { t: "Declare the enum's variants in that order and derive <code>Ord</code>", ok: true },
         { t: "Keep a separate list of the kind names in order and sort by position in it" },
@@ -81,7 +103,7 @@ QUIZZES.exam = {
         { t: "A <code>bool</code> can't be tested" },
       ],
       explain: "Parse, don't validate: what the check learned is kept in the type." },
-    { sec: "t4", q: "With <code>impl From&lt;rusqlite::Error&gt; for AppError</code> in place, what does <code>?</code> do with a rusqlite error inside a function returning <code>Result&lt;_, AppError&gt;</code>?",
+    { sec: "t5", q: "With <code>impl From&lt;rusqlite::Error&gt; for AppError</code> in place, what does <code>?</code> do with a rusqlite error inside a function returning <code>Result&lt;_, AppError&gt;</code>?",
       options: [
         { t: "Converts it with <code>From</code> and returns it", ok: true },
         { t: "Panics, because the types differ" },
@@ -95,21 +117,28 @@ QUIZZES.exam = {
         { t: "Nothing, so tests are optional" },
       ],
       explain: "Tests show the presence of bugs, never their absence. Choose cases by equivalence class and boundary to make them count." },
-    { sec: "t5", q: "One function writes every table sheet. Its signature is <code>fn write_table&lt;T: SheetRow&gt;(rows: &amp;[T])</code>. What does the compiler do with it?",
+    { sec: "t5", q: "A test in <code>tests/millbrook.rs</code> can call:",
+      options: [
+        { t: "Anything in the project, private or not" },
+        { t: "Only the library's <code>pub</code> items, by the package name", ok: true },
+        { t: "Only <code>main</code>" },
+      ],
+      explain: "Each integration test is a separate crate that uses your library the way outside code would. Unit tests inside a file can reach private items through <code>use super::*</code>." },
+    { sec: "t6", q: "One function writes every table sheet. Its signature is <code>fn write_table&lt;T: SheetRow&gt;(rows: &amp;[T])</code>. What does the compiler do with it?",
       options: [
         { t: "Makes one copy of the function per row type it's used with", ok: true },
         { t: "Looks up the right methods in a vtable at run time" },
         { t: "Converts every row to a common type first" },
       ],
       explain: "Generics are monomorphized: static dispatch, no run-time lookup. <code>dyn SheetRow</code> would be the vtable version." },
-    { sec: "t5", q: "Priya can't SUM your money column. The most likely cause?",
+    { sec: "t6", q: "Priya can't SUM your money column. The most likely cause?",
       options: [
         { t: "The workbook is missing a currency format" },
         { t: "The amounts were written as text, like <code>\"$1,204.50\"</code>", ok: true },
         { t: "The column isn't frozen" },
       ],
       explain: "Write numbers with <code>write_number_with_format</code>. The format changes how a number looks, not what it is." },
-    { sec: "t5", q: "A scheduled run fails, prints an error, and exits with status 0. What does the scheduler think?",
+    { sec: "t6", q: "A scheduled run fails, prints an error, and exits with status 0. What does the scheduler think?",
       options: [
         { t: "That it failed, because of the error message" },
         { t: "That it succeeded", ok: true },

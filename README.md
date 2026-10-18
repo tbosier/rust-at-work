@@ -9,18 +9,24 @@ You write the code yourself. When a ticket is done, you ask Claude for a review
 the way a senior engineer would review a pull request, and it doesn't rewrite
 your code.
 
-Part 1 (five tickets) is written. It goes from counting rows in a SQLite
-database to a reconciliation of invoices against purchase orders, a parser for
-a messy acquired branch's data with tests and modules, and a monthly Excel
-workbook with a command line. Parts 2 to 4 (a scheduled pipeline, an HTTP API,
-and linear algebra and machine learning inside that API) are planned. See
-[WHATS_NEXT.md](WHATS_NEXT.md).
+It's written for someone who already gets work done in Python, probably in
+notebooks, but has never studied computer science. Nothing is assumed: a
+"week zero" section covers the basics (compiling, types, loops, structs,
+`Option` and `Result`, reading the docs) and what's underneath them (bits,
+memory, text encoding, processes) before the first ticket arrives.
+
+Part 1 (week zero and six tickets) is written. It goes from counting rows in a
+SQLite database to a reconciliation of invoices against purchase orders, a
+parser for a messy acquired branch's data, a refactor into a tested library
+with modules, and a monthly Excel workbook with a command line. Parts 2 to 4
+(a scheduled pipeline, an HTTP API, and linear algebra and machine learning
+inside that API) are planned. See [WHATS_NEXT.md](WHATS_NEXT.md).
 
 ## Start here
 
 1. Open `dist/rust_at_work.html` in a browser. It's one self-contained file.
-2. Follow "Day one". It sets up your own cargo project and copies in the
-   practice database, `data/kettle_creek.db`.
+2. Follow "Set up". It makes your own cargo project and copies in the
+   practice database, `data/kettle_creek.db`. Then do week zero.
 
 The page was written for one learner, so a few things assume that setup:
 
@@ -29,6 +35,7 @@ The page was written for one learner, so a few things assume that setup:
   in the `CLAUDE.md` you paste on day one and in the review prompt. Change all
   three to match where you put things.
 - A Neovim config with rustaceanvim. The keys it lists come from that config.
+  The set up section also has the VS Code equivalents.
 - Claude Code as the reviewer, with a `CLAUDE.md` that stops it from writing
   your code. Any reviewer who follows the review checklist on the page will do.
 
@@ -63,7 +70,7 @@ python3 tools/build.py    # assemble dist/rust_at_work.html
 points nowhere, an id repeats, or the text has an em dash or a British spelling.
 Code blocks come from files that were compiled, and each output is what that
 file printed. The exceptions are shell commands and three file listings in
-ticket 4, which `verify.py` checks against the real files.
+tickets 4 and 5, which `verify.py` checks against the real files.
 
 The browser checks (`tools/shot.mjs` and `tools/enginetest.mjs`) need
 `playwright-core` and a Chrome binary. Set `PLAYWRIGHT_FROM` to a
