@@ -40,6 +40,9 @@ function renderQuestion(quizId, q, i, isExam) {
   }
   fs.appendChild(feedback);
   feedback.tabIndex = -1;
+  // Stable ids, like q-t3-4, so the retry list can link to a question.
+  const qid = `${quizId}-${i + 1}`;
+  fs.id = `q-${qid}`;
   // Changing the answer makes any earlier verdict stale: clear it.
   opts.addEventListener("change", () => {
     feedback.className = "feedback";
@@ -47,6 +50,11 @@ function renderQuestion(quizId, q, i, isExam) {
     fs.querySelectorAll(".opt").forEach(l => l.classList.remove("is-ok", "is-bad"));
     if (isExam) markExamStale(fs.closest("[data-quiz]"));
   });
+  if (!isExam) {
+    fs.dataset.qid = qid;
+    questionEls.set(qid, { fs, q, feedback });
+    showSaved(qid);
+  }
   return fs;
 }
 
@@ -76,6 +84,11 @@ function checkOne(fs, q, feedback) {
     feedback.innerHTML = "<p>Pick an answer first.</p>";
     return;
   }
+  showVerdict(fs, q, feedback, chosen);
+  recordAnswer(fs.dataset.qid, chosen, q.options[chosen].ok);
+}
+
+function showVerdict(fs, q, feedback, chosen) {
   markOptions(fs, q, chosen);
   const opt = q.options[chosen];
   if (opt.ok) {
@@ -97,14 +110,16 @@ function checkOne(fs, q, feedback) {
 /* Exam scores persist per browser. Stored data is untrusted: anything that
    does not look like a real result is ignored. */
 const EXAM_KEY = "rust_at_work.part1.exam";
+function parseExam(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const total = QUIZZES.exam.questions.length;
+  const ok = Number.isInteger(raw.score) && raw.score >= 0 && raw.score <= total
+    && raw.total === total && typeof raw.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw.date);
+  return ok ? { score: raw.score, total: raw.total, date: raw.date } : null;
+}
 function loadExam() {
   try {
-    const raw = JSON.parse(localStorage.getItem(EXAM_KEY) || "null");
-    if (!raw || typeof raw !== "object") return null;
-    const total = QUIZZES.exam.questions.length;
-    const ok = Number.isInteger(raw.score) && raw.score >= 0 && raw.score <= total
-      && raw.total === total && typeof raw.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw.date);
-    return ok ? { score: raw.score, total: raw.total, date: raw.date } : null;
+    return parseExam(JSON.parse(localStorage.getItem(EXAM_KEY) || "null"));
   } catch (e) {
     return null;
   }
@@ -169,6 +184,111 @@ function resetExam(root) {
   root.scrollIntoView({ block: "start" });
 }
 
+/* Practice-quiz answers and the retry list persist per browser, keyed by
+   question id ("t3-4"). Stored data is untrusted: only ids of questions on
+   this page, option numbers in range and real dates survive. The exam is
+   not saved per question. */
+const QUIZ_KEY = "rust_at_work.quiz";   // {"t3-4": 2}: the option last checked
+const RETRY_KEY = "rust_at_work.retry"; // {"t3-4": "2026-10-16"}: wrong at first check
+const RETRY_AFTER_DAYS = 2;
+function readStored(key) {
+  try { return JSON.parse(localStorage.getItem(key) || "null"); } catch (e) { return null; }
+}
+function writeStored(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; }
+}
+const isPlainObject = v => !!v && typeof v === "object" && !Array.isArray(v);
+function isoDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function validDate(s) {
+  if (typeof s !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const [y, m, d] = s.split("-").map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
+}
+const dayNumber = s => { const [y, m, d] = s.split("-").map(Number); return Date.UTC(y, m - 1, d) / 86400000; };
+// Tests can fake the date with ?today=YYYY-MM-DD. Only the retry list reads it,
+// and anything that isn't a real date is ignored. Read on every call, so a
+// page left open overnight moves on to the next day.
+const FAKE_TODAY = (() => {
+  let fake = null;
+  try { fake = new URLSearchParams(location.search).get("today"); } catch (e) { /* no query */ }
+  return validDate(fake) ? fake : null;
+})();
+const today = () => FAKE_TODAY || isoDate(new Date());
+const quizRoots = [...document.querySelectorAll("[data-quiz]")].filter(r => QUIZZES[r.dataset.quiz]);
+const questionIds = new Map(); // "t3-4" -> number of options
+quizRoots.forEach(root => {
+  if (root.dataset.quiz === "exam") return;
+  QUIZZES[root.dataset.quiz].questions.forEach((q, i) => questionIds.set(`${root.dataset.quiz}-${i + 1}`, q.options.length));
+});
+const questionEls = new Map(); // "t3-4" -> { fs, q, feedback }
+function parseAnswers(raw) {
+  const out = {};
+  if (isPlainObject(raw)) {
+    for (const [id, c] of Object.entries(raw)) {
+      if (questionIds.has(id) && Number.isInteger(c) && c >= 0 && c < questionIds.get(id)) out[id] = c;
+    }
+  }
+  return out;
+}
+function parseRetry(raw) {
+  const out = {};
+  if (isPlainObject(raw)) {
+    for (const [id, d] of Object.entries(raw)) {
+      // A date after today (a faked date, a wrong clock) would never come due: drop it.
+      if (questionIds.has(id) && validDate(d) && d <= today()) out[id] = d;
+    }
+  }
+  return out;
+}
+const answers = parseAnswers(readStored(QUIZ_KEY));
+const retry = parseRetry(readStored(RETRY_KEY));
+const isDue = id => Object.hasOwn(retry, id) && dayNumber(today()) - dayNumber(retry[id]) >= RETRY_AFTER_DAYS;
+function replaceAll(target, fresh) {
+  Object.keys(target).forEach(k => delete target[k]);
+  Object.assign(target, fresh);
+}
+// Change one saved map. Start from what storage holds now, not the copy read
+// at load, so a second open tab doesn't wipe this one's answers.
+function updateStored(key, parse, target, change) {
+  const raw = readStored(key);
+  if (raw !== null) replaceAll(target, parse(raw));
+  change(target);
+  return writeStored(key, target);
+}
+// A question due for retry is asked cold: forget its saved answer.
+// Returns the ids it cleared.
+function askDueCold() {
+  const cleared = Object.keys(retry).filter(id => isDue(id) && Object.hasOwn(answers, id));
+  if (cleared.length) updateStored(QUIZ_KEY, parseAnswers, answers, a => cleared.forEach(id => delete a[id]));
+  return cleared;
+}
+askDueCold();
+// Show a question as saved: its checked answer and verdict, or blank.
+function showSaved(qid) {
+  const { fs, q, feedback } = questionEls.get(qid);
+  const inputs = fs.querySelectorAll("input");
+  inputs.forEach(r => { r.checked = false; });
+  fs.querySelectorAll(".opt").forEach(l => l.classList.remove("is-ok", "is-bad"));
+  feedback.className = "feedback";
+  feedback.innerHTML = "";
+  if (Object.hasOwn(answers, qid)) {
+    inputs[answers[qid]].checked = true;
+    showVerdict(fs, q, feedback, answers[qid]);
+  }
+}
+function recordAnswer(qid, chosen, right) {
+  if (!questionIds.has(qid)) return;
+  // Only the first check of a question with no saved answer counts for the retry list.
+  if (!Object.hasOwn(answers, qid)) {
+    updateStored(RETRY_KEY, parseRetry, retry, r => { if (right) delete r[qid]; else r[qid] = today(); });
+  }
+  updateStored(QUIZ_KEY, parseAnswers, answers, a => { a[qid] = chosen; });
+  document.dispatchEvent(new Event("rw-progress"));
+}
+
 document.querySelectorAll("[data-quiz]").forEach(root => {
   const id = root.dataset.quiz;
   const quiz = QUIZZES[id];
@@ -204,10 +324,12 @@ document.querySelectorAll("[data-quiz]").forEach(root => {
 const CHECKS_KEY = "rust_at_work.checks";
 const checkboxes = [...document.querySelectorAll("input.crit-box")];
 const knownIds = new Set(checkboxes.map(b => b.id));
+function parseChecks(raw) {
+  return Array.isArray(raw) ? new Set(raw.filter(id => typeof id === "string" && knownIds.has(id))) : new Set();
+}
 function loadChecks() {
   try {
-    const raw = JSON.parse(localStorage.getItem(CHECKS_KEY) || "[]");
-    return Array.isArray(raw) ? new Set(raw.filter(id => typeof id === "string" && knownIds.has(id))) : new Set();
+    return parseChecks(JSON.parse(localStorage.getItem(CHECKS_KEY) || "[]"));
   } catch (e) {
     return new Set();
   }
