@@ -28,26 +28,26 @@
 <p class="wiki-crumb" id="t6-wiki">Engineering wiki / Rust / Interfaces, command lines and workbooks</p>
 <h3>One function for every table</h3>
 
-<p>Three of the four sheets are tables: a header row, then one row per item, each item a different type. You could write three nearly identical functions. This page shows how to write one, and how to give the program a command line that refuses bad input. First, the new crates:</p>
+<p>Three of the four sheets are tables: a header row, then one row per item, each item a different type. You could write three nearly identical functions. This page shows how to write one, and how to give the program a command line that refuses bad input. First, the new <a class="term" href="#g-crate">crates</a>:</p>
 <pre class="cmd">cargo add rust_xlsxwriter
 cargo add clap --features derive</pre>
 <p><code>cargo add</code> changes only the project you run it in. Run both lines in <code>snippets</code> for the examples, and again in <code>kettle_creek</code> for the drills and the ticket.</p>
 
-<h4>A trait is a promise</h4>
-<p>A <em>trait</em> names a set of methods that a type promises to have. You've been using traits since ticket 1: <code>Debug</code>, <code>Display</code>, <code>Ord</code> and <code>Iterator</code> are all traits. Now you write one. Here is a trait for anything that can be one row of a table, on the library toy:</p>
+<h4 id="t6-trait">A trait is a promise</h4>
+<p>A <em>trait</em> names a set of <a class="term" href="#g-method">methods</a> that a type promises to have. You've been using traits since ticket 1: <code>Debug</code>, <code>Display</code>, <code>Ord</code> and <code>Iterator</code> are all traits. Now you write one. Here is a trait for anything that can be one row of a table, on the library toy:</p>
 <pre>{{code:t6_trait#trait}}</pre>
 <p><code>headers</code> has no <code>self</code>: it belongs to the type, not to any one row, because every book has the same columns. It's called an <em>associated function</em>, and you call it on the type, as <code>Book::headers()</code>, the same way you've called <code>Bin::new</code> since week zero.</p>
 <p>Its return type, <code>&amp;'static [&amp;'static str]</code>, reads from the inside out:</p>
 <ul>
-  <li><code>&amp;str</code> is borrowed text, and <code>&amp;[&amp;str]</code> is a borrowed list of those: a slice, as in week zero.</li>
-  <li><code>'static</code> is a lifetime, like ticket 3's <code>'a</code>, but a fixed one: "good for the whole run of the program". It's the longest there is.</li>
+  <li><code>&amp;str</code> is <a class="term" href="#g-borrow">borrowed</a> text, and <code>&amp;[&amp;str]</code> is a borrowed list of those: a slice, as in week zero.</li>
+  <li><code>'static</code> is a <a class="term" href="#g-lifetime">lifetime</a>, like ticket 3's <code>'a</code>, but a fixed one: "good for the whole run of the program". It's the longest there is.</li>
   <li>String literals such as <code>"title"</code> are <code>&amp;'static str</code>, because they're stored inside the program file itself and never freed. A list written out of literals, <code>&amp;["book_id", "title"]</code>, is <code>'static</code> too.</li>
 </ul>
 <p>So <code>headers</code> can hand out its list without anyone owning it, and the caller can keep it as long as it likes. <code>cells</code> takes <code>&amp;self</code>, so it's an ordinary method that reads one row. Implementing the trait is where each type keeps its promise:</p>
 <pre>{{code:t6_trait#impls}}</pre>
-<p>Python's nearest relative is a <code>Protocol</code> from <code>typing</code>, or an abstract base class. The difference is that Python checks a protocol only if you run a type checker, and only as a hint. Rust checks every use of the trait, at compile time, every time.</p>
+<p>Python's nearest relative is a <code>Protocol</code> from <code>typing</code>, or an abstract base class. The difference is that Python checks a protocol only if you run a type checker, and only as a hint. Rust checks every use of the trait, at <a class="term" href="#g-compile">compile</a> time, every time.</p>
 
-<h4>One function, many types</h4>
+<h4 id="t6-generic">One function, many types</h4>
 <pre>{{code:t6_trait#generic}}</pre>
 <p><code>&lt;T: TableRow&gt;</code> says "<code>T</code> can be any type, as long as it implements <code>TableRow</code>". <code>T</code> is a <em>type parameter</em>, and <code>: TableRow</code> is its <em>bound</em>. Inside the function you can use exactly what the bound promises and nothing else: <code>T::headers()</code> and <code>row.cells()</code>. Calling it with two different types:</p>
 <p><code>books</code> and <code>loans</code> below are loaders you could write by now: one <code>SELECT</code> into a <code>Vec</code>, as in ticket 1, with <code>Book</code> holding an <code>author</code> as well this time.</p>
@@ -57,14 +57,14 @@ cargo add clap --features derive</pre>
 <pre>{{fail:t6_bound}}</pre>
 <pre class="out">{{failout:t6_bound}}</pre>
 <p>Read the last note: the error points at the call <em>and</em> at the bound that requires it. That pairing is how you find out what a library function wants from your types.</p>
-<p>A word on <code>.clone()</code> in <code>cells</code>. Each cell becomes a new <code>String</code> because the trait says <code>Vec&lt;String&gt;</code>. That's a copy of every piece of text per row, which is fine for a few thousand rows in a report. A trait that hands a writer each cell directly, the way the ticket's sheets will need to anyway, avoids the copies. Notice that the trait's signature decides the cost for every type that implements it. Designing a trait means choosing that cost.</p>
+<p>A word on <code>.clone()</code> in <code>cells</code>. Each cell becomes a new <code>String</code> because the trait says <code>Vec&lt;String&gt;</code>. That's a copy of every piece of text per row, which is fine for a few thousand rows in a report. A trait that hands a writer each cell directly, the way the ticket's sheets will need to anyway, avoids the copies. Notice that the trait's <a class="term" href="#g-signature">signature</a> decides the cost for every type that implements it. Designing a trait means choosing that cost.</p>
 
-<h4>When the type isn't known until the program runs</h4>
-<p>A generic function needs one type per call: a <code>&amp;[Book]</code> or a <code>&amp;[Loan]</code>, never a mix. Sometimes you need a list of different types side by side. That's a <em>trait object</em>, written <code>dyn Trait</code>:</p>
+<h4 id="t6-dyn">When the type isn't known until the program runs</h4>
+<p>A <a class="term" href="#g-generic">generic</a> function needs one type per call: a <code>&amp;[Book]</code> or a <code>&amp;[Loan]</code>, never a mix. Sometimes you need a list of different types side by side. That's a <em>trait object</em>, written <code>dyn Trait</code>:</p>
 <pre>{{code:t6_dispatch#dyn}}</pre>
 <pre>{{code:t6_dispatch#mixed}}</pre>
 <pre class="out">{{out:t6_dispatch#1}}</pre>
-<p><code>Box&lt;dyn Describe&gt;</code> means "a value on the heap, of some type that implements <code>Describe</code>, and we've forgotten which". The values have different sizes, so they can't sit side by side in a <code>Vec</code> directly. Each goes in its own <code>Box</code> on the heap, and the <code>Vec</code> holds the pointers. The cost is a heap allocation per item and an indirect call per method call. <a href="#t6-dispatch">Under the hood</a> shows what that call looks like.</p>
+<p><code>Box&lt;dyn Describe&gt;</code> means "a value on the <a class="term" href="#g-heap">heap</a>, of some type that implements <code>Describe</code>, and we've forgotten which". The values have different sizes, so they can't sit side by side in a <code>Vec</code> directly. Each goes in its own <code>Box</code> on the heap, and the <code>Vec</code> holds the <a class="term" href="#g-pointer">pointers</a>. The cost is a heap allocation per item and an indirect call per method call. <a href="#t6-dispatch">Under the hood</a> shows what that call looks like.</p>
 <p>Not every trait can be used this way. Try it with <code>TableRow</code>:</p>
 <pre>{{fail:t6_dyn}}</pre>
 <pre class="out">{{failout:t6_dyn}}</pre>
@@ -72,13 +72,13 @@ cargo add clap --features derive</pre>
 <p>For the pack, generics are the right fit. Each sheet holds one type of row, known when you write the code, and <code>headers</code> naturally belongs to the type. Reach for <code>dyn</code> when the set of types really is open or mixed at run time: plugins, a list of different shapes, error types from several libraries (that's what <code>Box&lt;dyn Error&gt;</code> in <code>main</code> has been doing since ticket 1).</p>
 
 <h4>A real command line</h4>
-<p>clap's <em>derive</em> style turns a struct into an argument parser. The field types say what each argument is, and the doc comments become the help text:</p>
+<p>clap's <em>derive</em> style turns a <a class="term" href="#g-struct">struct</a> into an argument <a class="term" href="#g-parse">parser</a>. The field types say what each argument is, and the doc comments become the help text:</p>
 <pre>{{code:t6_cli#cli}}</pre>
 <ul>
   <li><code>#[derive(Parser)]</code> writes the parser. <code>#[arg(long)]</code> makes a field a <code>--name value</code> option.</li>
   <li>A plain <code>String</code> field is required. <code>Option&lt;String&gt;</code> is optional. <code>default_value</code> fills it in when it's left out.</li>
   <li><code>value_parser = parse_shelf</code> runs your function on the raw text. Its <code>Err</code> message goes into clap's error, so the user sees exactly what was wrong.</li>
-  <li>A parser can return a type of your own instead of a <code>String</code>, such as a small <code>Month</code>. clap then needs that type to be <code>Clone</code>, and says so: "the trait bound `Month: Clone` is not satisfied". <code>#[derive(Clone)]</code> on it is the fix.</li>
+  <li>A parser can return a type of your own instead of a <code>String</code>, such as a small <code>Month</code>. clap then needs that type to be <code>Clone</code>, and says so: "the <a class="term" href="#g-trait-bound">trait bound</a> `Month: Clone` is not satisfied". <code>#[derive(Clone)]</code> on it is the fix.</li>
 </ul>
 <p>In a real program you call <code>Cli::parse()</code>, which reads the real arguments and exits on error. To see the results here, the examples use <code>Cli::try_parse_from</code>, which takes the arguments as a list and returns a <code>Result</code> instead:</p>
 <pre>{{code:t6_cli#try}}</pre>
@@ -86,7 +86,7 @@ cargo add clap --features derive</pre>
 <p>And three things a person might type wrong:</p>
 <pre>{{code:t6_cli#bad}}</pre>
 <pre class="out">{{out:t6_cli#2}}</pre>
-<p>Every one of those messages came from clap, using your <code>parse_shelf</code> text for the first two. The exit code 2 is the Unix convention for "you used the command wrongly". The help text is free too, and stays in step with the code because it is generated from it. This is what <code>--help</code> prints:</p>
+<p>Every one of those messages came from clap, using your <code>parse_shelf</code> text for the first two. The <a class="term" href="#g-exit-status">exit code</a> 2 is the Unix convention for "you used the command wrongly". The help text is free too, and stays in step with the code because it is generated from it. This is what <code>--help</code> prints:</p>
 <pre class="out">{{out:t6_cli#3}}</pre>
 <p>The usage lines say <code>fines</code> because of <code>#[command(name = "fines")]</code> and because the examples pass <code>"fines"</code> as the first argument. Run your own program with <code>cargo run -- --help</code> and the usage line names the program that's actually running, such as <code>snippets</code> or <code>kettle_creek</code>.</p>
 <p>Validating in the parser has a second benefit. Once <code>Cli</code> exists, its <code>shelf</code> is a well-formed shelf code. Code further in never has to check again, the same idea as parsing Millbrook's rows into proper types in ticket 4.</p>
@@ -98,7 +98,7 @@ cargo add clap --features derive</pre>
 <ul>
   <li>Rows and columns are zero-based numbers: row 0, column 0 is cell A1. Rows are <code>u32</code> and columns are <code>u16</code>, because a sheet has at most 1,048,576 rows and 16,384 columns, so <code>as u32</code> on a loop index is normal here.</li>
   <li><code>write_number</code> stores a number. Excel numbers are <code>f64</code>, so your <code>Cents</code> becomes dollars at the last possible moment, for display only. All the adding up has already happened in integers. Writing a formatted string like <code>"$1,204.50"</code> instead would look the same and break Priya's SUM, which is the mistake the email is warning you about.</li>
-  <li>A <code>Format</code> is made once and passed by reference to every cell that uses it. <code>"$#,##0.00;[Red]($#,##0.00)"</code> is Excel's own number format language: the part before the semicolon is for positive numbers, the part after for negatives, here red and in parentheses, the accountants' convention.</li>
+  <li>A <code>Format</code> is made once and passed by <a class="term" href="#g-reference">reference</a> to every cell that uses it. <code>"$#,##0.00;[Red]($#,##0.00)"</code> is Excel's own number format language: the part before the semicolon is for positive numbers, the part after for negatives, here red and in parentheses, the accountants' convention.</li>
   <li><code>set_freeze_panes(1, 0)</code> freezes everything above row 1, so the header stays put when scrolling. <code>autofilter</code> takes the first and last row and column of the table, header included.</li>
   <li>Almost every method returns a <code>Result</code>, because almost anything can be invalid: a sheet name over 31 characters, a row past the limit. <code>?</code> handles all of them.</li>
 </ul>
@@ -109,7 +109,7 @@ cargo add clap --features derive</pre>
 <p>The example's function is called <code>real_main</code> only because the program that tested it for this page needed <code>main</code> for itself. In your program it is <code>fn main() -&gt; ExitCode</code>.</p>
 <p><code>run</code> is a stand-in: it checks the file exists and reports a made-up count, because the point here is the exit status. To try it in <code>snippets</code>, make an empty file to point it at first, with <code>touch library.db</code>. Run from a shell, with <code>echo $?</code> printing the last exit status:</p>
 <pre class="out">{{out:t6_exit}}</pre>
-<p>Three outcomes, three statuses. <code>eprintln!</code> writes to <em>standard error</em> instead of standard output, which is where error messages belong. <a href="#t6-streams">Under the hood</a> explains why the difference matters. Returning <code>Result</code> from <code>main</code>, as you have been, also exits with 1 on <code>Err</code>. <code>ExitCode</code> gives you control of the message and the number.</p>
+<p>Three outcomes, three statuses. <code>eprintln!</code> writes to <em>standard error</em> instead of <a class="term" href="#g-standard-output">standard output</a>, which is where error messages belong. <a href="#t6-streams">Under the hood</a> explains why the difference matters. Returning <code>Result</code> from <code>main</code>, as you have been, also exits with 1 on <code>Err</code>. <code>ExitCode</code> gives you control of the message and the number.</p>
 
 <h3>Warm-up drills</h3>
 <p>In <code>src/bin/drills.rs</code>, as before. These use the real database but not the ticket's tables.</p>
@@ -143,14 +143,14 @@ cargo add clap --features derive</pre>
   <li><label><input type="checkbox" class="crit-box" id="c-t6-9"><span>Unit tests for the month validation and for the month filter on spend. <code>cargo fmt</code>, <code>cargo clippy --all-targets</code> and <code>cargo test</code> are clean.</span></label></li>
 </ul>
 <p>One decision before you start: what plain <code>cargo run</code> does now. If <code>--month</code> is required, it stops with exit status 2, and ticket 5's <code>cargo run &amp;&amp; diff</code> line stops with it. Either make <code>--month</code> an <code>Option</code>, so tickets 1 to 5 still come out of a plain <code>cargo run</code> and the pack is written only when a month is given, or keep it required and run <code>cargo run -- --month 2026-09</code> from now on, with the new workbook expected in any <code>diff</code>. Both are fine. Say which in your journal and in your hand-in.</p>
-<p><strong>Before you type,</strong> answer these in your journal. What does each table sheet's row type need to carry, and does it own its data or borrow it from the vectors you loaded? Your ticket 5 code produced CSVs: which of its functions can the pack call as they are, and which return the wrong shape? Is <code>--month</code> a <code>String</code> once it's been checked, or would a small type of its own be clearer? Where does the decision "this run failed" get turned into an exit status, and is there exactly one such place?</p>
+<p><strong>Before you type,</strong> answer these in your journal. What does each table sheet's row type need to carry, and does it own its data or borrow it from the <a class="term" href="#g-vector">vectors</a> you loaded? Your ticket 5 code produced CSVs: which of its functions can the pack call as they are, and which return the wrong shape? Is <code>--month</code> a <code>String</code> once it's been checked, or would a small type of its own be clearer? Where does the decision "this run failed" get turned into an exit status, and is there exactly one such place?</p>
 
 <h3>Stuck?</h3>
 <details class="hint"><summary>Hint 1: the shape of the trait</summary>
   <p>The wiki's <code>cells</code> returns <code>Vec&lt;String&gt;</code>, which loses the difference between text and numbers. Your sheets need that difference, because money must be written with <code>write_number_with_format</code>. So let the row write itself: a method that takes the worksheet, the row number and the money format, and writes its own cells. Its signature can look like <code>fn write_row(&amp;self, sheet: &amp;mut Worksheet, row: u32, money: &amp;Format) -&gt; Result&lt;(), XlsxError&gt;</code>. The <code>&amp;mut</code> is what lets it write cells, and <code>workbook.add_worksheet()</code> is where a <code>&amp;mut Worksheet</code> comes from. The generic function writes the header, then calls <code>write_row</code> once per row with a row number one past the last.</p>
 </details>
 <details class="hint"><summary>Hint 2: rows that borrow</summary>
-  <p>A discrepancy row needs the supplier's name, which lives in your suppliers <code>Vec</code>. Rather than cloning every name into a new struct, a small struct with a <code>&amp;'a Discrepancy</code> and a <code>&amp;'a str</code> can implement the trait. Implementing a trait for a type with a lifetime looks like <code>impl TableRow for DiscrepancyRow&lt;'_&gt;</code>. The <code>'_</code> means "some lifetime, and I don't need to name it", because nothing in the impl has to say how it relates to anything else. Most of the time Rust works lifetimes out without being told, and <code>'_</code> marks a spot where you let it.</p>
+  <p>A discrepancy row needs the supplier's name, which lives in your suppliers <code>Vec</code>. Rather than <a class="term" href="#g-clone">cloning</a> every name into a new struct, a small struct with a <code>&amp;'a Discrepancy</code> and a <code>&amp;'a str</code> can implement the trait. Implementing a trait for a type with a lifetime looks like <code>impl TableRow for DiscrepancyRow&lt;'_&gt;</code>. The <code>'_</code> means "some lifetime, and I don't need to name it", because nothing in the impl has to say how it relates to anything else. Most of the time Rust works lifetimes out without being told, and <code>'_</code> marks a spot where you let it.</p>
 </details>
 <details class="hint"><summary>Hint 3: no half-finished file</summary>
   <p>Do all the loading, parsing and reconciling first, and build the <code>Workbook</code> in memory. <code>save</code> is the only call that touches the output file, so if anything before it fails, nothing is written. Validate the month in clap's <code>value_parser</code>, and it fails before the database is even opened.</p>
@@ -168,7 +168,7 @@ cargo add clap --features derive</pre>
 <p>One exception to the "same output, byte for byte" rule from the review checklist: a workbook records the moment it was created, in <code>docProps/core.xml</code>, so two runs of a correct program give files with different checksums. Either compare what's in the sheets, or pin the timestamp. Look up <code>DocProperties::set_creation_datetime</code> and <code>Workbook::set_properties</code> in the rust_xlsxwriter docs, and decide whether a fixed date in the file is honest.</p>
 
 <h3>Hand it in</h3>
-<p>Commit, tag <code>t6-submitted</code>, and paste the <a href="#reviews">review prompt</a> with <code>N</code> as 6. The answer key's workbook is <code>out/t6/kettle_pack_2026-09.xlsx</code>, and the reviewer can compare sheet by sheet. Add:</p>
+<p><a class="term" href="#g-commit">Commit</a>, <a class="term" href="#g-tag">tag</a> <code>t6-submitted</code>, and paste the <a href="#reviews">review prompt</a> with <code>N</code> as 6. The answer key's workbook is <code>out/t6/kettle_pack_2026-09.xlsx</code>, and the reviewer can compare sheet by sheet. Add:</p>
 <pre class="prompt">For this ticket, pay particular attention to: whether my trait is the
 right size (too many methods, or ones that don't belong), whether main
 is thin, what happens on every bad input I could give it, and whether
@@ -178,7 +178,7 @@ formats and lookups are built once rather than per cell.</pre>
 <h3>Under the hood</h3>
 <h4 id="t6-dispatch">Generics and trait objects, compiled</h4>
 <p>When you call <code>print_table(&amp;books)</code> and <code>print_table(&amp;loans)</code>, the compiler writes two copies of <code>print_table</code>, one with <code>T</code> replaced by <code>Book</code> and one by <code>Loan</code>. That's <em>monomorphization</em>, from "one shape". Each copy calls its type's <code>cells</code> directly, and the optimizer can inline it as if you'd written two separate functions by hand. The price is size and build time: a generic used with fifty types is compiled fifty times. (The optimizer may then inline some copies into their callers or merge identical ones, so the final count can be lower.) This is <em>static dispatch</em>, because which method runs is fixed when the program is compiled.</p>
-<p>A trait object works the other way. The compiler builds one table per type, the <em>vtable</em>, listing that type's implementation of each method, and a <code>&amp;dyn Describe</code> carries two pointers: one to the value and one to its type's vtable. A method call reads the function's address out of the vtable and jumps there. You can see the second pointer:</p>
+<p>A trait object works the other way. The compiler builds one table per type, the <em>vtable</em>, listing that type's implementation of each method, and a <code>&amp;dyn Describe</code> carries two pointers: one to the value and one to its type's vtable. A method call reads the function's <a class="term" href="#g-address">address</a> out of the vtable and jumps there. You can see the second pointer:</p>
 <pre>{{code:t6_dispatch#sizes}}</pre>
 <pre class="out">{{out:t6_dispatch#2}}</pre>
 <p>A <em>fat pointer</em>, twice the size of an ordinary reference. This is <em>dynamic dispatch</em>: one copy of the code, decided at run time. The optimizer usually can't see through the jump to inline it, though it sometimes works out which method it must be. For a monthly report, the speed difference between the two is far too small to measure. Choose by what the code needs to say: a fixed type per call means generics, a mixed collection means <code>dyn</code>. C++ templates and virtual functions make the same trade. In Java and Python, calling a method on a value of a generic type always looks the method up at run time: Java's compiler erases the type parameter, and Python looks up every method as it runs. So their generics never get Rust's per-type copies.</p>
@@ -194,7 +194,7 @@ formats and lookups are built once rather than per cell.</pre>
 
 <h4 id="t6-streams">Processes, streams and exit codes</h4>
 <p>Every program starts with three open streams: standard input, standard output and standard error. <code>println!</code> writes to standard output and <code>eprintln!</code> to standard error. In a terminal they both appear on screen, which is why they look the same. They go to different places as soon as anything is redirected: <code>cargo run -- --month 2026-09 &gt; log.txt</code> sends output to the file and still shows errors on screen, and a scheduler can save each to its own log. Data on one stream and complaints on the other is what lets programs be chained with pipes without errors getting mixed into the data.</p>
-<p>When a process ends it hands its parent one small number, the exit status. Shells keep it in <code>$?</code>, and <code>&amp;&amp;</code> and <code>||</code> act on it: <code>cargo run -- --month 2026-09 &amp;&amp; echo sent</code> only says "sent" on success. Cron, systemd, CI servers and every job scheduler in Part 2 decide success or failure by this number alone. They never read your message. A program that prints "error" and exits 0 has told the scheduler everything went fine. Conventions: 0 is success, 1 is a general failure, 2 is bad usage (clap's choice, and many Unix tools'), and a few higher numbers are reserved by shells, so stay below 126.</p>
+<p>When a <a class="term" href="#g-process">process</a> ends it hands its parent one small number, the exit status. Shells keep it in <code>$?</code>, and <code>&amp;&amp;</code> and <code>||</code> act on it: <code>cargo run -- --month 2026-09 &amp;&amp; echo sent</code> only says "sent" on success. Cron, systemd, CI servers and every job scheduler in Part 2 decide success or failure by this number alone. They never read your message. A program that prints "error" and exits 0 has told the scheduler everything went fine. Conventions: 0 is success, 1 is a general failure, 2 is bad usage (clap's choice, and many Unix tools'), and a few higher numbers are reserved by shells, so stay below 126.</p>
 
 <h3>Go deeper</h3>
 <ul>
@@ -203,7 +203,7 @@ formats and lookups are built once rather than per cell.</pre>
   <li><a href="https://doc.rust-lang.org/book/ch12-00-an-io-project.html">Chapter 12: An I/O Project</a>, a command-line program built from scratch with no crates. Worth reading to see what clap is doing for you, including the stderr discussion in 12.6.</li>
   <li><a href="https://docs.rs/clap/latest/clap/_derive/_tutorial/index.html">clap's derive tutorial</a>: subcommands, flags, possible values and validation.</li>
   <li><a href="https://docs.rs/rust_xlsxwriter/latest/rust_xlsxwriter/">rust_xlsxwriter's docs</a>. Its examples cover charts, tables, conditional formats and formulas, if Priya asks for more.</li>
-  <li><a href="https://rust-lang.github.io/api-guidelines/">The Rust API Guidelines</a>: how the standard library and good crates name things, which traits types should implement, and why. Read the checklist page once you have a module others call.</li>
+  <li><a href="https://rust-lang.github.io/api-guidelines/">The Rust API Guidelines</a>: how the standard library and good crates name things, which traits types should implement, and why. Read the checklist page once you have a <a class="term" href="#g-module">module</a> others call.</li>
   <li><a href="https://doc.rust-lang.org/std/process/struct.ExitCode.html">The <code>ExitCode</code> docs</a>, and <code>std::process::Termination</code>, which is how <code>main</code> can return either a <code>Result</code> or an <code>ExitCode</code>.</li>
   <li><a href="https://ecma-international.org/publications-and-standards/standards/ecma-376/">ECMA-376</a>, the Office Open XML standard. Thousands of pages. Skim the part on SpreadsheetML to see how much a "simple" file format contains.</li>
   <li><em>Rust for Rustaceans</em> by Jon Gjengset, chapter 2 (Types) on dispatch and chapter 3 (Designing Interfaces) on choosing traits. The best book on writing Rust other people use, best read after part 2.</li>

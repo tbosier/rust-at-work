@@ -276,6 +276,66 @@ ok(await p.locator("#c-t1-1").isChecked(), "known id restored, unknown ignored")
   ok(await p.locator("#c-t2-1").isChecked() && await p.locator("#q-t4-2 input").first().isChecked(), "imported progress survives reload");
 }
 // ---- end of navigation and progress tests
+// ---- Glossary: term links, the popover, and where-it's-taught links ----
+{
+  const badTerms = await p.evaluate(() => [...document.querySelectorAll("a.term")]
+    .map(a => a.getAttribute("href"))
+    .filter(h => { const t = document.getElementById(h.slice(1)); return !t || t.tagName !== "DT" || !t.closest("dl.glossary"); }));
+  const nTerms = await p.locator("a.term").count();
+  ok(nTerms > 0 && badTerms.length === 0, `all ${nTerms} term links target a glossary entry ${badTerms.join(",")}`);
+  const badTaught = await p.evaluate(() => [...document.querySelectorAll("dl.glossary dd")]
+    .filter(dd => { const a = dd.querySelectorAll("a.g-taught"); return a.length !== 1 || !document.getElementById(a[0].getAttribute("href").slice(1)); })
+    .map(dd => dd.previousElementSibling.id));
+  ok(badTaught.length === 0, "every glossary entry has one where-it's-taught link that resolves " + badTaught.join(","));
+  const term = p.locator('a.term[href="#g-heap"]').first();
+  await term.scrollIntoViewIfNeeded();
+  await term.click();
+  const pop = p.locator("#g-pop");
+  ok(await pop.isVisible(), "clicking a term opens the popover");
+  const want = await p.evaluate(() => document.querySelector("#g-heap + dd .g-def").textContent.trim());
+  ok((await pop.locator(".g-pop-def").innerText()).trim() === want, "popover shows the glossary definition");
+  ok(await p.evaluate(() => document.activeElement.id === "g-pop" && location.hash === ""), "popover takes focus and the page stays put");
+  ok(await term.getAttribute("aria-expanded") === "true", "term says it is expanded");
+  const tHref = await pop.locator(".g-pop-taught").getAttribute("href");
+  ok(tHref === await p.evaluate(() => document.querySelector("#g-heap + dd a.g-taught").getAttribute("href")), "popover links to where it's taught");
+  ok(await pop.locator(".g-pop-entry").getAttribute("href") === "#g-heap", "popover links to the glossary entry");
+  await p.keyboard.press("Escape");
+  ok(!(await pop.isVisible()), "Escape closes the popover");
+  ok(await p.evaluate(() => document.activeElement.matches('a.term[href="#g-heap"]')), "focus returns to the term");
+  // Keyboard: Enter on a focused term opens it; a click on plain text closes it.
+  await term.focus();
+  await p.keyboard.press("Enter");
+  ok(await pop.isVisible(), "Enter on a term opens the popover");
+  await p.mouse.click(5, 5);
+  ok(!(await pop.isVisible()), "a click outside closes the popover");
+  // Shift+Tab back to the term keeps it open; once more past it closes it.
+  await term.focus();
+  await p.keyboard.press("Enter");
+  await p.keyboard.press("Shift+Tab");
+  ok(await pop.isVisible() && await p.evaluate(() => document.activeElement.matches('a.term[href="#g-heap"]')), "Shift+Tab from the popover lands on its term, still open");
+  await p.keyboard.press("Shift+Tab");
+  ok(!(await pop.isVisible()) && await term.getAttribute("aria-expanded") === "false", "tabbing past the term closes the popover");
+  // Phone width: the popover stays inside the viewport for every term.
+  const phone = await ctx.newPage();
+  await phone.setViewportSize({ width: 390, height: 844 });
+  await phone.goto(url);
+  const outside = await phone.evaluate(() => {
+    const bad = [];
+    // Terms inside a closed hint aren't rendered, so open every hint first.
+    document.querySelectorAll("details").forEach(d => { d.open = true; });
+    for (const a of document.querySelectorAll("a.term")) {
+      a.scrollIntoView({ block: "center" });
+      a.click();
+      const r = document.getElementById("g-pop").getBoundingClientRect();
+      if (r.left < 0 || r.top < 0 || r.right > document.documentElement.clientWidth || r.bottom > innerHeight) bad.push(a.getAttribute("href"));
+      a.click();
+    }
+    return bad;
+  });
+  ok(outside.length === 0, "popover stays inside a 390px viewport " + outside.slice(0, 5).join(","));
+  ok(await phone.evaluate(() => document.documentElement.scrollWidth <= 390), "no horizontal overflow at 390px with the popover");
+  await phone.close();
+}
 ok(errs.length === 0, "no page errors " + errs.join(" | "));
 await b.close(); srv.close();
 process.exit(fails ? 1 : 0);

@@ -43,10 +43,10 @@
 <p class="wiki-crumb" id="t3-wiki">Engineering wiki / Rust / Types that model the business</p>
 <h3>Make wrong answers hard to write</h3>
 
-<p>Ticket 2 was arithmetic. This one is judgment: every PO lands in exactly one of several outcomes, money has to be exact, and three tables have to be lined up against each other. Rust's answer to all three is the same idea: put the rules into types, so the compiler checks them every time you build. The library examples below have the same shapes as the ticket, on different data.</p>
+<p>Ticket 2 was arithmetic. This one is judgment: every PO lands in exactly one of several outcomes, money has to be exact, and three tables have to be lined up against each other. Rust's answer to all three is the same idea: put the rules into types, so the <a class="term" href="#g-compile">compiler</a> checks them every time you build. The library examples below have the same shapes as the ticket, on different data.</p>
 
-<h4>An enum for "exactly one of these"</h4>
-<p>An <em>enum</em> lists every possible form a value can take. Unlike a Python <code>Enum</code>, each variant can carry its own data:</p>
+<h4 id="t3-enum">An enum for "exactly one of these"</h4>
+<p>An <em>enum</em> lists every possible form a value can take. Unlike a Python <code>Enum</code>, each <a class="term" href="#g-variant">variant</a> can carry its own data:</p>
 <pre>{{code:t3_enum#enum}}</pre>
 <p>A <code>Standing</code> is <code>Lost</code>, or <code>Overdue</code> with a number of days attached, or <code>Out</code>, or <code>Returned</code>. Never two at once, and never a value that isn't on the list. A string like <code>"overdue"</code> can be misspelled, and the misspelling compiles; <code>Standing::Overdu</code> does not.</p>
 <p>You take an enum apart with <code>match</code>:</p>
@@ -54,11 +54,11 @@
 <ul>
   <li><code>Standing::Overdue { days }</code> matches the variant and pulls its <code>days</code> out into a variable, in one step.</li>
   <li><code>if days &gt; 30</code> after a pattern is a <em>guard</em>: the arm only matches when the condition holds too. Arms are tried top to bottom, so the 40-day loan takes the first <code>Overdue</code> arm and the 3-day loan falls through to the second.</li>
-  <li>A <code>match</code> is an expression. Each arm produces a value, and the whole <code>match</code> is the function's return value.</li>
+  <li>A <code>match</code> is an <a class="term" href="#g-expression">expression</a>. Each arm produces a value, and the whole <code>match</code> is the function's return value.</li>
 </ul>
 <pre>{{code:t3_enum#use}}</pre>
 <pre class="out">{{out:t3_enum#1}}</pre>
-<p>Why <code>format!("{s:?}")</code> inside the <code>println!</code>? A derived <code>Debug</code> doesn't pad the value as a whole: <code>{:&lt;26?}</code> leaves <code>Lost</code> unpadded and pads the <code>3</code> inside <code>Overdue { days: 3 }</code>. So the line turns the value into a <code>String</code> first, and a <code>String</code> pads properly. <code>matches!(value, pattern)</code> is a one-line <code>match</code> that answers yes or no. <code>Overdue { .. }</code> means "the <code>Overdue</code> variant, whatever its fields are".</p>
+<p>Why <code>format!("{s:?}")</code> inside the <code>println!</code>? A <a class="term" href="#g-derive">derived</a> <code>Debug</code> doesn't pad the value as a whole: <code>{:&lt;26?}</code> leaves <code>Lost</code> unpadded and pads the <code>3</code> inside <code>Overdue { days: 3 }</code>. So the line turns the value into a <code>String</code> first, and a <code>String</code> pads properly. <code>matches!(value, pattern)</code> is a one-line <code>match</code> that answers yes or no. <code>Overdue { .. }</code> means "the <code>Overdue</code> variant, whatever its fields are".</p>
 <p>The rule that makes enums worth it: a <code>match</code> must cover every variant. Leave one out and the program doesn't build:</p>
 <pre>{{fail:t3_nonexhaustive}}</pre>
 <pre class="out">{{failout:t3_nonexhaustive}}</pre>
@@ -71,7 +71,7 @@
 <ul>
   <li>Here the <code>_</code> arm belongs. Text can be anything, so "anything else" has to be handled, and it becomes <code>None</code>. That's the one place a catch-all is right: where the outside world comes in. Once you have a <code>LoanStatus</code>, every <code>match</code> on it lists the variants by name.</li>
   <li>The match is case-sensitive. <code>"Lost"</code> isn't <code>"lost"</code>. Whether that's right depends on the data, so look at what your column really holds.</li>
-  <li><code>ok_or_else</code> turns <code>None</code> into an error, built by the closure only when it's needed. A <code>String</code> converts into a <code>Box&lt;dyn Error&gt;</code>, so <code>?</code> can return it from any function with that return type. Load the status as a <code>String</code>, as in ticket 1, and convert each row in a second step after loading. An unknown status then stops the program with a message that names the value.</li>
+  <li><code>ok_or_else</code> turns <code>None</code> into an error, built by the <a class="term" href="#g-closure">closure</a> only when it's needed. A <code>String</code> converts into a <code>Box&lt;dyn Error&gt;</code>, so <code>?</code> can return it from any function with that return type. Load the status as a <code>String</code>, as in ticket 1, and convert each row in a second step after loading. An unknown status then stops the program with a message that names the value.</li>
 </ul>
 
 <h4>Matching on two things at once</h4>
@@ -83,11 +83,11 @@
   <li><code>a.cmp(&amp;b)</code> compares two values and returns a <a href="https://doc.rust-lang.org/std/cmp/enum.Ordering.html"><code>std::cmp::Ordering</code></a>: <code>Less</code>, <code>Equal</code> or <code>Greater</code>. It's an enum like any other, so it can go in a pattern.</li>
   <li><code>Ordering::Less | Ordering::Equal</code> is an <em>or-pattern</em>: the arm matches either one.</li>
   <li><code>(LoanStatus::Lost, _)</code> means "lost, and any <code>Ordering</code>". A <code>_</code> inside a tuple only waves through that one position. Every status is still named, so a new <code>LoanStatus</code> variant would still be a compile error here. That's different from a whole-arm <code>_ =&gt;</code>, which waves through everything.</li>
-  <li><code>-&gt; &amp;'static str</code> returns text written into the program itself, like <code>"bill the replacement"</code>. Text like that is never freed, and <code>'static</code> is the lifetime that says so. It needs no input to borrow from, which is why this function can return a <code>&amp;str</code> without a <code>'a</code>. <a href="#t6-wiki">Ticket 6</a> says more.</li>
+  <li><code>-&gt; &amp;'static str</code> returns text written into the program itself, like <code>"bill the replacement"</code>. Text like that is never freed, and <code>'static</code> is the <a class="term" href="#g-lifetime">lifetime</a> that says so. It needs no input to <a class="term" href="#g-borrow">borrow</a> from, which is why this function can return a <code>&amp;str</code> without a <code>'a</code>. <a href="#t6-wiki">Ticket 6</a> says more.</li>
   <li>The compiler checks every combination. Delete the <code>Returned, Greater</code> arm and it names the missing pair, with its full path: <code>(LoanStatus::Returned, std::cmp::Ordering::Greater)</code> not covered.</li>
 </ul>
 
-<h4>What each derive buys you</h4>
+<h4 id="t3-derive">What each derive buys you</h4>
 <p>The <code>#[derive(...)]</code> line asks the compiler to write standard behavior for your type. Each one is a <em>trait</em>, a named ability, that other code can rely on:</p>
 <div class="table-wrap">
 <table>
@@ -103,20 +103,20 @@
 </table>
 </div>
 <p>Declaration order as sort order is worth noticing. If your report must list kinds in a set order, declare the enum's variants in that order and derive <code>Ord</code>: then sorting is correct by construction, and nobody has to keep a separate list of strings in step with the enum.</p>
-<p>Why <code>PartialEq</code> and <code>Eq</code> are two things: floats. <code>f64</code> has <code>NaN</code>, which isn't equal even to itself, so <code>f64</code> can only be <code>PartialEq</code>. And because it isn't <code>Eq</code> or <code>Hash</code>, it can't be a <code>HashMap</code> key:</p>
+<p>Why <code>PartialEq</code> and <code>Eq</code> are two things: <a class="term" href="#g-floating-point">floats</a>. <code>f64</code> has <code>NaN</code>, which isn't equal even to itself, so <code>f64</code> can only be <code>PartialEq</code>. And because it isn't <code>Eq</code> or <code>Hash</code>, it can't be a <code>HashMap</code> key:</p>
 <pre>{{fail:t3_float_eq}}</pre>
 <pre class="out">{{failout:t3_float_eq}}</pre>
 <p>That's the type system hinting that floats and exact comparison don't mix. The next section shows why.</p>
 
-<h4>Money is not a float</h4>
+<h4 id="t3-money">Money is not a float</h4>
 <p>The library stores fines the way our warehouse system stores prices: as <code>REAL</code> dollars. Loan 1 has two fines, 10 and 20 cents. Loan 4 has one fine of 30 cents. Add them up in <code>f64</code>:</p>
 <pre>{{code:t3_float#trap}}</pre>
 <pre class="out">{{out:t3_float#1}}</pre>
 <p>Thirty cents is not thirty cents. <code>{:.2}</code> hides the problem when you print, which is why ticket 2's totals looked fine. It doesn't help when you compare, and this ticket is nothing but comparisons. <a href="#t3-floats">Under the hood</a> explains where the stray digits come from. The usual fix, and the right one for invoices billed in whole cents like ours: <strong>turn the float into whole cents once, the moment it leaves the database, and never do arithmetic on money as a float again.</strong> (Some systems price in fractions of a cent, such as a per-unit rate. They use a smaller integer unit or a decimal type, and round only when they bill. The rule is the same: no floats.)</p>
-<p>Make cents a type of its own, a struct with one unnamed field. A wrapper like this is called a <em>newtype</em>:</p>
+<p>Make cents a type of its own, a <a class="term" href="#g-struct">struct</a> with one unnamed field. A wrapper like this is called a <em>newtype</em>:</p>
 <pre>{{code:t3_cents#newtype}}</pre>
 <p>The <code>.0</code> reaches the field inside. Why not just use <code>i64</code>? Because then a quantity, an ID and an amount are all <code>i64</code>, and adding a PO number to a price compiles. With <code>Cents</code>, the compiler only lets money combine with money.</p>
-<p>A new type starts with no abilities except the derived ones. You add the rest by implementing standard traits. You've written <code>impl Cents { ... }</code> blocks since <a href="#t0-structs">week zero</a>. <code>impl Display for Cents { ... }</code> is the same kind of block, with one difference: it keeps a trait's promise, so its methods are exactly the ones the trait lists, with the signatures the trait's docs give. <code>Display</code> is what <code>{}</code> uses:</p>
+<p>A new type starts with no abilities except the derived ones. You add the rest by implementing standard traits. You've written <code>impl Cents { ... }</code> blocks since <a href="#t0-structs">week zero</a>. <code>impl Display for Cents { ... }</code> is the same kind of block, with one difference: it keeps a trait's promise, so its <a class="term" href="#g-method">methods</a> are exactly the ones the trait lists, with the <a class="term" href="#g-signature">signatures</a> the trait's docs give. <code>Display</code> is what <code>{}</code> uses:</p>
 <pre>{{code:t3_cents#display}}</pre>
 <p>And <code>Add</code> is what <code>+</code> uses:</p>
 <pre>{{code:t3_cents#add}}</pre>
@@ -131,14 +131,14 @@
   <li><code>.collect::&lt;Result&lt;_, _&gt;&gt;()?</code> is ticket 1's <code>rows.collect()</code>, written in one chain. There the function's return type told <code>collect</code> what to build. Here the turbofish says "a <code>Result</code>", the <code>_</code>s let the compiler fill in the rest from <code>Vec&lt;Fine&gt;</code>, and <code>?</code> takes the <code>Vec</code> out or returns the first error.</li>
 </ul>
 <p>The ticket needs more arithmetic than <code>+</code>. <code>Sub</code> is <code>-</code>, the same pattern as <code>Add</code>. A PO line is a quantity times a price, which is <code>Cents * i64</code>: implement <code>Mul&lt;i64&gt; for Cents</code>, where the <code>&lt;i64&gt;</code> names the type on the right of the <code>*</code>. The compiler's error, if you try <code>*</code> first, names exactly the trait it wants.</p>
-<p>One more iterator method before the traits. <code>fold</code> walks an iterator and carries one value along: you give it a starting value and a closure that takes "the value so far" and the next item, and returns the new value so far. Its result is the last one. <code>sum()</code> is a <code>fold</code> that starts at 0 and adds:</p>
+<p>One more <a class="term" href="#g-iterator">iterator</a> method before the traits. <code>fold</code> walks an iterator and carries one value along: you give it a starting value and a closure that takes "the value so far" and the next item, and returns the new value so far. Its result is the last one. <code>sum()</code> is a <code>fold</code> that starts at 0 and adds:</p>
 <pre>{{code:t3_tuple#fold}}</pre>
 <pre class="out">{{out:t3_tuple#2}}</pre>
-<p><code>.iter()</code> hands out references, as <code>for x in &amp;v</code> did in <a href="#t0-refs">week zero</a>. In the second <code>fold</code>, <code>|most, &amp;days|</code> is a pattern in the parameter: "this is a reference; call the number it points at <code>days</code>". It's <code>*</code> done on the way in, and <code>max</code> needs the plain number. Clippy will tell you when a <code>fold</code> is just a <code>sum</code> in disguise.</p>
+<p><code>.iter()</code> hands out <a class="term" href="#g-reference">references</a>, as <code>for x in &amp;v</code> did in <a href="#t0-refs">week zero</a>. In the second <code>fold</code>, <code>|most, &amp;days|</code> is a pattern in the parameter: "this is a reference; call the number it points at <code>days</code>". It's <code>*</code> done on the way in, and <code>max</code> needs the plain number. <a class="term" href="#g-clippy">Clippy</a> will tell you when a <code>fold</code> is just a <code>sum</code> in disguise.</p>
 <p>Two more traits will make your code read better, and writing them is yours to do:</p>
 <ul>
   <li><a href="https://doc.rust-lang.org/std/ops/trait.AddAssign.html"><code>AddAssign</code></a> is <code>+=</code>. With it, <code>*total = *total + x</code> becomes <code>*total += x</code>. One method, <code>add_assign(&amp;mut self, other: Cents)</code>.</li>
-  <li><a href="https://doc.rust-lang.org/std/iter/trait.Sum.html"><code>Sum</code></a> lets an iterator of <code>Cents</code> end in <code>.sum()</code>. Its one method has a generic signature, which ticket 6 explains properly: <code>fn sum&lt;I: Iterator&lt;Item = Cents&gt;&gt;(iter: I) -&gt; Cents</code>. Read <code>&lt;I: Iterator&lt;Item = Cents&gt;&gt;</code> as "<code>iter</code> can be any iterator that hands out <code>Cents</code>". Put that signature inside <code>impl std::iter::Sum for Cents { ... }</code> and write the body: a <code>fold</code> that starts from <code>Cents(0)</code> and adds each item. This one is optional. A <code>for</code> loop with <code>+=</code> does the same job, and ticket 6 is where generic signatures stop being strange.</li>
+  <li><a href="https://doc.rust-lang.org/std/iter/trait.Sum.html"><code>Sum</code></a> lets an iterator of <code>Cents</code> end in <code>.sum()</code>. Its one method has a <a class="term" href="#g-generic">generic</a> signature, which ticket 6 explains properly: <code>fn sum&lt;I: Iterator&lt;Item = Cents&gt;&gt;(iter: I) -&gt; Cents</code>. Read <code>&lt;I: Iterator&lt;Item = Cents&gt;&gt;</code> as "<code>iter</code> can be any iterator that hands out <code>Cents</code>". Put that signature inside <code>impl std::iter::Sum for Cents { ... }</code> and write the body: a <code>fold</code> that starts from <code>Cents(0)</code> and adds each item. This one is optional. A <code>for</code> loop with <code>+=</code> does the same job, and ticket 6 is where generic signatures stop being strange.</li>
 </ul>
 <p>Before you trust the <code>Display</code> above with your report, try it on negative amounts, because <code>difference</code> is often negative:</p>
 <pre>{{code:t3_cents#negative}}</pre>
@@ -173,7 +173,7 @@
 </table>
 </div>
 
-<h4>Lifetimes, properly this time</h4>
+<h4 id="t3-lifetimes">Lifetimes, properly this time</h4>
 <p>Ticket 1 met <code>'a</code> on a function. An index is the same idea in a struct: a <code>Catalog</code> that holds references must say how long they're good for.</p>
 <pre>{{code:t3_catalog#catalog}}</pre>
 <p>Read <code>Catalog&lt;'a&gt;</code> as "a catalog that borrows something for the span <code>'a</code>". <code>new</code> says the catalog borrows from <code>books</code>, and <code>title</code> says the text it hands back comes from the books too, not from the catalog, so it stays valid even after the catalog is gone.</p>
@@ -207,7 +207,7 @@
 </div>
 
 <h3>The ticket</h3>
-<p>Still one program in <code>src/main.rs</code>. It will be long; that's fine for now, and ticket 5 is where it gets split up. You will need the csv crate from ticket 2 again.</p>
+<p>Still one program in <code>src/main.rs</code>. It will be long; that's fine for now, and ticket 5 is where it gets split up. You will need the csv <a class="term" href="#g-crate">crate</a> from ticket 2 again.</p>
 <ul class="criteria">
   <li><label><input type="checkbox" class="crit-box" id="c-t3-1"><span>Loads <code>suppliers</code>, <code>purchase_orders</code>, <code>po_lines</code> and <code>invoices</code>, each with one plain <code>SELECT</code>.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t3-2"><span>Money becomes your <code>Cents</code> type while the rows load. No <code>f64</code> addition or comparison on money anywhere after that in this ticket's code. (Ticket 2's report can keep its <code>f64</code> sum, or move to <code>Cents</code> too, as long as its file comes out the same.)</span></label></li>
@@ -242,7 +242,7 @@
 </ul>
 
 <h3>Hand it in</h3>
-<p>Commit, tag <code>t3-submitted</code>, and paste the <a href="#reviews">review prompt</a> with <code>N</code> as 3. Add this to the end:</p>
+<p><a class="term" href="#g-commit">Commit</a>, <a class="term" href="#g-tag">tag</a> <code>t3-submitted</code>, and paste the <a href="#reviews">review prompt</a> with <code>N</code> as 3. Add this to the end:</p>
 <pre class="prompt">For this ticket, pay particular attention to: whether my enum and money
 type make wrong code hard to write, whether any f64 survives past loading,
 the big-O of each pass, and whether the lifetimes and ownership in my
@@ -257,10 +257,10 @@ indexes are as simple as they can be.</pre>
 <pre class="out">{{out:t3_float#2}}</pre>
 <p>0.1 is stored a hair high, and so is 0.2. 0.3 is stored a hair low. Add the first two and their errors don't cancel; the sum is rounded to a different nearest <code>f64</code> from the one 0.3 got. Each step is correct to within half a unit in the last place, which is excellent for measuring a bridge. It's useless for "is this invoice exactly right?".</p>
 <p>That was 508 mismatches in our own data, with plain <code>f64</code> addition and <code>==</code> and the duplicates set aside. Done in integer cents, 401 of them disappear. Nearly four alarms in five would have been the float, not the supplier, and Priya's team would have spent a week learning to ignore the report.</p>
-<p>Why rounding <em>once</em> at the boundary is safe: a stored price like 4.35 is really 4.349999999999999644..., within about one part in 10<sup>16</sup> of what someone typed. Times 100 that's 434.99999999999994, a tiny distance from 435, so <code>.round()</code> lands on the integer you meant. That holds for amounts up to many billions of dollars. After that, integers add exactly: an <code>i64</code> holds up to about 9.2 &times; 10<sup>18</sup> cents. One warning: <code>as i64</code> never fails. A float too big for an <code>i64</code> becomes the largest <code>i64</code>, and <code>NaN</code> becomes 0. That's fine for numbers from a <code>REAL</code> column you've seen, and not for text from a stranger, which is why ticket 4 parses text straight into cents.</p>
+<p>Why rounding <em>once</em> at the boundary is safe: a stored price like 4.35 is really 4.349999999999999644..., within about one part in 10<sup>16</sup> of what someone typed. Times 100 that's 434.99999999999994, a tiny distance from 435, so <code>.round()</code> lands on the integer you meant. That holds for amounts up to many billions of dollars. After that, integers add exactly: an <code>i64</code> holds up to about 9.2 &times; 10<sup>18</sup> cents. One warning: <code>as i64</code> never fails. A float too big for an <code>i64</code> becomes the largest <code>i64</code>, and <code>NaN</code> becomes 0. That's fine for numbers from a <code>REAL</code> column you've seen, and not for text from a stranger, which is why ticket 4 <a class="term" href="#g-parse">parses</a> text straight into cents.</p>
 <p>Floats are for measuring, estimating and deciding: averages, ratios, forecasts, the machine learning in Part 4. Money, counts and IDs are integers here (or a decimal type, where money has fractions of a cent).</p>
 
-<h4>Big-O, and the join you just wrote</h4>
+<h4 id="t3-bigo">Big-O, and the join you just wrote</h4>
 <p>Lining up two tables by a shared column is a <em>join</em>. There are two obvious ways to write one:</p>
 <pre>{{code:t3_join#joins}}</pre>
 <p>The first, a <em>nested-loop join</em>, searches the whole PO list for every invoice: with <em>n</em> invoices and <em>m</em> POs, about <em>n</em> &times; <em>m</em> comparisons in the worst case. The second, a <em>hash join</em>, makes one pass to build an index and one pass to look things up: about <em>n</em> + <em>m</em> steps, because a <code>HashMap</code> lookup takes the same time on average however big the map is (ticket 2's under-the-hood section is why). In big-O notation, the nested loop is O(<em>nm</em>) and the hash join is O(<em>n</em> + <em>m</em>). Big-O ignores constant factors and asks only how the cost grows as the input grows.</p>
@@ -270,7 +270,7 @@ indexes are as simple as they can be.</pre>
 <p>A debug build, plain <code>cargo run</code>, runs this sort of loop many times slower than <code>--release</code>. Never time anything in debug.</p>
 
 <h4>What a database index is</h4>
-<p>You aren't allowed to write a SQL <code>JOIN</code>, but it's worth knowing what one does. <code>po_id</code> is the <code>INTEGER PRIMARY KEY</code> of <code>purchase_orders</code>, so SQLite stores the table as a <em>B-tree</em> sorted by <code>po_id</code>: a shallow, wide tree that finds any key in a few steps, O(log <em>n</em>). A <code>JOIN</code> in SQLite is a nested loop. When the inner table has an index on the join column, as <code>purchase_orders</code> does on <code>po_id</code>, the inner loop becomes an index lookup instead of a scan, and that's how it stays fast without a hash table. Without a usable index it scans.</p>
+<p>You aren't allowed to write a SQL <code>JOIN</code>, but it's worth knowing what one does. <code>po_id</code> is the <code>INTEGER PRIMARY KEY</code> of <code>purchase_orders</code>, so SQLite stores the table as a <em>B-tree</em> sorted by <code>po_id</code>: a shallow, wide tree that finds any key in a few steps, O(log <em>n</em>). A <code>JOIN</code> in SQLite is a nested loop. When the inner table has an index on the join column, as <code>purchase_orders</code> does on <code>po_id</code>, the inner loop becomes an index lookup instead of a scan, and that's how it stays fast without a <a class="term" href="#g-hash-table">hash table</a>. Without a usable index it scans.</p>
 <p>When you <code>SELECT</code> a table into a <code>Vec</code>, the index stays behind in the database. Your <code>HashMap</code> is the index you rebuild in Rust. The two make different trade-offs. A hash index is the faster of the two for "find this exact key", but it keeps no order. A B-tree keeps keys sorted, so it can also answer range questions, but only on the column it's sorted by. "Every PO between two dates" would need a B-tree index on <code>order_date</code>, which this table doesn't have. Rust has both: <code>HashMap</code> and <code>BTreeMap</code>. When you choose between them, you're making the same choice a database designer makes.</p>
 
 <h3>Go deeper</h3>

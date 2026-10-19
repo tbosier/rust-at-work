@@ -19,11 +19,11 @@
 <h3>House rules</h3>
 <p>These are the rules a good engineering team would give a new hire. Each one is here because breaking it costs you something later.</p>
 <ol>
-  <li><strong>You write every line.</strong> Claude can explain a compiler error, point you at a concept, or review finished work. It does not write your implementation. The <code>CLAUDE.md</code> you add during set up tells it so.</li>
+  <li><strong>You write every line.</strong> Claude can explain a <a class="term" href="#g-compile">compiler</a> error, point you at a concept, or review finished work. It does not write your implementation. The <code>CLAUDE.md</code> you add during set up tells it so.</li>
   <li><strong>SQL stops at <code>SELECT columns FROM table</code>.</strong> No <code>WHERE</code>, <code>JOIN</code>, <code>GROUP BY</code> or <code>SUM</code>. Kettle Creek's IT team asks for this because business rules buried in SQL strings inside a program are easy to miss in review, awkward to test without a live database, and soon forgotten. For you there is a second reason: every filter, join and total you write in Rust is Rust you learn.</li>
-  <li><strong>No crate until a ticket needs it.</strong> Each ticket names the crates it allows. Learning what the standard library already does is part of the job.</li>
+  <li><strong>No crate until a ticket needs it.</strong> Each ticket names the <a class="term" href="#g-crate">crates</a> it allows. Learning what the standard library already does is part of the job.</li>
   <li><strong>Clean before review.</strong> <code>cargo fmt</code>, then <code>cargo clippy --all-targets</code> with no warnings, then <code>cargo test</code>. A reviewer's time goes on design, not on things a tool can find.</li>
-  <li><strong>Commit each ticket, and say why.</strong> A commit message says what changed and why it changed. Tag the commit you hand in, so the review can see exactly what changed since the last ticket.</li>
+  <li><strong>Commit each ticket, and say why.</strong> A <a class="term" href="#g-commit">commit</a> message says what changed and why it changed. <a class="term" href="#g-tag">Tag</a> the commit you hand in, so the review can see exactly what changed since the last ticket.</li>
   <li><strong>Keep a journal.</strong> Three lines per ticket in <code>JOURNAL.md</code>: what surprised you, what the compiler taught you, and what you would design differently. Writing it down is what turns an error you fixed into one you won't make again.</li>
 </ol>
 
@@ -65,7 +65,7 @@
 <pre class="cmd">cargo --version
 rustup component list --installed
 claude --version</pre>
-<p>You want cargo 1.89 or newer (<code>rustup update</code> gets it) and, in the component list, <code>clippy</code>, <code>rustfmt</code> and <code>rust-analyzer</code>. On this machine all three are installed. The last line checks for Claude Code, the command-line Claude that does your reviews. If it's missing, Anthropic's Claude Code documentation says how to install it.</p>
+<p>You want <a class="term" href="#g-cargo">cargo</a> 1.89 or newer (<code>rustup update</code> gets it) and, in the component list, <code>clippy</code>, <code>rustfmt</code> and <code>rust-analyzer</code>. On this machine all three are installed. The last line checks for Claude Code, the command-line Claude that does your reviews. If it's missing, Anthropic's Claude Code documentation says how to install it.</p>
 
 <h3>Make the project</h3>
 <pre class="cmd">cd ~/projects
@@ -77,13 +77,13 @@ cargo add rusqlite --features bundled
 printf '/out\n/data/*.db\n' &gt;&gt; .gitignore</pre>
 <p><code>cargo new</code> makes <code>Cargo.toml</code>, <code>src/main.rs</code> and a git repository with a <code>.gitignore</code> that already skips <code>target/</code>. The last line adds two more: your program's output files, which are rebuilt every run, and your copy of the database, which you can always copy again. <code>printf</code> prints the text, with <code>\n</code> as a line break, and <code>&gt;&gt;</code> adds it to the end of the file. A single <code>&gt;</code> would replace the file instead.</p>
 <p>Because <code>out/</code> is ignored, git never stores it, and a fresh clone of your project won't have one. Writing to <code>out/report.csv</code> then fails with <code>No such file or directory</code>, a message that doesn't say which path. So have your program make the folder before it writes there: <code>std::fs::create_dir_all("out")?</code> creates it, and does nothing if it already exists.</p>
-<p><code>cargo add rusqlite --features bundled</code> adds the SQLite crate. A <em>crate</em> is one unit of compiled Rust, a library or a program, and a <em>package</em> is what cargo downloads and builds, holding one or more crates. Day to day, people say crate for both. <code>bundled</code> compiles SQLite itself from C source into your program, so SQLite doesn't have to be installed on the machine. It does need a C compiler. On Linux and macOS, Rust normally links programs through the system's C toolchain, so you usually have one already. If the first build fails with an error that mentions <code>cc</code>, install your system's C build tools and try again. That makes the first build slow, a minute or so, and every build after it fast. <code>Cargo.toml</code> now ends with something like:</p>
+<p id="setup-crates"><code>cargo add rusqlite --features bundled</code> adds the SQLite crate. A <em>crate</em> is one unit of <a class="term" href="#g-compile">compiled</a> Rust, a library or a program, and a <em>package</em> is what cargo downloads and builds, holding one or more crates. Day to day, people say crate for both. <code>bundled</code> compiles SQLite itself from C source into your program, so SQLite doesn't have to be installed on the machine. It does need a C compiler. On Linux and macOS, Rust normally links programs through the system's C toolchain, so you usually have one already. If the first build fails with an error that mentions <code>cc</code>, install your system's C build tools and try again. That makes the first build slow, a minute or so, and every build after it fast. <code>Cargo.toml</code> now ends with something like:</p>
 <pre>[dependencies]
 rusqlite = { version = "0.40.2", features = ["bundled"] }</pre>
 <p>Your version may be newer. If an example on this page stops compiling with a newer rusqlite, pin the tested one with <code>version = "=0.40.2"</code>.</p>
 
 <h3>The database</h3>
-<p>The file is a copy of the warehouse system's tables, as of Monday, October 5, 2026. Dates are text in <code>YYYY-MM-DD</code> form. Money is stored the way many real systems store it, as floating-point dollars in a <code>REAL</code> column, and ticket 3 is about why that is a problem.</p>
+<p>The file is a copy of the warehouse system's tables, as of Monday, October 5, 2026. Dates are text in <code>YYYY-MM-DD</code> form. Money is stored the way many real systems store it, as <a class="term" href="#g-floating-point">floating-point</a> dollars in a <code>REAL</code> column, and ticket 3 is about why that is a problem.</p>
 <div class="table-wrap">
 <table>
   <thead><tr><th>Table</th><th>Rows</th><th>Columns</th></tr></thead>
@@ -99,7 +99,7 @@ rusqlite = { version = "0.40.2", features = ["bundled"] }</pre>
 </div>
 <p>To look around, install the <code>sqlite3</code> command-line program from your package manager (the bundled feature puts SQLite inside your program, not on your machine). Then <code>sqlite3 data/kettle_creek.db</code> opens a prompt. <code>.tables</code> lists tables, <code>.schema purchase_orders</code> shows one, and <code>SELECT * FROM suppliers LIMIT 5;</code> shows a few rows. Using SQL to look is fine. The rule is about what goes in your program.</p>
 
-<h3>The loop you'll run a thousand times</h3>
+<h3 id="setup-loop">The loop you'll run a thousand times</h3>
 <div class="table-wrap">
 <table>
   <thead><tr><th>Command</th><th>What it does</th><th>Python's nearest</th></tr></thead>
@@ -116,7 +116,7 @@ rusqlite = { version = "0.40.2", features = ["bundled"] }</pre>
 
 <h3>Your editor</h3>
 <p>Whatever editor you use, it should run <em>rust-analyzer</em>, the program that reads your code as you type and shows errors, types and docs in place. Without it you find every mistake at the next <code>cargo build</code>, and Rust is much harder to learn that way.</p>
-<p>Your Neovim already runs rust-analyzer through rustaceanvim, with clippy on every save, and shows inferred types as gray inlay hints. Start <code>nvim</code> from the project folder so it picks up the right project. The keys worth learning this week, all from your own config. <kbd>&lt;leader&gt;</kbd> is the prefix key your config sets. With a different Neovim setup the keys will differ, and the actions are what to look for:</p>
+<p>Your Neovim already runs rust-analyzer through rustaceanvim, with <a class="term" href="#g-clippy">clippy</a> on every save, and shows <a class="term" href="#g-infer">inferred</a> types as gray inlay hints. Start <code>nvim</code> from the project folder so it picks up the right project. The keys worth learning this week, all from your own config. <kbd>&lt;leader&gt;</kbd> is the prefix key your config sets. With a different Neovim setup the keys will differ, and the actions are what to look for:</p>
 <div class="table-wrap">
 <table>
   <thead><tr><th>Key</th><th>What it does</th></tr></thead>
@@ -182,12 +182,12 @@ My Rust learning project. I am working through the guide at
 - The answer key is in ~/projects/testRandomShiz/rust_at_work/answer_key.
   Never show me its code or open its output files for me. You may compare
   my output with it and tell me where they differ.</pre>
-<p>Then start the journal and make the first commit:</p>
+<p>Then start the journal and make the first <a class="term" href="#g-commit">commit</a>:</p>
 <pre class="cmd">printf '# Journal\n\n' &gt; JOURNAL.md
 cargo run
 git add -A
 git commit -m "Start kettle_creek: empty binary, rusqlite, rules for Claude"</pre>
-<p><code>git add -A</code> <em>stages</em> every change: it marks what goes into the next commit. <code>git commit</code> then saves the staged changes as one snapshot you can always get back to. If this is the first time you've used git on this machine, the commit stops and asks who you are. Tell it once, with your own name and email, and commit again:</p>
+<p id="setup-git"><code>git add -A</code> <em>stages</em> every change: it marks what goes into the next commit. <code>git commit</code> then saves the staged changes as one snapshot you can always get back to. If this is the first time you've used git on this machine, the commit stops and asks who you are. Tell it once, with your own name and email, and commit again:</p>
 <pre class="cmd">git config --global user.name "Your Name"
 git config --global user.email "you@example.com"</pre>
 <p>If <code>cargo run</code> prints <code>Hello, world!</code> after compiling SQLite, you're set up. Week zero is next.</p>
@@ -198,11 +198,11 @@ git config --global user.email "you@example.com"</pre>
 <p>A review is where most of the learning in this course happens. Getting a program to print the right number is half the job. The other half is a program that the next person, or you in six months, can read, change and trust. Nobody can teach you that half from a book. It comes from someone looking at your code and asking why.</p>
 
 <h3>When to ask</h3>
-<p>When the sanity checks pass, <code>cargo fmt</code> and <code>cargo clippy --all-targets</code> are clean, and the work is committed and tagged:</p>
+<p>When the sanity checks pass, <code>cargo fmt</code> and <code>cargo clippy --all-targets</code> are clean, and the work is <a class="term" href="#g-commit">committed</a> and <a class="term" href="#g-tag">tagged</a>:</p>
 <pre class="cmd">git add -A
 git commit -m "Ticket 1: count open POs and list stale ones"
 git tag t1-submitted</pre>
-<p>A <em>tag</em> is a name stuck on one commit, so you and the reviewer can say "the code as handed in" without copying a commit's long ID. <code>git tag</code> lists them, and <code>git diff t1-final t2-submitted</code> shows everything that changed between two of them. A tag stays on its commit when you commit again. If you fix something before the review and want to hand in the new version, move the tag with <code>git tag -f t1-submitted</code>; without <code>-f</code>, git says the tag already exists.</p>
+<p id="reviews-tag">A <em>tag</em> is a name stuck on one commit, so you and the reviewer can say "the code as handed in" without copying a commit's long ID. <code>git tag</code> lists them, and <code>git diff t1-final t2-submitted</code> shows everything that changed between two of them. A tag stays on its commit when you commit again. If you fix something before the review and want to hand in the new version, move the tag with <code>git tag -f t1-submitted</code>; without <code>-f</code>, git says the tag already exists.</p>
 
 <h3>What to paste</h3>
 <p>Start <code>claude</code> in the project folder and paste this, with the ticket number filled in. Each ticket adds a line or two of its own to focus the review.</p>
@@ -238,8 +238,8 @@ and the ticket is the "Ticket N" section of
     <tr><td>Clear</td><td>Does <code>main</code> read like a summary of the program? Does each function do one thing its name describes?</td></tr>
     <tr><td>Structured</td><td>Is each file about one thing? Is the structure as simple as the problem allows, and no simpler?</td></tr>
     <tr><td>Honest about failure</td><td>Can bad data or a missing file crash it? When it fails, does the message say what went wrong and where?</td></tr>
-    <tr><td>Ownership</td><td>Does it borrow by default, and clone only on purpose?</td></tr>
-    <tr><td>Idiomatic</td><td>Iterators where they read better than loops, the standard library's types instead of homemade ones, <code>derive</code> instead of hand-written boilerplate.</td></tr>
+    <tr><td><a class="term" href="#g-ownership">Ownership</a></td><td>Does it <a class="term" href="#g-borrow">borrow</a> by default, and <a class="term" href="#g-clone">clone</a> only on purpose?</td></tr>
+    <tr><td>Idiomatic</td><td><a class="term" href="#g-iterator">Iterators</a> where they read better than loops, the standard library's types instead of homemade ones, <code>derive</code> instead of hand-written boilerplate.</td></tr>
     <tr><td>Tested</td><td>From ticket 4: would a test fail if the important logic broke?</td></tr>
     <tr><td>Reproducible</td><td>Same input, same output, byte for byte. No absolute paths baked in.</td></tr>
   </tbody>

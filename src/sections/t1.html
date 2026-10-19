@@ -31,13 +31,13 @@
   <p>The examples import it as <code>snippets::library</code>, from the <code>snippets</code> scratch project you made in <a href="#t0">week zero</a>. Add rusqlite to it. (If you set <code>default-run</code> in week zero, plain <code>cargo run</code> still runs <code>src/main.rs</code>.)</p>
   <pre class="cmd">cd ~/projects/snippets
 cargo add rusqlite --features bundled</pre>
-  <p>Save the code below as <code>src/lib.rs</code>, beside <code>src/main.rs</code>. A package can hold a library and a program at once, and the program reaches the library by the package's name, so <code>use snippets::library;</code> at the top of <code>src/main.rs</code> brings the function in. (Ticket 5 explains libraries properly.) Then type an example into <code>src/main.rs</code> and <code>cargo run</code>. The database is built in memory each run, so nothing is saved.</p>
+  <p>Save the code below as <code>src/lib.rs</code>, beside <code>src/main.rs</code>. A package can hold a <a class="term" href="#g-library">library</a> and a program at once, and the program reaches the library by the package's name, so <code>use snippets::library;</code> at the top of <code>src/main.rs</code> brings the function in. (Ticket 5 explains libraries properly.) Then type an example into <code>src/main.rs</code> and <code>cargo run</code>. The database is built in memory each run, so nothing is saved.</p>
   <pre>{{code:lib#library}}</pre>
-  <p>Three things in it are new. <code>///</code> starts a <em>doc comment</em>, which describes the item below it; your editor shows it when you hover over the name. <code>use rusqlite::{Connection, Result};</code> imports two names from one crate at once: the braces hold a list. And this <code>Result</code> is rusqlite's own. It's a <em>type alias</em>, a short name for a longer type: <code>rusqlite::Result&lt;T&gt;</code> means <code>Result&lt;T, rusqlite::Error&gt;</code>. It's week zero's two-part <code>Result</code> with the error type already filled in.</p>
+  <p>Three things in it are new. <code>///</code> starts a <em>doc comment</em>, which describes the item below it; your editor shows it when you hover over the name. <code>use rusqlite::{Connection, Result};</code> imports two names from one <a class="term" href="#g-crate">crate</a> at once: the braces hold a list. And this <code>Result</code> is rusqlite's own. It's a <em>type alias</em>, a short name for a longer type: <code>rusqlite::Result&lt;T&gt;</code> means <code>Result&lt;T, rusqlite::Error&gt;</code>. It's week zero's two-part <code>Result</code> with the error type already filled in.</p>
 </details>
 
 <h4>Describe a row with a struct</h4>
-<p>A <em>struct</em> is a named group of fields, each with a type. Think of one row of a table with its column types written down. A <code>Vec</code> of them plays the part of a DataFrame's rows. (If you've met Python's <code>@dataclass</code>, a struct is that, except the types are checked when the program is compiled.)</p>
+<p>A <em>struct</em> is a named group of fields, each with a type. Think of one row of a table with its column types written down. A <code>Vec</code> of them plays the part of a DataFrame's rows. (If you've met Python's <code>@dataclass</code>, a struct is that, except the types are checked when the program is <a class="term" href="#g-compile">compiled</a>.)</p>
 <pre>{{code:t1_struct#struct}}</pre>
 <p>Pick each field's type from the column:</p>
 <ul>
@@ -48,7 +48,7 @@ cargo add rusqlite --features bundled</pre>
 <p><code>#[derive(Debug)]</code> asks the compiler to write the code that prints the struct with <code>{:?}</code>. Making one and printing it:</p>
 <pre>{{code:t1_struct#make}}</pre>
 <pre class="out">{{out:t1_struct}}</pre>
-<p><code>"2026-08-11"</code> on its own is a <code>&amp;str</code>, a borrowed view of text that's baked into the program. A struct field of type <code>String</code> needs text it owns, so <code>.to_string()</code> or <code>String::from(...)</code> makes an owned copy. <code>{:#?}</code> is the pretty, multi-line form of <code>{:?}</code>.</p>
+<p><code>"2026-08-11"</code> on its own is a <code>&amp;str</code>, a <a class="term" href="#g-borrow">borrowed</a> view of text that's baked into the program. A struct field of type <code>String</code> needs text it owns, so <code>.to_string()</code> or <code>String::from(...)</code> makes an owned copy. <code>{:#?}</code> is the pretty, multi-line form of <code>{:?}</code>.</p>
 
 <h4>Load the rows</h4>
 <p>Here is the whole load step, with <code>main</code>:</p>
@@ -74,11 +74,11 @@ mkdir -p data
 cp ~/projects/kettle_creek/data/kettle_creek.db data/</pre>
 <pre>{{code:t1_open#open}}</pre>
 <pre class="out">{{out:t1_open#1}}</pre>
-<p>(<code>query_row</code> is for a query that returns exactly one row. It's here to keep the example short. Your loaders use <code>query_map</code>.) The path is relative, so it's looked up from the folder the program runs in. <code>cargo run</code> from the project folder finds <code>data/kettle_creek.db</code>. Run it from <code>src/</code> and it won't. Week zero's <a href="#t0">under the hood</a> has more on the working directory.</p>
+<p>(<code>query_row</code> is for a query that returns exactly one row. It's here to keep the example short. Your loaders use <code>query_map</code>.) The path is relative, so it's looked up from the folder the program runs in. <code>cargo run</code> from the project folder finds <code>data/kettle_creek.db</code>. Run it from <code>src/</code> and it won't. Week zero's <a href="#t0">under the hood</a> has more on the <a class="term" href="#g-working-directory">working directory</a>.</p>
 <p>One trap: <code>Connection::open</code> creates an empty database if the file doesn't exist, so a typo in the path doesn't fail where you made it. It fails later, and confusingly:</p>
 <pre>{{code:t1_open#typo}}</pre>
 <pre class="out">{{out:t1_open#2}}</pre>
-<p>If you typed that in, it also left an empty file called <code>data_kettle_creek.db</code> in your project folder. Delete it (<code>rm data_kettle_creek.db</code>) so it doesn't end up in a commit. Opening read-only refuses a missing file at once, with the path in the message, and it guarantees your program can't change the warehouse data:</p>
+<p>If you typed that in, it also left an empty file called <code>data_kettle_creek.db</code> in your project folder. Delete it (<code>rm data_kettle_creek.db</code>) so it doesn't end up in a <a class="term" href="#g-commit">commit</a>. Opening read-only refuses a missing file at once, with the path in the message, and it guarantees your program can't change the warehouse data:</p>
 <pre>{{code:t1_open#readonly}}</pre>
 <pre class="out">{{out:t1_open#3}}</pre>
 <p>In Python you'd write <code>rows = cursor.execute(sql).fetchall()</code> and get a list of tuples. Here you get a <code>Vec</code> of structs whose fields have names and types. That costs you the struct definition, and pays you back every time you type <code>loan.</code> and your editor lists the fields.</p>
@@ -98,19 +98,19 @@ cp ~/projects/kettle_creek/data/kettle_creek.db data/</pre>
   <li>The name of a function is a value you can hand over, without the parentheses. <code>.map(String::from)</code> is the same as <code>.map(|s| String::from(s))</code>.</li>
 </ul>
 
-<h4>Borrowing, in five minutes</h4>
+<h4 id="t1-borrow">Borrowing, in five minutes</h4>
 <p>Look at the parameter: <code>loans: &amp;[Loan]</code>, not <code>loans: Vec&lt;Loan&gt;</code>. The <code>&amp;</code> means <code>count_out</code> <em>borrows</em> the loans: it can read them, and the caller still has them afterward. This is the idea that makes Rust Rust, so here is what happens without it:</p>
 <pre>{{fail:t1_move}}</pre>
 <pre class="out">{{failout:t1_move}}</pre>
-<p>Every value in Rust has exactly one owner. Passing a <code>Vec</code> by value <em>moves</em> it: <code>total_len</code> owns it now, frees it when it returns, and <code>main</code> can't touch it again. Python never has this problem because every variable is a shared reference and a garbage collector cleans up. Rust has no garbage collector. It frees memory at a moment the compiler can see, and ownership is how it sees that moment.</p>
+<p>Every value in Rust has exactly one <a class="term" href="#g-ownership">owner</a>. Passing a <code>Vec</code> by value <em>moves</em> it: <code>total_len</code> owns it now, frees it when it returns, and <code>main</code> can't touch it again. Python never has this problem because every variable is a shared reference and a <a class="term" href="#g-garbage-collector">garbage collector</a> cleans up. Rust has no garbage collector. It frees memory at a moment the compiler can see, and ownership is how it sees that moment.</p>
 <p>You have three choices whenever a function needs a value:</p>
 <ul>
   <li><strong>Borrow it</strong> (<code>&amp;[Loan]</code>, <code>&amp;Loan</code>, <code>&amp;str</code>) when the function only reads. This is the default. Nearly every function you write this week should take its input this way.</li>
   <li><strong>Borrow it mutably</strong> (<code>&amp;mut Vec&lt;Loan&gt;</code>) when the function changes it in place, like sorting.</li>
   <li><strong>Move it</strong> (<code>Vec&lt;Loan&gt;</code>) when the function keeps it or consumes it. Or <code>.clone()</code> it first if you need your own copy, which costs a full copy, every time.</li>
 </ul>
-<p>Write <code>&amp;[Loan]</code> rather than <code>&amp;Vec&lt;Loan&gt;</code>. A <em>slice</em>, <code>&amp;[T]</code>, is a view of some items in a row, and it accepts a borrowed <code>Vec</code>, an array or part of either. Clippy will tell you this too.</p>
-<p>There is one rule for borrows, and the compiler checks it everywhere: <strong>a value can have any number of <code>&amp;</code> borrows, or exactly one <code>&amp;mut</code>, but never both at once.</strong> Many readers, or one writer. Here a reference is still in use when the code tries to change the list:</p>
+<p>Write <code>&amp;[Loan]</code> rather than <code>&amp;Vec&lt;Loan&gt;</code>. A <em>slice</em>, <code>&amp;[T]</code>, is a view of some items in a row, and it accepts a borrowed <code>Vec</code>, an array or part of either. <a class="term" href="#g-clippy">Clippy</a> will tell you this too.</p>
+<p>There is one rule for borrows, and the compiler checks it everywhere: <strong>a value can have any number of <code>&amp;</code> borrows, or exactly one <code>&amp;mut</code>, but never both at once.</strong> Many readers, or one writer. Here a <a class="term" href="#g-reference">reference</a> is still in use when the code tries to change the list:</p>
 <pre>{{fail:t1_borrow}}</pre>
 <pre class="out">{{failout:t1_borrow}}</pre>
 <p>The reason is concrete. When a <code>Vec</code> is full, <code>push</code> gets a bigger block of memory, may copy every item across to it, and gives the old block back (<a href="#t1-heap">under the hood</a> shows this happening). <code>first</code> would still point into the old block, at memory that's no longer the list's. Python can't get into this state, because its garbage collector keeps anything alive while something points at it. C can: the same program compiles and reads whatever is in that memory now. A borrow lasts until the last line that uses it, not to the end of the block, so moving the <code>println!</code> above the <code>push</code> fixes it: <code>first</code> is finished with by then.</p>
@@ -133,7 +133,7 @@ cp ~/projects/kettle_creek/data/kettle_creek.db data/</pre>
   <p>Read it as: the <code>&amp;Loan</code>s that come out live as long as the <code>loans</code> that went in. Ticket 3 is where lifetimes get properly explained. For now, when the compiler asks, tie the output to the input it really comes from.</p>
 </details>
 
-<h4>Sort</h4>
+<h4 id="t1-sort">Sort</h4>
 <pre>{{code:t1_sort#sort}}</pre>
 <pre class="out">{{out:t1_sort}}</pre>
 <ul>
@@ -146,7 +146,7 @@ cp ~/projects/kettle_creek/data/kettle_creek.db data/</pre>
 <pre>{{code:t1_filter#use}}</pre>
 <pre class="out">{{out:t1_filter}}</pre>
 
-<h4>Write a file</h4>
+<h4 id="t1-write">Write a file</h4>
 <pre>{{code:t1_write#write}}</pre>
 <p>Called with the sorted loans from the example above:</p>
 <pre>{{code:t1_write#call}}</pre>
@@ -154,9 +154,9 @@ cp ~/projects/kettle_creek/data/kettle_creek.db data/</pre>
 <ul>
   <li><code>File::create</code> makes or empties the file. <code>BufWriter</code> collects your small writes in memory and hands them to the operating system in big chunks. Without it, every <code>writeln!</code> is a separate request to the OS, which is much slower.</li>
   <li><code>writeln!</code> works like <code>println!</code>, but into anything you can write to. Writing can fail (disk full, no permission), so it returns a <code>Result</code> and needs a <code>?</code>.</li>
-  <li><code>flush</code> pushes out whatever is still buffered. A <code>BufWriter</code> also flushes when it's dropped, but it has to ignore errors when it does that. Flushing yourself means an error reaches you.</li>
-  <li><code>std::io::Result&lt;()&gt;</code> is the I/O module's own <code>Result</code>, a type alias like rusqlite's, with its error type filled in.</li>
-  <li><code>use std::io::Write</code> is there because <code>writeln!</code> into a file and <code>flush</code> come from <code>Write</code>, a <em>trait</em>: a named set of methods that many types share (ticket 3 explains traits). A trait's methods only work where the trait is imported. Forget the line and the error says "items from traits can only be used if the trait is in scope", and its help gives you the <code>use</code> line to add.</li>
+  <li><code>flush</code> pushes out whatever is still buffered. A <code>BufWriter</code> also flushes when it's <a class="term" href="#g-drop">dropped</a>, but it has to ignore errors when it does that. Flushing yourself means an error reaches you.</li>
+  <li><code>std::io::Result&lt;()&gt;</code> is the <a class="term" href="#g-io">I/O</a> module's own <code>Result</code>, a type alias like rusqlite's, with its error type filled in.</li>
+  <li><code>use std::io::Write</code> is there because <code>writeln!</code> into a file and <code>flush</code> come from <code>Write</code>, a <em>trait</em>: a named set of <a class="term" href="#g-method">methods</a> that many types share (ticket 3 explains traits). A trait's methods only work where the trait is imported. Forget the line and the error says "items from traits can only be used if the trait is in <a class="term" href="#g-scope">scope</a>", and its help gives you the <code>use</code> line to add.</li>
 </ul>
 <p><code>File::create</code> makes a file, not the folders it goes in. Point it at a folder that doesn't exist and it fails, with an error that doesn't name the path:</p>
 <pre>{{code:t1_write#missing}}</pre>
@@ -167,7 +167,7 @@ cp ~/projects/kettle_creek/data/kettle_creek.db data/</pre>
 <h3>Warm-up drills</h3>
 <p>From here on, the drills and the ticket go in your work project. Wiki examples, in this ticket and later ones, still go in <code>snippets</code>.</p>
 <pre class="cmd">cd ~/projects/kettle_creek</pre>
-<p>Keep drills out of your real program by giving them a program of their own. Cargo treats every file in <code>src/bin/</code> as a separate program, so put them in <code>src/bin/drills.rs</code> and run <code>cargo run --bin drills</code> from the project folder. With two programs in the project, a bare <code>cargo run</code> no longer knows which one you mean. Tell it, by adding <code>default-run = "kettle_creek"</code> under <code>[package]</code> in <code>Cargo.toml</code>.</p>
+<p>Keep drills out of your real program by giving them a program of their own. <a class="term" href="#g-cargo">Cargo</a> treats every file in <code>src/bin/</code> as a separate program, so put them in <code>src/bin/drills.rs</code> and run <code>cargo run --bin drills</code> from the project folder. With two programs in the project, a bare <code>cargo run</code> no longer knows which one you mean. Tell it, by adding <code>default-run = "kettle_creek"</code> under <code>[package]</code> in <code>Cargo.toml</code>.</p>
 <p>Give each drill its own function, such as <code>fn drill_1(db: &amp;Connection) -&gt; Result&lt;(), Box&lt;dyn Error&gt;&gt;</code>, and have <code>main</code> open the database and call them in turn. Drills then don't share variables, and you can comment out the call to a drill you've finished. A compile error anywhere still stops the whole file from building, so undo each break-it mistake once you've read the error.</p>
 <div class="drill">
   <p><strong>Drill 1.</strong> Load <code>suppliers</code> into a <code>Vec</code> of a struct with <code>supplier_id</code>, <code>name</code>, <code>payment_terms_days</code> and <code>active</code>. Print how many there are and how many are active. (rusqlite turns an integer 0 or 1 into a <code>bool</code> for you if the field is a <code>bool</code>.)</p>
@@ -217,7 +217,7 @@ cp ~/projects/kettle_creek/data/kettle_creek.db data/</pre>
 </ul>
 
 <h3>Hand it in</h3>
-<p>Commit, tag <code>t1-submitted</code>, and paste the <a href="#reviews">review prompt</a> with <code>N</code> as 1. Add this line to the end:</p>
+<p>Commit, <a class="term" href="#g-tag">tag</a> <code>t1-submitted</code>, and paste the <a href="#reviews">review prompt</a> with <code>N</code> as 1. Add this line to the end:</p>
 <pre class="prompt">For this ticket, pay particular attention to: whether main reads like a
 summary, whether every function borrows what it only reads, and whether
 my names would make sense to someone who has never seen the ticket.</pre>
@@ -225,8 +225,8 @@ my names would make sense to someone who has never seen the ticket.</pre>
 
 <h3>Under the hood</h3>
 <h4 id="t1-heap">Where your data lives: the stack and the heap</h4>
-<p>A running program gets memory in two places. The <em>stack</em> holds each function's local variables. It is fast, because making room is just moving a pointer, and limited: every value on it must have a size known when the program is compiled. The <em>heap</em> is a big pool for anything else. You ask for a block of any size while running, and someone has to give it back.</p>
-<p>A <code>Vec</code> is both. A <code>Vec</code> in a local variable is three numbers on the stack: a pointer to a block on the heap, how many items are in it (<em>length</em>), and how many fit before it needs a bigger block (<em>capacity</em>). The items themselves sit side by side in that heap block. A <code>String</code> has the same three numbers, pointing at bytes of text.</p>
+<p>A running program gets memory in two places. The <em>stack</em> holds each function's local variables. It is fast, because making room is just moving a <a class="term" href="#g-pointer">pointer</a>, and limited: every value on it must have a size known when the program is compiled. The <em>heap</em> is a big pool for anything else. You ask for a block of any size while running, and someone has to give it back.</p>
+<p>A <code>Vec</code> is both. A <code>Vec</code> in a local variable is three numbers on the stack: a pointer to a block on the heap, how many items are in it (<em>length</em>), and how many fit before it needs a bigger block (<em>capacity</em>). The items themselves sit side by side in that heap block. A <code>String</code> has the same three numbers, pointing at <a class="term" href="#g-byte">bytes</a> of text.</p>
 <figure>
   <div class="diagram" role="img" aria-label="A Vec of loans: three numbers on the stack, a pointer, length 7 and capacity 8, pointing to a heap block of eight slots, seven of them holding a Loan and one empty. Each Loan's String fields point to further heap blocks of text.">
   <svg viewBox="0 0 640 220" aria-hidden="true">
@@ -263,11 +263,11 @@ my names would make sense to someone who has never seen the ticket.</pre>
 <pre>{{code:t1_memory#sizes}}</pre>
 <pre class="out">{{out:t1_memory#1}}</pre>
 <p>A <code>String</code> is 24 bytes whether it holds "Ada" or a novel: the text is elsewhere. And <code>Option&lt;String&gt;</code> costs nothing extra. Some bit patterns can never be a valid <code>String</code> (its pointer is never null, for one), so Rust uses one of those patterns to mean <code>None</code>. The spare pattern is called a <em>niche</em>.</p>
-<p>When a <code>Vec</code> runs out of room, it asks the allocator for a bigger block, and today's implementation roughly doubles it. The standard library doesn't promise the factor. The allocator may grow the block where it is, or hand back a new one and copy everything across. Pushing 2,017 IDs one at a time:</p>
+<p>When a <code>Vec</code> runs out of room, it asks the <a class="term" href="#g-allocate">allocator</a> for a bigger block, and today's implementation roughly doubles it. The standard library doesn't promise the factor. The allocator may grow the block where it is, or hand back a new one and copy everything across. Pushing 2,017 IDs one at a time:</p>
 <pre>{{code:t1_memory#growth}}</pre>
 <pre class="out">{{out:t1_memory#2}}</pre>
 <p>Ten trips to the allocator for 2,017 pushes. Growing by a constant factor means the total copying is at most a small multiple of the final size, so a push costs a constant amount <em>on average</em>, even though the occasional push may copy everything. That's called <em>amortized O(1)</em>. O(1), said "order one", means the cost doesn't grow as the list grows; ticket 3's under the hood explains the notation properly. It's the same reason Python's <code>list.append</code> is fast. If you know the size up front, <code>Vec::with_capacity(n)</code> skips the copying entirely. Ticket 8 measures whether that matters.</p>
-<p>Moves now make sense too. Moving a <code>Vec</code> copies its 24 bytes and leaves the heap block where it is. What must never happen is two owners both freeing the same block, and that is the mistake the move error stopped.</p>
+<p>Moves now make sense too. Moving a <code>Vec</code> copies its 24 bytes and leaves the heap block where it is. What must never happen is two owners both freeing the same block, and that is the mistake the <a class="term" href="#g-move">move</a> error stopped.</p>
 
 <h4>Why the dates sort as text</h4>
 <pre>{{code:t1_dates#dates}}</pre>

@@ -34,29 +34,29 @@
 <p class="wiki-crumb" id="t4-wiki">Engineering wiki / Rust / Errors, parsing and tests</p>
 <h3>When the data fights back</h3>
 
-<p>Until now the data has been well behaved: integers were integers and dates were ISO. Data from another system is never like that. This page is about writing code that meets bad input calmly: it says exactly what was wrong, keeps going, and comes with tests that prove the rules hold. The examples parse loan lengths and library card numbers typed on paper slips, not Millbrook's columns.</p>
-<p>Ticket 5 is next week, and it splits your code into modules. So this week, keep everything in <code>src/main.rs</code>, and keep each parser a separate function that takes a <code>&amp;str</code>. That makes next week's move easy.</p>
+<p>Until now the data has been well behaved: integers were integers and dates were ISO. Data from another system is never like that. This page is about writing code that meets bad input calmly: it says exactly what was wrong, keeps going, and comes with tests that prove the rules hold. The examples <a class="term" href="#g-parse">parse</a> loan lengths and library card numbers typed on paper slips, not Millbrook's columns.</p>
+<p>Ticket 5 is next week, and it splits your code into <a class="term" href="#g-module">modules</a>. So this week, keep everything in <code>src/main.rs</code>, and keep each parser a separate function that takes a <code>&amp;str</code>. That makes next week's move easy.</p>
 
-<h4>Two kinds of failure</h4>
+<h4 id="t4-failure">Two kinds of failure</h4>
 <p>Rust separates two things that Python lumps together as exceptions. A <em>panic</em> means the program itself is wrong: something that could never happen just did, so it stops. An <em>error</em> is a <code>Result</code>: something in the world was wrong, such as a missing file or a bad value, and the caller decides what to do. Here is a panic:</p>
 <pre>{{code:t4_panic#panic}}</pre>
 <pre class="out">{{out:t4_panic}}</pre>
-<p><code>.unwrap()</code> means "I promise this is <code>Ok</code>, and if I'm wrong, panic". The program stops with exit code 101 and everything after that line is lost. For Dana's month-end run, that is the exact failure the email rules out.</p>
+<p><code>.unwrap()</code> means "I promise this is <code>Ok</code>, and if I'm wrong, panic". The program stops with <a class="term" href="#g-exit-status">exit code</a> 101 and everything after that line is lost. For Dana's month-end run, that is the exact failure the email rules out.</p>
 <p>The policy most Rust teams follow:</p>
 <ul>
   <li><strong>Input from outside is never unwrapped.</strong> Files, databases, user arguments and other systems' data can be anything. They get a <code>Result</code>, and bad values become messages.</li>
   <li><strong><code>unwrap</code> is fine in tests</strong>, where a panic is how a test fails, and in throwaway code like your drills.</li>
   <li><strong>When you've proved a value can't fail,</strong> use <code>.expect("why this can't fail")</code> or a comment saying why. If you've just checked that a string is four ASCII digits, parsing it as a <code>u32</code> can't fail. Write the reason down, because the next person won't know it.</li>
-  <li><strong>Indexing panics too.</strong> <code>parts[2]</code> panics if there are only two parts, and <code>&amp;s[..4]</code> panics if <code>s</code> is shorter than four bytes. On untrusted text, prefer <code>.get(2)</code>, <code>split_once</code> and <code>strip_prefix</code>, which return an <code>Option</code>.</li>
+  <li><strong>Indexing panics too.</strong> <code>parts[2]</code> panics if there are only two parts, and <code>&amp;s[..4]</code> panics if <code>s</code> is shorter than four <a class="term" href="#g-byte">bytes</a>. On untrusted text, prefer <code>.get(2)</code>, <code>split_once</code> and <code>strip_prefix</code>, which return an <code>Option</code>.</li>
 </ul>
 
 <h4>An error type that says what went wrong</h4>
-<p>A parser's error should tell the caller which kind of wrong it was, and carry the evidence. An enum does both:</p>
+<p>A parser's error should tell the caller which kind of wrong it was, and carry the evidence. An <a class="term" href="#g-enum">enum</a> does both:</p>
 <pre>{{code:t4_duration#error}}</pre>
 <ul>
-  <li>Each variant is one way the input can be wrong. <code>NoNumber(String)</code> carries the offending text, so the message can quote it.</li>
-  <li><code>Display</code> is the message for people: what <code>{}</code> and <code>.to_string()</code> print. <code>Debug</code>, from the derive, is the version for programmers: what <code>{:?}</code> prints.</li>
-  <li><code>impl std::error::Error for DurationError {}</code> has an empty body, and that's normal. It marks the type as a proper error, which lets it go into a <code>Box&lt;dyn Error&gt;</code> and work with other libraries' error handling. Its methods all have sensible defaults.</li>
+  <li>Each <a class="term" href="#g-variant">variant</a> is one way the input can be wrong. <code>NoNumber(String)</code> carries the offending text, so the message can quote it.</li>
+  <li><code>Display</code> is the message for people: what <code>{}</code> and <code>.to_string()</code> print. <code>Debug</code>, from the <a class="term" href="#g-derive">derive</a>, is the version for programmers: what <code>{:?}</code> prints.</li>
+  <li><code>impl std::error::Error for DurationError {}</code> has an empty body, and that's normal. It marks the type as a proper error, which lets it go into a <code>Box&lt;dyn Error&gt;</code> and work with other libraries' error handling. Its <a class="term" href="#g-method">methods</a> all have sensible defaults.</li>
   <li><code>PartialEq</code> lets tests compare errors with <code>assert_eq!</code>, which you'll want in a minute.</li>
 </ul>
 
@@ -85,7 +85,7 @@
 <pre class="out">{{out:t4_toolkit#4}}</pre>
 <ul>
   <li><code>to_lowercase</code> makes a new <code>String</code>, because lowercase text can be a different length from the original in some languages. Most other methods here hand back views of the text you already have.</li>
-  <li><code>split_whitespace</code> splits on any run of spaces, tabs or line breaks and skips the empty pieces. It gives an iterator of <code>&amp;str</code>, and <code>collect</code> gathers them into a <code>Vec&lt;&amp;str&gt;</code>. Each piece borrows from <code>lower</code>, so <code>lower</code> has to stay alive while you use them. Python's <code>s.split()</code> with no argument does the same.</li>
+  <li><code>split_whitespace</code> splits on any run of spaces, tabs or line breaks and skips the empty pieces. It gives an <a class="term" href="#g-iterator">iterator</a> of <code>&amp;str</code>, and <code>collect</code> gathers them into a <code>Vec&lt;&amp;str&gt;</code>. Each piece <a class="term" href="#g-borrow">borrows</a> from <code>lower</code>, so <code>lower</code> has to stay alive while you use them. Python's <code>s.split()</code> with no argument does the same.</li>
   <li><code>join</code> glues the pieces back together with a separator, like Python's <code>" ".join(words)</code> written the other way round. Split, then join, is the usual way to squeeze repeated spaces down to one.</li>
   <li><code>replace</code> swaps every match for something else, and returns a new <code>String</code>.</li>
   <li><code>starts_with</code> and <code>ends_with</code> answer yes or no. Use <code>strip_prefix</code> instead when you also want what's left.</li>
@@ -95,19 +95,19 @@
 <pre class="out">{{out:t4_toolkit#5}}</pre>
 <p><code>as_deref</code> turns <code>&amp;Option&lt;String&gt;</code> into <code>Option&lt;&amp;str&gt;</code>: same answer to "is anything there?", but borrowed. Then <code>.unwrap_or("")</code> treats a missing value as empty text, which suits a parser that already rejects empty text. That <code>unwrap_or</code> can't panic. It's <code>unwrap</code> with a fallback.</p>
 
-<h4>A parser, start to finish</h4>
+<h4 id="t4-parser">A parser, start to finish</h4>
 <pre>{{code:t4_duration#parse}}</pre>
 <pre>{{code:t4_duration#demo}}</pre>
 <pre class="out">{{out:t4_duration}}</pre>
 <ul>
   <li>The shape is the shape of most parsers: clean the input, peel off one piece at a time, and return early with a specific error the moment something is wrong. When the function reaches the end, the value is known to be good.</li>
   <li><code>take_while</code> counts the leading digits and <code>split_at</code> cuts there. Splitting at a byte position is safe here because ASCII digits are one byte each. Splitting through the middle of a multi-byte character would panic.</li>
-  <li><code>.map_err(...)</code> turns the standard library's <code>ParseIntError</code> into our own error, and <code>?</code> returns it. Since we already checked the text is all digits, the only way <code>parse</code> can fail is overflow, hence <code>TooBig</code>.</li>
-  <li><code>checked_mul</code> returns <code>None</code> on overflow instead of wrapping around. A debug build panics on overflow and a release build silently wraps, so anything multiplying untrusted numbers should be checked.</li>
+  <li><code>.map_err(...)</code> turns the standard library's <code>ParseIntError</code> into our own error, and <code>?</code> returns it. Since we already checked the text is all digits, the only way <code>parse</code> can fail is <a class="term" href="#g-overflow">overflow</a>, hence <code>TooBig</code>.</li>
+  <li><code>checked_mul</code> returns <code>None</code> on overflow instead of wrapping around. A debug build panics on overflow and a <a class="term" href="#g-release-build">release build</a> silently wraps, so anything multiplying untrusted numbers should be checked.</li>
 </ul>
 
 <h4>Money: from text to cents, never through a float</h4>
-<p>Ticket 3 kept money in integer cents once it was in the program. Text is where money usually enters, and the obvious route goes through a float:</p>
+<p>Ticket 3 kept money in integer cents once it was in the program. Text is where money usually enters, and the obvious route goes through a <a class="term" href="#g-floating-point">float</a>:</p>
 <pre>{{code:t4_toolkit#floats}}</pre>
 <pre class="out">{{out:t4_toolkit#3}}</pre>
 <p><code>0.29</code> has no exact binary form, so it is stored as a hair under 0.29. Multiplying by 100 gives a hair under 29, and <code>as i64</code> <em>truncates</em> toward zero: 28 cents. <code>.round()</code> rescues this case, but the honest fix is not to go through a float at all. The text already holds the digits of the dollars and of the cents. Read them as integers:</p>
@@ -125,7 +125,7 @@
 <p>The field <code>u32</code> has no <code>pub</code>, so code outside the <code>card</code> module can't build a <code>CardNumber</code> directly:</p>
 <pre>{{fail:t4_newtype}}</pre>
 <pre class="out">{{failout:t4_newtype}}</pre>
-<p>This is a case where the compiler's help is wrong for you. Making the field public would compile, and it would throw away the guarantee. The error is the design doing its job.</p>
+<p>This is a case where the <a class="term" href="#g-compile">compiler</a>'s help is wrong for you. Making the field public would compile, and it would throw away the guarantee. The error is the design doing its job.</p>
 <p>A card number is one field. Most real values have several, and whether one field is good depends on another. Our library's shelf marks look like <code>B-12</code>: aisles A to C have 40 shelves, and D, the short one by the door, has 12. So <code>D-12</code> exists and <code>D-13</code> doesn't, though <code>B-13</code> does. The check belongs in a constructor that returns a <code>Result</code>, and the fields stay private so nothing can skip it:</p>
 <pre>{{code:t4_slips#shelf}}</pre>
 <pre>{{code:t4_slips#shelf_use}}</pre>
@@ -134,7 +134,7 @@
   <li><code>Shelf::new</code> checks the parts and <code>Shelf::parse</code> only cuts text into parts. Keeping them apart means code that already has a letter and a number, from a form or a test, gets the same check.</li>
   <li><code>shelves_in</code> isn't <code>pub</code>, so it's a helper only the module can use.</li>
   <li><code>ok_or</code> is <code>ok_or_else</code> for an error that's cheap to build up front. <code>"B".parse::&lt;char&gt;()</code> works only on text that's exactly one character, which is the rule we want.</li>
-  <li><code>bad</code> is a closure that takes no arguments, written <code>||</code>. It's handed to <code>ok_or_else</code> as a value and called directly as <code>bad()</code> in the next two lines.</li>
+  <li><code>bad</code> is a <a class="term" href="#g-closure">closure</a> that takes no arguments, written <code>||</code>. It's handed to <code>ok_or_else</code> as a value and called directly as <code>bad()</code> in the next two lines.</li>
   <li><code>aisle()</code> and <code>number()</code> are <em>getters</em>: other code can read the fields, never set them.</li>
 </ul>
 <p>A date has the same shape: three fields, where how big the day may be depends on the month, and for February on the year. <a href="#t4-leap">Under the hood</a> has the year rule.</p>
@@ -152,12 +152,12 @@
   <li><code>field: &amp;'static str</code> holds text written into the program itself, such as <code>"shelf"</code>, which never goes away. That's what <code>'static</code> means; <a href="#t6-wiki">ticket 6</a> says more.</li>
 </ul>
 
-<h4>Unit tests</h4>
+<h4 id="t4-unit">Unit tests</h4>
 <p>Each parser is a function from <code>&amp;str</code> to <code>Result</code>, with no database and no files. That is the easiest code there is to test. Tests live at the bottom of the same file:</p>
 <pre>{{code:t4_duration#tests}}</pre>
 <ul>
   <li><code>#[cfg(test)]</code> compiles the module only for <code>cargo test</code>, so tests add nothing to your real program.</li>
-  <li><code>use super::*;</code> brings in everything from the file above, private items included. Unit tests can test private functions.</li>
+  <li><code>use super::*;</code> brings in everything from the file above, private items included. <a class="term" href="#g-unit-test">Unit tests</a> can test private functions.</li>
   <li><code>#[test]</code> marks a test. <code>assert_eq!(actual, expected)</code> panics with both values if they differ, and the panic is what fails the test.</li>
   <li><code>assert_ne!(a, b)</code> is the opposite check, and <code>assert!(condition)</code> takes any <code>bool</code>. All three take an optional message after the values, written like <code>format!</code>: <code>assert!(n &gt; 0, "no rows loaded from {path}")</code>.</li>
   <li><code>matches!(value, pattern)</code> is true if the value fits the pattern. Use it when you care about the variant but not exactly what's inside.</li>
@@ -213,9 +213,9 @@ mod tests {
   <li><label><input type="checkbox" class="crit-box" id="c-t4-8"><span>Tickets 1 to 3 still come out of the same <code>cargo run</code>, unchanged.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t4-9"><span><code>cargo fmt</code>, <code>cargo clippy --all-targets</code> and <code>cargo test</code> are clean.</span></label></li>
 </ul>
-<p><strong>Before you type,</strong> answer these in your journal. Does each field get its own error enum, or is there one for the whole row, and what goes in the <code>reason</code> column either way? Where does vendor normalization happen: once for our supplier list, or for every row? What does one accepted row look like as a struct? For each of Dana's five columns, list the equivalence classes of input you can think of (there's a section on those <a href="#t4-tests">under the hood</a>; read it first), and write one test name per class before you write the parser.</p>
+<p><strong>Before you type,</strong> answer these in your journal. Does each field get its own error enum, or is there one for the whole row, and what goes in the <code>reason</code> column either way? Where does vendor normalization happen: once for our supplier list, or for every row? What does one accepted row look like as a <a class="term" href="#g-struct">struct</a>? For each of Dana's five columns, list the equivalence classes of input you can think of (there's a section on those <a href="#t4-tests">under the hood</a>; read it first), and write one test name per class before you write the parser.</p>
 
-<p>One clippy snag to expect. Next week puts the accepted rows into the reconciliation, so this week nothing reads some of <code>BranchInvoice</code>'s fields, and the compiler warns that they're "never read". Don't delete them, and don't put a blanket <code>#[allow(...)]</code> on the file. Put <code>#[expect(dead_code, reason = "ticket 5 reconciles these")]</code> on the struct. <code>expect</code> silences the warning and records why, and once ticket 5 uses the fields, the compiler warns that the expectation no longer holds, so you remember to take it off. The same works for a drill you've commented out the call to.</p>
+<p>One <a class="term" href="#g-clippy">clippy</a> snag to expect. Next week puts the accepted rows into the reconciliation, so this week nothing reads some of <code>BranchInvoice</code>'s fields, and the compiler warns that they're "never read". Don't delete them, and don't put a blanket <code>#[allow(...)]</code> on the file. Put <code>#[expect(dead_code, reason = "ticket 5 reconciles these")]</code> on the struct. <code>expect</code> silences the warning and records why, and once ticket 5 uses the fields, the compiler warns that the expectation no longer holds, so you remember to take it off. The same works for a drill you've commented out the call to.</p>
 
 <h3>Stuck?</h3>
 <details class="hint"><summary>Hint 1: start at the leaves</summary>
@@ -240,7 +240,7 @@ mod tests {
 </ul>
 
 <h3>Hand it in</h3>
-<p>Commit, tag <code>t4-submitted</code>, and paste the <a href="#reviews">review prompt</a> with <code>N</code> as 4. Add:</p>
+<p><a class="term" href="#g-commit">Commit</a>, <a class="term" href="#g-tag">tag</a> <code>t4-submitted</code>, and paste the <a href="#reviews">review prompt</a> with <code>N</code> as 4. Add:</p>
 <pre class="prompt">For this ticket, pay particular attention to: my error types (one per
 field or one per row, and whether the reasons are useful to Millbrook),
 anything that could still panic on bad input, whether my tests would fail
@@ -275,7 +275,7 @@ d    = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"</pre>
 <ul>
   <li><a href="https://doc.rust-lang.org/book/ch09-00-error-handling.html">The Rust Programming Language, chapter 9: Error Handling</a>, including its section on when to panic.</li>
   <li><a href="https://doc.rust-lang.org/book/ch11-01-writing-tests.html">Chapter 11.1: How to Write Tests</a> and <a href="https://doc.rust-lang.org/book/ch11-02-running-tests.html">11.2: Controlling How Tests Are Run</a>.</li>
-  <li><a href="https://burntsushi.net/rust-error-handling/">Error Handling in Rust</a> by Andrew Gallant (BurntSushi, author of ripgrep and the csv crate). Long, careful, and still the best explanation of why Rust errors work the way they do.</li>
+  <li><a href="https://burntsushi.net/rust-error-handling/">Error Handling in Rust</a> by Andrew Gallant (BurntSushi, author of ripgrep and the csv <a class="term" href="#g-crate">crate</a>). Long, careful, and still the best explanation of why Rust errors work the way they do.</li>
   <li><a href="https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/">Parse, don't validate</a> by Alexis King. The examples are in Haskell, and the idea carries over directly.</li>
   <li><a href="https://doc.rust-lang.org/std/primitive.str.html">The <code>str</code> docs</a>. Skim the whole method list once. Most hand-written string loops already exist there as a method.</li>
 </ul>

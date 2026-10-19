@@ -1,7 +1,7 @@
 <!-- ===================================================== -->
 <h2 id="next">What comes after part 1</h2>
 
-<p>When ticket 6's review is done and you've tagged <code>t6-final</code>, you have a program finance depends on. That changes what the next requests look like. Nobody will ask for a new report for a while. They'll ask for this one to run without you.</p>
+<p>When ticket 6's review is done and you've <a class="term" href="#g-tag">tagged</a> <code>t6-final</code>, you have a program finance depends on. That changes what the next requests look like. Nobody will ask for a new report for a while. They'll ask for this one to run without you.</p>
 <article class="email" aria-label="Preview: email from Dana Whitlock about scheduling the pack">
   <dl class="email-head">
     <div><dt>From</dt><dd>Dana Whitlock, Operations Manager</dd></div>
@@ -22,18 +22,18 @@ Read my code and my review history, then write part 2 of the guide in
 
 <!-- ===================================================== -->
 <h2 id="books">The bookshelf</h2>
-<p>You asked how to learn this properly rather than from a pile of mediocre tutorials. The honest answer is to use few sources, all of them primary: the official books, the standard library's docs, docs written by a crate's own author, and a handful of books by people who build these systems. Skip "Rust in an hour" videos, posts written before the 2018 edition, and any tutorial you can't trace to someone who ships Rust. Here is the shelf, in roughly the order it becomes useful.</p>
+<p>You asked how to learn this properly rather than from a pile of mediocre tutorials. The honest answer is to use few sources, all of them primary: the official books, the standard library's docs, docs written by a <a class="term" href="#g-crate">crate</a>'s own author, and a handful of books by people who build these systems. Skip "Rust in an hour" videos, posts written before the 2018 edition, and any tutorial you can't trace to someone who ships Rust. Here is the shelf, in roughly the order it becomes useful.</p>
 
 <h3>Rust</h3>
 <dl class="shelf">
   <dt><a href="https://doc.rust-lang.org/book/">The Rust Programming Language</a>, Klabnik, Nichols and Krycho (free online)</dt>
   <dd>The official book. Each ticket's "Go deeper" points at the chapters it just made you need. Read them then, not before.</dd>
   <dt><a href="https://doc.rust-lang.org/std/">The standard library docs</a></dt>
-  <dd>Better written than most books. When you wonder whether something exists, it's usually a method on <code>Option</code>, <code>Iterator</code> or <code>str</code>.</dd>
+  <dd>Better written than most books. When you wonder whether something exists, it's usually a <a class="term" href="#g-method">method</a> on <code>Option</code>, <code>Iterator</code> or <code>str</code>.</dd>
   <dt><a href="https://doc.rust-lang.org/rust-by-example/">Rust by Example</a> (free online)</dt>
   <dd>Small runnable programs, one feature at a time. Good for "show me the syntax" moments.</dd>
   <dt><em>Programming Rust</em>, 2nd edition, Blandy, Orendorff and Tindall (O'Reilly, 2021)</dt>
-  <dd>The best second book. Deeper than the official one on ownership, traits, iterators and collections, written by systems programmers for systems programmers. Read it during part 1 and 2.</dd>
+  <dd>The best second book. Deeper than the official one on <a class="term" href="#g-ownership">ownership</a>, <a class="term" href="#g-trait">traits</a>, iterators and collections, written by systems programmers for systems programmers. Read it during part 1 and 2.</dd>
   <dt><em>Rust for Rustaceans</em>, Jon Gjengset (No Starch, 2021)</dt>
   <dd>How experienced Rust developers think: API design, testing, error handling at scale, what <code>unsafe</code> is for. Read it after part 2, when your code has enough shape to be worth arguing about.</dd>
   <dt><em>Zero to Production in Rust</em>, Luca Palmieri (self-published)</dt>
@@ -41,7 +41,7 @@ Read my code and my review history, then write part 2 of the guide in
   <dt><em>Rust Atomics and Locks</em>, Mara Bos (O'Reilly, 2023, free online)</dt>
   <dd>Concurrency from the hardware up, by a member of the Rust library team. For parts 2 and 3.</dd>
   <dt><a href="https://rust-lang.github.io/api-guidelines/">The Rust API Guidelines</a> and <a href="https://rust-lang.github.io/rust-clippy/stable/">the Clippy lint list</a></dt>
-  <dd>What idiomatic means, written down. Read a few clippy lint explanations a week: each one is a small lesson about why.</dd>
+  <dd>What idiomatic means, written down. Read a few <a class="term" href="#g-clippy">clippy</a> lint explanations a week: each one is a small lesson about why.</dd>
 </dl>
 
 <h3>Software design</h3>
@@ -55,7 +55,7 @@ Read my code and my review history, then write part 2 of the guide in
 <h3>Computer science</h3>
 <dl class="shelf">
   <dt><em>Computer Systems: A Programmer's Perspective</em>, 3rd edition, Bryant and O'Hallaron (Pearson, 2015)</dt>
-  <dd>Memory, caches, linking, processes, networking: everything underneath your program, explained for the person writing it. Ticket 8 leans on chapter 6.</dd>
+  <dd>Memory, caches, linking, <a class="term" href="#g-process">processes</a>, networking: everything underneath your program, explained for the person writing it. Ticket 8 leans on chapter 6.</dd>
   <dt><em>Introduction to Algorithms</em>, 4th edition, Cormen, Leiserson, Rivest and Stein (MIT Press, 2022)</dt>
   <dd>The reference. Dip in, don't read it cover to cover. <em>The Algorithm Design Manual</em> by Steven Skiena is the friendlier companion.</dd>
   <dt><a href="https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html">"What Every Computer Scientist Should Know About Floating-Point Arithmetic"</a>, David Goldberg (1991)</dt>
