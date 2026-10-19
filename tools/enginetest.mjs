@@ -311,6 +311,41 @@ ok(await p.locator("#c-t1-1").isChecked(), "known id restored, unknown ignored")
   await p.evaluate(() => localStorage.clear());
 }
 // ---- end of storage edge cases
+// ---- Second review: stale keys recover, stale retries, due while open ----
+{
+  const get = k => p.evaluate(k => JSON.parse(localStorage.getItem(k)), k);
+  await p.evaluate(() => localStorage.clear());
+  await p.goto(url);
+  // One key's failed write doesn't make other keys ignore storage, and a key recovers.
+  await p.evaluate(() => {
+    const real = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) { if (k === "rust_at_work.checks") throw new Error("quota"); return real.call(this, k, v); };
+    window.__realSet = real;
+  });
+  await p.locator("#c-t1-1").check();
+  await p.evaluate(() => { Storage.prototype.setItem = window.__realSet; localStorage.setItem("rust_at_work.quiz", '{"t0-2":0}'); });
+  await p.locator("#q-t0-3 input").nth(0).check(); await p.locator("#q-t0-3 button.btn").click();
+  const q1 = await get("rust_at_work.quiz");
+  ok(Object.hasOwn(q1, "t0-2") && Object.hasOwn(q1, "t0-3"), "a failed write on one key leaves the others reading storage");
+  // A retry another tab already finished isn't undone when this tab comes back.
+  await p.evaluate(() => localStorage.clear());
+  await p.goto(url + "?today=2026-10-10");
+  // This tab still remembers t1-1 as due with an old answer; another tab has since retried it.
+  await p.evaluate(() => { retry["t1-1"] = "2026-10-01"; answers["t1-1"] = 0; });
+  await p.evaluate(() => { localStorage.setItem("rust_at_work.retry", "{}"); localStorage.setItem("rust_at_work.quiz", '{"t1-1":1}'); });
+  await p.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  ok((await get("rust_at_work.quiz"))["t1-1"] === 1, "returning to a tab keeps another tab's finished retry");
+  // A saved answer that comes due while the page is open is not graded: it is asked again.
+  await p.evaluate(() => { localStorage.setItem("rust_at_work.retry", '{"t1-2":"2026-10-09"}'); localStorage.setItem("rust_at_work.quiz", '{"t1-2":0}'); });
+  await p.goto(url + "?today=2026-10-10");
+  ok(await p.locator("#q-t1-2 input").nth(0).isChecked(), "not yet due: the saved answer shows");
+  await p.evaluate(() => localStorage.setItem("rust_at_work.retry", '{"t1-2":"2026-10-01"}'));
+  await p.locator("#q-t1-2 button.btn").click();
+  ok((await p.locator("#q-t1-2 .feedback").innerText()).includes("due for a retry") && !(await p.locator("#q-t1-2 input").nth(0).isChecked()), "a question that came due is blanked, not graded");
+  ok(Object.hasOwn(await get("rust_at_work.retry"), "t1-2"), "it stays on the retry list until answered fresh");
+  await p.evaluate(() => localStorage.clear());
+}
+// ---- end of second review tests
 // ---- Glossary: term links, the popover, and where-it's-taught links ----
 {
   const badTerms = await p.evaluate(() => [...document.querySelectorAll("a.term")]

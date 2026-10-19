@@ -84,6 +84,12 @@ function checkOne(fs, q, feedback) {
     feedback.innerHTML = "<p>Pick an answer first.</p>";
     return;
   }
+  // An old answer to a question that has come due since the page loaded
+  // doesn't count: blank it and ask again.
+  if (blankDue().includes(fs.dataset.qid)) {
+    feedback.innerHTML = "<p>This one is due for a retry. Answer it fresh.</p>";
+    return;
+  }
   showVerdict(fs, q, feedback, chosen);
   recordAnswer(fs.dataset.qid, chosen, q.options[chosen].ok);
 }
@@ -194,9 +200,21 @@ const RETRY_AFTER_DAYS = 2;
 function readStored(key) {
   try { return JSON.parse(localStorage.getItem(key) || "null"); } catch (e) { return null; }
 }
+// A key whose last write failed: storage holds an older copy than this page,
+// so until a write to it works again, this page's copy is the truth.
+const staleKeys = new Set();
 function writeStored(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; }
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    staleKeys.delete(key);
+    return true;
+  } catch (e) {
+    staleKeys.add(key);
+    return false;
+  }
 }
+// What storage holds now, or null when it holds nothing usable for this page.
+const readFresh = key => (staleKeys.has(key) ? null : readStored(key));
 const isPlainObject = v => !!v && typeof v === "object" && !Array.isArray(v);
 function isoDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -250,21 +268,23 @@ function replaceAll(target, fresh) {
   Object.keys(target).forEach(k => delete target[k]);
   Object.assign(target, fresh);
 }
-// Change one saved map. Start from what storage holds now, not the copy read
-// at load, so a second open tab doesn't wipe this one's answers. Once a write
-// has failed, storage holds an older copy: from then on, memory is the truth.
-let storageWrites = true;
-function updateStored(key, parse, target, change) {
-  const raw = storageWrites ? readStored(key) : null;
+// Bring a saved map up to date with storage, which another tab may have changed.
+function refresh(key, parse, target) {
+  const raw = readFresh(key);
   if (raw !== null) replaceAll(target, parse(raw));
+}
+// Change one saved map, starting from what storage holds now, not the copy
+// read at load, so a second open tab doesn't wipe this one's answers.
+function updateStored(key, parse, target, change) {
+  refresh(key, parse, target);
   change(target);
-  const saved = writeStored(key, target);
-  if (!saved) storageWrites = false;
-  return saved;
+  return writeStored(key, target);
 }
 // A question due for retry is asked cold: forget its saved answer.
 // Returns the ids it cleared.
 function askDueCold() {
+  refresh(RETRY_KEY, parseRetry, retry);
+  refresh(QUIZ_KEY, parseAnswers, answers);
   const cleared = Object.keys(retry).filter(id => isDue(id) && Object.hasOwn(answers, id));
   if (cleared.length) updateStored(QUIZ_KEY, parseAnswers, answers, a => cleared.forEach(id => delete a[id]));
   return cleared;
@@ -272,11 +292,14 @@ function askDueCold() {
 askDueCold();
 // A page left open overnight: when the reader comes back to it, blank the
 // questions that came due meanwhile.
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState !== "visible") return;
+function blankDue() {
   const cleared = askDueCold().filter(id => questionEls.has(id));
   cleared.forEach(showSaved);
   if (cleared.length) document.dispatchEvent(new Event("rw-progress"));
+  return cleared;
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") blankDue();
 });
 // Show a question as saved: its checked answer and verdict, or blank.
 function showSaved(qid) {
@@ -293,7 +316,6 @@ function showSaved(qid) {
 }
 function recordAnswer(qid, chosen, right) {
   if (!questionIds.has(qid)) return;
-  askDueCold(); // it may have come due since the page loaded
   // Only the first check of a question with no saved answer counts for the retry list.
   if (!Object.hasOwn(answers, qid)) {
     updateStored(RETRY_KEY, parseRetry, retry, r => { if (right) delete r[qid]; else r[qid] = today(); });
@@ -352,9 +374,9 @@ checkboxes.forEach(box => {
   box.checked = checked.has(box.id);
   box.addEventListener("change", () => {
     // Start from storage, as updateStored does, so another tab's ticks survive.
-    const raw = storageWrites ? readStored(CHECKS_KEY) : null;
+    const raw = readFresh(CHECKS_KEY);
     if (raw !== null) { checked.clear(); parseChecks(raw).forEach(id => checked.add(id)); }
     if (box.checked) checked.add(box.id); else checked.delete(box.id);
-    if (!writeStored(CHECKS_KEY, [...checked])) storageWrites = false; // still works for this visit
+    writeStored(CHECKS_KEY, [...checked]); // if storage is blocked, still works for this visit
   });
 });

@@ -321,7 +321,7 @@
   panel.querySelector(".carry-save").addEventListener("click", () => {
     // Read storage again: another open tab may have saved since this one loaded.
     const fresh = (key, parse, mem) => {
-      const raw = storageWrites ? readStored(key) : null;
+      const raw = readFresh(key);
       return raw !== null ? parse(raw) : mem;
     };
     const data = {
@@ -331,7 +331,8 @@
     };
     const exam = loadExam();
     if (exam) data[EXAM_KEY] = exam;
-    if (spot) data[SPOT_KEY] = spot;
+    const lastSpot = parseSpot(readFresh(SPOT_KEY)) || spot;
+    if (lastSpot) data[SPOT_KEY] = lastSpot;
     const file = { kind: "rust_at_work progress", version: 1, saved: today(), data };
     const name = `rust_at_work-progress-${today()}.json`;
     const a = document.createElement("a");
