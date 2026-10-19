@@ -126,9 +126,34 @@ def check(page):
             errors.append(f"British spelling: {word}")
 
 
+def check_glossary(page):
+    """Every term link names a glossary entry, never sits in code, and every
+    entry has exactly one link to where it's taught."""
+    def links(html, cls):
+        """The href of every <a> whose class list includes cls, attribute order aside."""
+        out = []
+        for tag in re.findall(r"<a\b[^>]*>", html):
+            classes = re.search(r'\sclass="([^"]*)"', tag)
+            if classes and cls in classes.group(1).split():
+                href = re.search(r'\shref="([^"]*)"', tag)
+                out.append(href.group(1) if href else "")
+        return out
+    entries = set(re.findall(r'<dt\b[^>]*\sid="(g-[^"]+)"', page))
+    for href in links(page, "term"):
+        if href[1:] not in entries or not href.startswith("#"):
+            errors.append(f"term link to {href or '(no href)'}, which is not a glossary entry")
+    for m in re.finditer(r"<(pre|code)\b.*?</\1>", page, re.S):
+        if links(m.group(0), "term"):
+            errors.append("term link inside code: " + m.group(0)[:60])
+    for dd in re.findall(r'<dt\b[^>]*\sid="g-[^"]+".*?</dd>', page, re.S):
+        if len([h for h in links(dd, "g-taught") if h.startswith("#")]) != 1:
+            errors.append("glossary entry without exactly one taught link: " + dd[:60])
+
+
 def main():
     page = expand((SRC / "guide.html").read_text())
     check(page)
+    check_glossary(page)
     if errors:
         print("\n".join(errors))
         sys.exit(f"{len(errors)} problem(s); nothing written")

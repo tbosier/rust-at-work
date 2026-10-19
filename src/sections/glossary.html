@@ -1,0 +1,286 @@
+<!-- ===================================================== -->
+<section id="glossary" aria-labelledby="glossary-h">
+<h2 id="glossary-h">Glossary</h2>
+<p>Words this page uses that you may not have met in Python notebooks, in alphabetical order. A dotted underline in the text marks the first time a ticket uses one of them: select it and the definition opens next to the word. Each entry ends with a link to where the page teaches it. Punctuation is in the <a href="#syntax">symbol lookup</a>.</p>
+<dl class="glossary">
+  <dt id="g-address">address</dt>
+  <dd><p class="g-def">A byte's position in memory, written as a number. A reference or pointer holds one. On a 64-bit machine an address takes 8 bytes, which is why <code>usize</code> is 8 bytes there.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-memory">week zero, memory</a></p></dd>
+
+  <dt id="g-allocate">allocate</dt>
+  <dd><p class="g-def">To get a block of memory to hold data while the program runs, usually from the heap. Giving it back is called freeing it. In Rust you rarely do either by hand: a <code>Vec</code> or <code>String</code> allocates as it grows, and its memory is freed when it's dropped.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-memory">week zero, memory</a></p></dd>
+
+  <dt id="g-associated-function">associated function</dt>
+  <dd><p class="g-def">A function in an <code>impl</code> block. Strictly, methods are associated functions too, but the name usually means one that takes no <code>self</code>: it belongs to the type, not to one value, and you call it on the type with <code>::</code>, as in <code>Bin::new(...)</code> or <code>Book::headers()</code>. Python's nearest is a <code>@staticmethod</code>.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t6-trait">ticket 6, a trait is a promise</a></p></dd>
+
+  <dt id="g-big-o">big-O</dt>
+  <dd><p class="g-def">A way of saying how a cost grows as the input grows, ignoring constant factors. O(1) stays flat, O(<em>n</em>) grows in step with the input, and O(<em>n</em><sup>2</sup>) grows with its square: four times the data, sixteen times the work.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t3-bigo">ticket 3, big-O</a></p></dd>
+
+  <dt id="g-binary">binary</dt>
+  <dd><p class="g-def">The file the compiler writes, also called an executable: machine code your processor runs directly. <code>cargo build</code> puts it under <code>target/debug/</code>. It runs without Rust installed, and it doesn't change until you build again.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-compile">week zero, what cargo run does</a></p></dd>
+
+  <dt id="g-borrow">borrow</dt>
+  <dd><p class="g-def">To use a value through a reference without taking ownership of it: <code>&amp;x</code> to read it, <code>&amp;mut x</code> to change it. At any moment a value can have any number of <code>&amp;</code> borrows or exactly one <code>&amp;mut</code>, never both, and no borrow may outlive the value. A borrow lasts until its last use, which can be a later trip around a loop, not to the end of the block.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t1-borrow">ticket 1, borrowing</a></p></dd>
+
+  <dt id="g-box"><code>Box</code></dt>
+  <dd><p class="g-def"><code>Box&lt;T&gt;</code> is a pointer to a <code>T</code> stored on the heap. The box owns the value, and when the box is dropped, so is the value, and its memory is freed. <code>Box&lt;dyn Error&gt;</code> uses one to hold an error of any type behind a pointer of one fixed size.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t6-dyn">ticket 6, trait objects</a></p></dd>
+
+  <dt id="g-byte">byte</dt>
+  <dd><p class="g-def">Eight bits, each 0 or 1, which gives 256 patterns. Memory is counted in bytes: a <code>u8</code> is one byte, an <code>i64</code> is eight, and text is stored as bytes in UTF-8.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-bits">week zero, bits, bytes and integers</a></p></dd>
+
+  <dt id="g-cargo">cargo</dt>
+  <dd><p class="g-def">Rust's build tool and package manager. It downloads the crates listed in <code>Cargo.toml</code>, calls the compiler, and runs your program, tests, formatter and linter: <code>cargo build</code>, <code>cargo run</code>, <code>cargo test</code>, <code>cargo clippy</code>.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#setup-loop">set up, the loop you'll run</a></p></dd>
+
+  <dt id="g-clippy">clippy</dt>
+  <dd><p class="g-def">Rust's linter, run with <code>cargo clippy</code>. It flags code that compiles but could be clearer, faster or more likely to be correct, the way ruff or pylint does for Python. Its warnings don't stop the build, and the house rules ask for none before a review.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#setup-loop">set up, the loop you'll run</a></p></dd>
+
+  <dt id="g-clone">clone</dt>
+  <dd><p class="g-def">An explicit copy, made by calling <code>.clone()</code> on a type that implements <code>Clone</code>. For a <code>String</code> or a <code>Vec</code> it copies the contents on the heap too, so it can cost real time. <code>Copy</code> types are copied without being asked. Other types can be copied only with <code>.clone()</code>, and only if they implement <code>Clone</code>; a few, such as <code>&amp;mut</code> references, don't.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t3-derive">ticket 3, what each derive buys you</a></p></dd>
+
+  <dt id="g-closure">closure</dt>
+  <dd><p class="g-def">A function with no name, written where it's used as <code>|args| body</code>. Python's <code>lambda</code> is the same idea, except a closure can be as long as you like. A closure can use variables from the code around it, which is called capturing; a <code>fn</code> can't.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-closures">week zero, closures</a></p></dd>
+
+  <dt id="g-commit">commit</dt>
+  <dd><p class="g-def">A snapshot git saves of the changes you staged with <code>git add</code>, with a message saying what changed and why. You can always get back to it.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#setup-git">set up, the first commit</a></p></dd>
+
+  <dt id="g-compile">compile</dt>
+  <dd><p class="g-def">To turn source code into machine code before the program runs. Rust's compiler, <code>rustc</code>, reads the whole program first and checks types, names and borrows, so many mistakes are errors you fix before anything runs. Python finds most of them only when it reaches the line.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-compile">week zero, what cargo run does</a></p></dd>
+
+  <dt id="g-copy"><code>Copy</code></dt>
+  <dd><p class="g-def">A trait for types whose values can be copied by copying their bytes: integers, floats, <code>bool</code>, <code>char</code>, shared references such as <code>&amp;str</code>, and arrays and tuples made only of these. Assigning or passing one hands over a copy and leaves the original usable. <code>String</code> and <code>Vec</code> aren't <code>Copy</code>, because they own memory on the heap, so they move instead.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-refs">week zero, references</a></p></dd>
+
+  <dt id="g-crate">crate</dt>
+  <dd><p class="g-def">One unit of compiled Rust, a library or a program, which the compiler builds as one piece. A package is what cargo downloads and builds, and it holds one or more crates. Day to day, people say crate for both, as in "the csv crate".</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#setup-crates">set up, the SQLite crate</a></p></dd>
+
+  <dt id="g-derive">derive</dt>
+  <dd><p class="g-def"><code>#[derive(...)]</code> above a struct or enum asks the compiler to write a trait's standard code for you: <code>Debug</code> for <code>{:?}</code>, <code>Clone</code>, <code>PartialEq</code> for <code>==</code>, <code>Ord</code> for sorting, and so on. For the standard library's traits it only compiles when every field has the trait too. Crates can add derives of their own, such as clap's <code>Parser</code>.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t3-derive">ticket 3, what each derive buys you</a></p></dd>
+
+  <dt id="g-drop">drop</dt>
+  <dd><p class="g-def">To end a value's life and free what it owns. Rust drops a value when the variable that owns it goes out of scope, usually at a closing brace, and <code>drop(x)</code> does it early. A value that was moved is dropped by its new owner instead.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-memory">week zero, memory</a></p></dd>
+
+  <dt id="g-enum">enum</dt>
+  <dd><p class="g-def">A type whose value is exactly one of a fixed list of variants, such as <code>Lost</code>, <code>Overdue { days }</code> or <code>Returned</code>. Unlike a Python <code>Enum</code>, each variant can carry its own data, and a <code>match</code> on an enum must cover every variant. <code>Option</code> and <code>Result</code> are enums.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t3-enum">ticket 3, enums</a></p></dd>
+
+  <dt id="g-exit-status">exit status</dt>
+  <dd><p class="g-def">The number a process hands back when it ends, also called its exit code: 0 for success, anything else for failure. A panic in <code>main</code> exits with 101, and clap exits with 2 when a command is used wrongly. The shell keeps the last one in <code>$?</code>, and schedulers judge a run by it alone.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-process">week zero, your program is a process</a></p></dd>
+
+  <dt id="g-expression">expression</dt>
+  <dd><p class="g-def">Code that produces a value, such as <code>a + b</code>, an <code>if</code>/<code>else</code> or a <code>match</code>. A statement does something and ends in <code>;</code>. A block's value is its last expression when no semicolon follows it, which is how a Rust function usually returns.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-anatomy">week zero, the shape of a program</a></p></dd>
+
+  <dt id="g-floating-point">floating point</dt>
+  <dd><p class="g-def">How computers store numbers with fractions: in base 2, with a fixed number of significant bits, so most decimals, 0.1 among them, are stored very slightly off. <code>f64</code> uses the same format as Python's <code>float</code>. Good for measurements and averages, wrong for money.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t3-floats">ticket 3, how a computer stores 0.1</a></p></dd>
+
+  <dt id="g-garbage-collector">garbage collector</dt>
+  <dd><p class="g-def">Part of a running program that finds values nothing refers to anymore and frees their memory. Python has one. Rust doesn't: ownership tells the compiler where each value can be freed, so it writes the freeing into the program.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-memory">week zero, memory</a></p></dd>
+
+  <dt id="g-generic">generic</dt>
+  <dd><p class="g-def">Written once for many types, with a type parameter such as the <code>T</code> in <code>Vec&lt;T&gt;</code> or <code>fn print_table&lt;T: TableRow&gt;(rows: &amp;[T])</code>. Each place the code is used fills in a real type, and the compiler checks that use.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t6-generic">ticket 6, one function, many types</a></p></dd>
+
+  <dt id="g-hash-table">hash table</dt>
+  <dd><p class="g-def">A structure that finds a key without searching through every key: a hash function turns the key into a number, and the number picks the slot to look in. Two keys can land in the same slot, so the table has a plan for that too. On average, a lookup takes about the same time with ten keys or ten million. <code>HashMap</code> and <code>HashSet</code> are hash tables, as are Python's <code>dict</code> and <code>set</code>. Rust's keep no order.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t2-hash">ticket 2, how a hash table finds things</a></p></dd>
+
+  <dt id="g-heap">heap</dt>
+  <dd><p class="g-def">A large pool of memory that a running program can ask for blocks from, of any size, at any time. A <code>Vec</code> or <code>String</code> keeps its contents there, because they can grow. Rust gives a block back when the value that owns it is dropped.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t1-heap">ticket 1, the stack and the heap</a></p></dd>
+
+  <dt id="g-io">I/O</dt>
+  <dd><p class="g-def">Input and output: reading and writing files, the terminal and the network. I/O can fail for reasons outside your program, such as a missing folder or a full disk, so I/O functions return a <code>Result</code>, often <code>std::io::Result</code>.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t1-write">ticket 1, write a file</a></p></dd>
+
+  <dt id="g-impl"><code>impl</code></dt>
+  <dd><p class="g-def">A block that holds the functions belonging to a type. <code>impl Bin { ... }</code> holds the type's own methods and associated functions. <code>impl Display for Cents { ... }</code> keeps a trait's promise for that type.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-structs">week zero, structs and methods</a></p></dd>
+
+  <dt id="g-infer">infer</dt>
+  <dd><p class="g-def">To work out a type from how a value is used, so you don't have to write it. Rust infers most variables' types, and your editor shows them in gray. Function signatures are always written out.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-vars">week zero, variables</a></p></dd>
+
+  <dt id="g-integration-test">integration test</dt>
+  <dd><p class="g-def">A test in a file in the <code>tests/</code> folder. Cargo compiles each file as its own crate, which uses your library from outside and so can reach only <code>pub</code> items. That makes it the place to test a whole path through the code.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t5-integration">ticket 5, integration tests</a></p></dd>
+
+  <dt id="g-iterator">iterator</dt>
+  <dd><p class="g-def">Something that hands out items one at a time, made with <code>.iter()</code>, <code>.into_iter()</code> or a range. Methods such as <code>filter</code> and <code>map</code> wrap it in another iterator, and nothing runs until something like <code>count</code>, <code>sum</code> or <code>collect</code> asks for the items. Python's iterators and generators are the same idea.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-collections">week zero, tuples, arrays and vectors</a></p></dd>
+
+  <dt id="g-library">library</dt>
+  <dd><p class="g-def">A crate that other code uses, as opposed to a program you run. In a package it starts at <code>src/lib.rs</code>. A package can hold a library and a program together, and the program reaches the library by the package's name.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t5-modules">ticket 5, modules</a></p></dd>
+
+  <dt id="g-lifetime">lifetime</dt>
+  <dd><p class="g-def">The stretch of the program during which a reference is valid. When the compiler can't work out how references relate, you name a lifetime, such as <code>'a</code>, to say what a result borrows from. Lifetimes exist only while compiling: they describe how long references stay valid, never change how long anything lives, and cost nothing when the program runs.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t3-lifetimes">ticket 3, lifetimes</a></p></dd>
+
+  <dt id="g-macro">macro</dt>
+  <dd><p class="g-def">Code that writes code while compiling. Most are called with a <code>!</code>: <code>println!</code>, <code>vec!</code>, <code>dbg!</code>. A derive, such as <code>#[derive(Debug)]</code>, is a macro too. Macros do what a function can't, such as take any number of arguments of any type, or check format text before the program runs.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-macros">week zero, macros</a></p></dd>
+
+  <dt id="g-match"><code>match</code></dt>
+  <dd><p class="g-def">Branching on the shape of a value. Each arm is a pattern, <code>=&gt;</code>, and what to do. The compiler checks that the arms cover every possible value, so you can't forget <code>None</code> or a new enum variant, unless a catch-all <code>_</code> arm swallows them for you.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-option">week zero, Option and Result</a></p></dd>
+
+  <dt id="g-method">method</dt>
+  <dd><p class="g-def">A function in an <code>impl</code> block whose first parameter is some form of <code>self</code>, called with a dot: <code>bin.put_away(5)</code>. <code>&amp;self</code> reads the value, <code>&amp;mut self</code> may change it, and plain <code>self</code> takes it. Python's <code>self</code> is always the changing kind.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-structs">week zero, structs and methods</a></p></dd>
+
+  <dt id="g-module">module</dt>
+  <dd><p class="g-def">A named section of code, declared with <code>mod</code>, whose items are private to it, and to the modules inside it, unless marked <code>pub</code>. In Python every file is a module. In Rust a file under <code>main.rs</code> or <code>lib.rs</code> is compiled only if a <code>mod</code> line names it.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t5-modules">ticket 5, modules</a></p></dd>
+
+  <dt id="g-monomorphization">monomorphization</dt>
+  <dd><p class="g-def">How Rust compiles generic code: a separate copy of a generic function for each type it's called with, such as one <code>print_table</code> for <code>Book</code> and one for <code>Loan</code>. Each copy calls its type's methods directly, which is called static dispatch. The price is build time and program size.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t6-dispatch">ticket 6, generics and trait objects, compiled</a></p></dd>
+
+  <dt id="g-move">move</dt>
+  <dd><p class="g-def">Handing ownership of a value to another variable or function. After a move the old name can't be used. A move copies only the value itself, not what it points to: for a <code>Vec</code>, its pointer, length and capacity, while the items on the heap stay where they are. <code>Copy</code> types are copied instead, and the original stays usable.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t1-borrow">ticket 1, borrowing</a></p></dd>
+
+  <dt id="g-mutable">mutable</dt>
+  <dd><p class="g-def">Allowed to change. A Rust variable can't change unless it's declared <code>let mut</code>, and a function changes a caller's value through a <code>&amp;mut</code> reference. A Python variable can always be given a new value.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-vars">week zero, variables</a></p></dd>
+
+  <dt id="g-nan"><code>NaN</code></dt>
+  <dd><p class="g-def">"Not a number", the float you get from things like <code>0.0 / 0.0</code>. It isn't equal to anything, itself included. That's why <code>f64</code> isn't <code>Ord</code>, so <code>sort_by_key</code> refuses it, and why it can't be a <code>HashMap</code> key. <code>total_cmp</code> gives floats a total order when you need one.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t2-float">ticket 2, sorting by a float</a></p></dd>
+
+  <dt id="g-newtype">newtype</dt>
+  <dd><p class="g-def">A struct with one unnamed field that wraps another type, such as <code>struct Cents(i64)</code>. It costs nothing when the program runs, and it lets the compiler tell money apart from every other <code>i64</code>.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t3-money">ticket 3, money is not a float</a></p></dd>
+
+  <dt id="g-option"><code>Option</code></dt>
+  <dd><p class="g-def"><code>Option&lt;T&gt;</code> is an enum that means maybe a <code>T</code>: either <code>Some(value)</code> or <code>None</code>. Rust uses it where Python would use <code>None</code>, and the type makes you handle the missing case before you can use the value.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-option">week zero, Option and Result</a></p></dd>
+
+  <dt id="g-overflow">overflow</dt>
+  <dd><p class="g-def">A result too big, or too small, for its fixed-size integer type, such as 250 + 10 in a <code>u8</code>. By default, plain <code>+</code>, <code>-</code> or <code>*</code> panics on it in a debug build and wraps around in a release build, and methods like <code>checked_add</code> let you choose. Parsing text into a number too big for its type returns an error instead. Python's integers grow instead, so they never overflow.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-bits">week zero, bits, bytes and integers</a></p></dd>
+
+  <dt id="g-ownership">ownership</dt>
+  <dd><p class="g-def">Rust's rule that every value has exactly one owner, usually a variable. When the owner goes out of scope, the value is dropped. Ownership can be moved to a new owner, and the value can be lent out by borrowing. It's how Rust frees memory without a garbage collector.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t1-borrow">ticket 1, borrowing</a></p></dd>
+
+  <dt id="g-panic">panic</dt>
+  <dd><p class="g-def">Rust stopping the program because something that should be impossible happened, such as reading past the end of a <code>Vec</code> or calling <code>unwrap</code> on an <code>Err</code>. It prints where and why, and in a program like yours, with one thread, it exits with status 101. A panic is for bugs. Bad input should be a <code>Result</code>.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t4-failure">ticket 4, two kinds of failure</a></p></dd>
+
+  <dt id="g-parse">parse</dt>
+  <dd><p class="g-def">To turn text into a typed value, such as <code>"42"</code> into a <code>u32</code> or <code>10/15/2026</code> into a date, with an error when the text doesn't fit. A good parser returns a type that can only hold good values, so code further on doesn't have to check again.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t4-parser">ticket 4, a parser</a></p></dd>
+
+  <dt id="g-pointer">pointer</dt>
+  <dd><p class="g-def">A value that holds the memory address of another value. A Rust reference is a pointer with rules: the compiler checks that it always points at a live value.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-memory">week zero, memory</a></p></dd>
+
+  <dt id="g-process">process</dt>
+  <dd><p class="g-def">A running program. The operating system gives each one its own memory, the arguments it was started with, a working directory, and standard input, output and error. When it ends it hands back an exit status.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-process">week zero, your program is a process</a></p></dd>
+
+  <dt id="g-refactor">refactor</dt>
+  <dd><p class="g-def">To change the structure of code without changing what it does, such as splitting one long file into modules. A saved copy of the old output, and a <code>diff</code> against it after each step, shows that nothing moved.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t5-refactor">ticket 5, change the shape</a></p></dd>
+
+  <dt id="g-reference">reference</dt>
+  <dd><p class="g-def">A pointer that lets code use a value without taking it. <code>&amp;x</code> is a shared reference, for reading, and <code>&amp;mut x</code> a mutable one, for changing. Making one is borrowing. The compiler checks that a reference never outlives the value it points at, and <code>*</code> follows it to the value.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-refs">week zero, references</a></p></dd>
+
+  <dt id="g-release-build">release build</dt>
+  <dd><p class="g-def">A build made with <code>--release</code>: slower to compile, fully optimized, often many times faster than the default debug build, and, by default, without its overflow checks. It goes in <code>target/release/</code>. Time things only in release.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-compile">week zero, what cargo run does</a></p></dd>
+
+  <dt id="g-result"><code>Result</code></dt>
+  <dd><p class="g-def"><code>Result&lt;T, E&gt;</code> is an enum that means a <code>T</code> or an error of type <code>E</code>: <code>Ok(value)</code> or <code>Err(error)</code>. Most functions that can fail return one, where Python would raise an exception, and <code>?</code> hands an <code>Err</code> back to the caller.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-option">week zero, Option and Result</a></p></dd>
+
+  <dt id="g-scope">scope</dt>
+  <dd><p class="g-def">The stretch of code where a name can be used. A variable's scope runs from its <code>let</code> to the end of its block, and when the owner of a value goes out of scope, the value is dropped. A trait or type is "in scope" in a file once a <code>use</code> line brings its name in.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-memory">week zero, memory</a></p></dd>
+
+  <dt id="g-signature">signature</dt>
+  <dd><p class="g-def">The part of a function before its body: the name, each parameter with its type, and after <code>-&gt;</code> the type it returns. In Rust it also says whether the function borrows, changes or takes each argument, so you learn a lot before reading the body.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-anatomy">week zero, the shape of a program</a></p></dd>
+
+  <dt id="g-slice">slice</dt>
+  <dd><p class="g-def">A view of a run of items that sit side by side, written <code>&amp;v[1..3]</code> or, as a type, <code>&amp;[T]</code>. It borrows from a <code>Vec</code> or an array without copying. <code>&amp;str</code> is the same idea for text.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-collections">week zero, tuples, arrays and vectors</a></p></dd>
+
+  <dt id="g-stable-sort">stable sort</dt>
+  <dd><p class="g-def">A sort that keeps items with equal keys in the order they had before. <code>sort</code>, <code>sort_by</code> and <code>sort_by_key</code> are stable. The <code>sort_unstable</code> family may reorder equal items, and is often faster.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t1-sort">ticket 1, sort</a></p></dd>
+
+  <dt id="g-stack">stack</dt>
+  <dd><p class="g-def">The memory where each function call keeps its local variables. Room is made when a function is called and given back when it returns, which makes it fast, and everything kept there needs a size known when compiling. A <code>Vec</code> in a local variable keeps its pointer, length and capacity on the stack and its items on the heap.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t1-heap">ticket 1, the stack and the heap</a></p></dd>
+
+  <dt id="g-standard-error">standard error</dt>
+  <dd><p class="g-def">The output channel for messages about how a program is going: errors, warnings, <code>dbg!</code> output. <code>eprintln!</code> writes to it. Often shortened to stderr. Redirecting with <code>&gt;</code> sends standard output to a file and leaves standard error on screen.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t6-streams">ticket 6, processes, streams and exit codes</a></p></dd>
+
+  <dt id="g-standard-output">standard output</dt>
+  <dd><p class="g-def">The output channel for a program's results, often shortened to stdout. <code>println!</code> writes to it. It and standard error both show in the terminal until one is redirected, as <code>cargo run &gt; out.txt</code> does.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t6-streams">ticket 6, processes, streams and exit codes</a></p></dd>
+
+  <dt id="g-struct">struct</dt>
+  <dd><p class="g-def">A named group of fields, each with a type. Think of one row of a table with its column types written down, or a Python <code>@dataclass</code> whose types are checked when compiling.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-structs">week zero, structs and methods</a></p></dd>
+
+  <dt id="g-tag">tag</dt>
+  <dd><p class="g-def">A name git sticks on one commit, such as <code>t1-submitted</code>, so you and a reviewer can point at that exact version later. It stays on that commit when you make new ones.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#reviews-tag">how reviews work, when to ask</a></p></dd>
+
+  <dt id="g-trait">trait</dt>
+  <dd><p class="g-def">A named set of methods that a type can promise to have, such as <code>Display</code>, <code>Ord</code> or your own <code>TableRow</code>. A type keeps the promise in an <code>impl Trait for Type</code> block, and generic code can accept any type that has it. It's closer to a Python <code>Protocol</code> than to a class: a trait has no fields, and the compiler checks every use.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t6-trait">ticket 6, a trait is a promise</a></p></dd>
+
+  <dt id="g-trait-bound">trait bound</dt>
+  <dd><p class="g-def">A requirement on a type parameter, as in <code>&lt;T: TableRow&gt;</code>: <code>T</code> can be any type that implements <code>TableRow</code>. Inside the function you can use only what the bound promises.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t6-generic">ticket 6, one function, many types</a></p></dd>
+
+  <dt id="g-trait-object">trait object</dt>
+  <dd><p class="g-def"><code>dyn Trait</code>: a value of some type that implements the trait, where the exact type is known only while the program runs. It always sits behind a pointer, such as <code>&amp;dyn Describe</code> or <code>Box&lt;dyn Error&gt;</code>, which also points at a table of that type's methods. Each call is looked up there at run time, which is called dynamic dispatch.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t6-dyn">ticket 6, trait objects</a></p></dd>
+
+  <dt id="g-unit-test">unit test</dt>
+  <dd><p class="g-def">A small test of one piece of code: a <code>#[test]</code> function inside a <code>#[cfg(test)]</code> module in the same file. <code>cargo test</code> runs them all. Unit tests can reach private functions, which integration tests can't.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t4-unit">ticket 4, unit tests</a></p></dd>
+
+  <dt id="g-utf-8">UTF-8</dt>
+  <dd><p class="g-def">The standard way to store text as bytes. Unicode gives every symbol a number, its code point, and UTF-8 stores each code point in one byte if it's ASCII and two to four bytes otherwise. What you'd call one character is usually one code point, but not always: an accent can be a code point of its own. Rust text is always UTF-8, so <code>.len()</code> on a <code>String</code> counts bytes, not characters.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-text-bytes">week zero, text is bytes</a></p></dd>
+
+  <dt id="g-variant">variant</dt>
+  <dd><p class="g-def">One of the forms an enum's value can take, such as <code>Some</code> and <code>None</code> for <code>Option</code>, or <code>Ok</code> and <code>Err</code> for <code>Result</code>. A variant can carry data of its own, like <code>Overdue { days }</code>.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t3-enum">ticket 3, enums</a></p></dd>
+
+  <dt id="g-vector">vector</dt>
+  <dd><p class="g-def"><code>Vec&lt;T&gt;</code>, Rust's growable list: Python's <code>list</code>, with every item of one type. Its items sit side by side in one block on the heap, and when the block is full it asks for a bigger one.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-collections">week zero, tuples, arrays and vectors</a></p></dd>
+
+  <dt id="g-working-directory">working directory</dt>
+  <dd><p class="g-def">The folder a process counts as "here". A relative path like <code>data/kettle_creek.db</code> is looked up from it, not from where the source file is, which is why you run <code>cargo run</code> from the project folder.</p>
+  <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-process">week zero, your program is a process</a></p></dd>
+</dl>
+</section>

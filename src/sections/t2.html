@@ -35,7 +35,7 @@
 <p><code>HashMap&lt;K, V&gt;</code> is Python's <code>dict</code>, with one key type and one value type. It lives in <code>std::collections</code>, so it needs a <code>use</code>:</p>
 <pre>{{code:t2_map#basics}}</pre>
 <pre class="out">{{out:t2_map#1}}</pre>
-<p><code>get</code> doesn't return the value. It returns an <code>Option</code>: <code>Some(value)</code> if the key is there, <code>None</code> if it isn't. Python's <code>d[key]</code> raises <code>KeyError</code> at run time. Rust makes "the key might not be there" part of the type, so you decide what happens before the program ever runs. Try to skip that decision and the compiler stops you:</p>
+<p><code>get</code> doesn't return the value. It returns an <code>Option</code>: <code>Some(value)</code> if the key is there, <code>None</code> if it isn't. Python's <code>d[key]</code> raises <code>KeyError</code> at run time. Rust makes "the key might not be there" part of the type, so you decide what happens before the program ever runs. Try to skip that decision and the <a class="term" href="#g-compile">compiler</a> stops you:</p>
 <pre>{{fail:t2_get}}</pre>
 <pre class="out">{{failout:t2_get}}</pre>
 <p>The suggested <code>.expect("REASON")</code> would compile. It means "crash with this message if the key is missing". That's right when a missing key would be a bug in your program, and wrong when it's something the data can do. Most of the time you want one of these:</p>
@@ -44,16 +44,16 @@
 <ul>
   <li><code>match</code> handles both cases and says what each one does.</li>
   <li><code>if let Some(n) = ...</code> is <code>match</code> when you only care about one case.</li>
-  <li><code>.copied().unwrap_or(0)</code> turns "maybe a reference to a number" into "a number, or 0". <code>copied</code> turns <code>Option&lt;&amp;u32&gt;</code> into <code>Option&lt;u32&gt;</code>. Look up <code>Option</code> in the docs and skim its methods. You'll use a dozen of them by ticket 6.</li>
-  <li><code>map[&amp;key]</code> also works. It panics if the key is missing, just like Python's <code>d[key]</code>. Use it only where a missing key really is impossible, and you can say why.</li>
+  <li><code>.copied().unwrap_or(0)</code> turns "maybe a <a class="term" href="#g-reference">reference</a> to a number" into "a number, or 0". <code>copied</code> turns <code>Option&lt;&amp;u32&gt;</code> into <code>Option&lt;u32&gt;</code>. Look up <code>Option</code> in the docs and skim its <a class="term" href="#g-method">methods</a>. You'll use a dozen of them by ticket 6.</li>
+  <li><code>map[&amp;key]</code> also works. It <a class="term" href="#g-panic">panics</a> if the key is missing, just like Python's <code>d[key]</code>. Use it only where a missing key really is impossible, and you can say why.</li>
 </ul>
 
 <h4>Counting and summing: the entry API</h4>
 <p>The core of every group-by is "find this key's running total, or start one at zero, and add to it". The <em>entry API</em> does that in one lookup:</p>
 <pre>{{code:t2_map#entry}}</pre>
 <pre class="out">{{out:t2_map#3}}</pre>
-<p><code>counts.entry(w)</code> finds the slot for <code>w</code>. <code>.or_insert(0)</code> fills it with 0 if it's empty and hands back a mutable reference to the value, and the <code>*</code> in front reaches through that reference so <code>+= 1</code> changes the number in the map. <code>.or_default()</code> does the same with the type's default, which is 0 for numbers. Python's version is <code>counts[w] = counts.get(w, 0) + 1</code>, or <code>Counter</code>.</p>
-<p>A <code>HashMap</code> has no order. To print or write one predictably, collect it into a <code>Vec</code> and sort that. <code>counts.into_iter()</code> walks the map by value: each item is an owned (key, value) pair, and the map is used up, so you can't touch <code>counts</code> afterward. <code>counts.iter()</code> would borrow instead and hand out references, the way <code>for x in &amp;list</code> does. More on why under the hood.</p>
+<p><code>counts.entry(w)</code> finds the slot for <code>w</code>. <code>.or_insert(0)</code> fills it with 0 if it's empty and hands back a <a class="term" href="#g-mutable">mutable</a> reference to the value, and the <code>*</code> in front reaches through that reference so <code>+= 1</code> changes the number in the map. <code>.or_default()</code> does the same with the type's default, which is 0 for numbers. Python's version is <code>counts[w] = counts.get(w, 0) + 1</code>, or <code>Counter</code>.</p>
+<p>A <code>HashMap</code> has no order. To print or write one predictably, collect it into a <code>Vec</code> and sort that. <code>counts.into_iter()</code> walks the map by value: each item is an owned (key, value) pair, and the map is used up, so you can't touch <code>counts</code> afterward. <code>counts.iter()</code> would <a class="term" href="#g-borrow">borrow</a> instead and hand out references, the way <code>for x in &amp;list</code> does. More on why under the hood.</p>
 <p>Borrowing a map is what you do when you want to keep it. Each item is then a pair of references, which matters as soon as you compare or add:</p>
 <pre>{{code:t2_map#borrowed}}</pre>
 <pre class="out">{{out:t2_map#4}}</pre>
@@ -72,13 +72,13 @@
 <h4>Owned text and borrowed text</h4>
 <p>Look at the key type: <code>&amp;str</code>, not <code>String</code>. That choice matters more than it looks.</p>
 <ul>
-  <li><strong><code>String</code></strong> owns its text on the heap. You can keep it as long as you like, change it, and hand it to someone else.</li>
-  <li><strong><code>&amp;str</code></strong> is a borrowed view of text that somebody else owns: a pointer and a length. It costs nothing to make, but it's only valid while the owner is alive and unchanged.</li>
+  <li><strong><code>String</code></strong> owns its text on the <a class="term" href="#g-heap">heap</a>. You can keep it as long as you like, change it, and hand it to someone else.</li>
+  <li><strong><code>&amp;str</code></strong> is a borrowed view of text that somebody else owns: a <a class="term" href="#g-pointer">pointer</a> and a length. It costs nothing to make, but it's only valid while the <a class="term" href="#g-ownership">owner</a> is alive and unchanged.</li>
 </ul>
 <p>When your rows are already loaded into a <code>Vec</code>, a map keyed by <code>&amp;str</code> borrows names straight out of those rows, and nothing is copied. A map keyed by <code>String</code> needs its own copy of every key, made with <code>.clone()</code> or <code>.to_string()</code>. For a map that's built, used and thrown away in one function, borrow. For a map that has to outlive the rows it came from, own. The compiler holds you to it:</p>
 <pre>{{fail:t2_drop}}</pre>
 <pre class="out">{{failout:t2_drop}}</pre>
-<p><code>per_shelf</code> holds views into <code>books</code>, so <code>books</code> can't be thrown away while <code>per_shelf</code> is still in use. The same program in C would compile, then read freed memory and maybe print garbage. Python never has the problem, because its garbage collector keeps the strings alive as long as anything points at them. Rust rejects it before it runs. Ticket 3 gives this rule its proper name.</p>
+<p><code>per_shelf</code> holds views into <code>books</code>, so <code>books</code> can't be thrown away while <code>per_shelf</code> is still in use. The same program in C would compile, then read freed memory and maybe print garbage. Python never has the problem, because its <a class="term" href="#g-garbage-collector">garbage collector</a> keeps the strings alive as long as anything points at them. Rust rejects it before it runs. Ticket 3 gives this rule its proper name.</p>
 <p>Switch a map to <code>String</code> keys and the first try usually looks like this:</p>
 <pre>{{fail:t2_move_out}}</pre>
 <pre class="out">{{failout:t2_move_out}}</pre>
@@ -90,29 +90,29 @@
 <pre>{{code:t2_group#all}}</pre>
 <pre class="out">{{out:t2_group}}</pre>
 <ul>
-  <li><code>member_of</code> is built with <code>.map(...).collect()</code>. Iterators of pairs collect straight into a <code>HashMap</code>.</li>
+  <li><code>member_of</code> is built with <code>.map(...).collect()</code>. <a class="term" href="#g-iterator">Iterators</a> of pairs collect straight into a <code>HashMap</code>.</li>
   <li><code>member_of[&amp;fine.loan_id]</code> panics on a missing key. Here every fine was made from a loan, so a missing one would be a bug. In your ticket, think about whether an invoice can name a supplier that isn't in <code>suppliers</code>, and what the report should do if it does.</li>
-  <li>The value is a tuple, <code>(u32, f64)</code>: a count and a total, updated through <code>entry.0</code> and <code>entry.1</code>. A small struct with named fields reads better once there are three or more.</li>
-  <li><code>fines_by_member</code> has a lifetime <code>'a</code> on <code>loans</code> and on the output, for the reason you met in ticket 1: the keys of the result are borrowed from <code>loans</code>.</li>
+  <li>The value is a tuple, <code>(u32, f64)</code>: a count and a total, updated through <code>entry.0</code> and <code>entry.1</code>. A small <a class="term" href="#g-struct">struct</a> with named fields reads better once there are three or more.</li>
+  <li><code>fines_by_member</code> has a <a class="term" href="#g-lifetime">lifetime</a> <code>'a</code> on <code>loans</code> and on the output, for the reason you met in ticket 1: the keys of the result are borrowed from <code>loans</code>.</li>
 </ul>
 
-<h4>Sorting by a float</h4>
+<h4 id="t2-float">Sorting by a float</h4>
 <p>The sort line uses <code>total_cmp</code>, not <code>sort_by_key</code>. Here's why:</p>
 <pre>{{fail:t2_sortf64}}</pre>
 <pre class="out">{{failout:t2_sortf64}}</pre>
-<p><code>sort_by_key</code> needs a key that implements <code>Ord</code>, a <em>total order</em>, where any two values compare as less, equal or greater. Floats don't have one, because of <code>NaN</code> ("not a number", what <code>0.0 / 0.0</code> gives you). <code>NaN</code> is not less than, equal to or greater than anything, itself included. Python sorts floats anyway and gives you a wrong order, without a word, if a <code>NaN</code> sneaks in. Rust makes you choose. <code>a.total_cmp(&amp;b)</code> is a total order on floats that puts <code>NaN</code> at the ends, which is what you want for sorting. <code>.then_with(|| ...)</code> breaks ties with a second comparison, just like the tuple keys in ticket 1.</p>
+<p><code>sort_by_key</code> needs a key that implements <code>Ord</code>, a <em>total order</em>, where any two values compare as less, equal or greater. <a class="term" href="#g-floating-point">Floats</a> don't have one, because of <code>NaN</code> ("not a number", what <code>0.0 / 0.0</code> gives you). <code>NaN</code> is not less than, equal to or greater than anything, itself included. Python sorts floats anyway and gives you a wrong order, without a word, if a <code>NaN</code> sneaks in. Rust makes you choose. <code>a.total_cmp(&amp;b)</code> is a total order on floats that puts <code>NaN</code> at the ends, which is what you want for sorting. <code>.then_with(|| ...)</code> breaks ties with a second comparison, just like the tuple keys in ticket 1.</p>
 
 <h4>Formatting money</h4>
 <p>The output above prints each total twice: <code>{total:&gt;6.2}</code> right-aligns it in six characters with two decimals, and plain <code>{total}</code> prints the shortest decimal that reads back as exactly the same float. On this tiny library they agree. On a quarter's invoices they won't, and you'll see digits like <code>...55000000002</code>. That's not a bug in your code: it's what floating point does. For this report, format with two decimals and move on. Ticket 3 is where it stops being cosmetic.</p>
 
 <h4>Writing real CSV</h4>
-<p>To try this in your <code>snippets</code> project, run <code>cargo add csv</code> there first. Every line ends in <code>?</code>, so it goes in a <code>main</code> that returns <code>Result&lt;(), Box&lt;dyn Error&gt;&gt;</code>, as in ticket 1. The crate handles quoting for you. Any field with a comma, a quote or a line break gets wrapped in quotes, and quotes inside get doubled, which is the rule every spreadsheet program expects:</p>
+<p>To try this in your <code>snippets</code> project, run <code>cargo add csv</code> there first. Every line ends in <code>?</code>, so it goes in a <code>main</code> that returns <code>Result&lt;(), Box&lt;dyn Error&gt;&gt;</code>, as in ticket 1. The <a class="term" href="#g-crate">crate</a> handles quoting for you. Any field with a comma, a quote or a line break gets wrapped in quotes, and quotes inside get doubled, which is the rule every spreadsheet program expects:</p>
 <pre>{{code:t2_csv#csv}}</pre>
 <pre class="out">{{out:t2_csv}}</pre>
 <p><code>write_record</code> takes any list of things that look like text, such as string literals or <code>String</code>s, as long as every field in one record has the same type. That's why the last record turns everything into a <code>String</code>. <code>format!</code> is <code>println!</code> that gives you the <code>String</code> instead of printing it. The csv crate can also write structs directly through serde, but that's more machinery than this ticket needs.</p>
 
 <h4 id="t2-helpers">One function per report</h4>
-<p>When you move ticket 1 out of <code>main</code>, its function opens a file and reads the database, so it can fail in two ways: an I/O error or a rusqlite error. A function can only name one error type, and <code>?</code> refuses to pass along an error that doesn't fit it. The same thing on a smaller scale, a function that parses a number and writes a file:</p>
+<p>When you move ticket 1 out of <code>main</code>, its function opens a file and reads the database, so it can fail in two ways: an <a class="term" href="#g-io">I/O</a> error or a rusqlite error. A function can only name one error type, and <code>?</code> refuses to pass along an error that doesn't fit it. The same thing on a smaller scale, a function that <a class="term" href="#g-parse">parses</a> a number and writes a file:</p>
 <pre>{{fail:t2_helper}}</pre>
 <pre class="out">{{failout:t2_helper}}</pre>
 <p>The function promised <code>std::io::Result</code>, which can only carry an I/O error, and <code>parse</code> fails with a <code>ParseIntError</code>. The fix you already know from <code>main</code>: return <code>Box&lt;dyn Error&gt;</code>, "any kind of error", and <code>?</code> will box whichever error turns up.</p>
@@ -144,7 +144,7 @@
   <li><label><input type="checkbox" class="crit-box" id="c-t2-7"><span>Ticket 1's report still comes out of the same <code>cargo run</code>, and <code>main</code> is still short.</span></label></li>
   <li><label><input type="checkbox" class="crit-box" id="c-t2-8"><span><code>cargo fmt</code> and <code>cargo clippy --all-targets</code> are clean.</span></label></li>
 </ul>
-<p><strong>Before you type,</strong> answer these in your journal. What is the key of your grouping map, and what is the value? Should the key be the supplier's ID or its name, and what goes wrong with names? Do you need the supplier name during grouping, or only when writing? How will you test "July 1 through September 30" at the edges, and is <code>&lt;= "2026-09-30"</code> right for a date written as text? (If you write the test as two comparisons joined by <code>&amp;&amp;</code>, clippy will suggest a range with <code>contains</code> instead. Week zero shows both.)</p>
+<p><strong>Before you type,</strong> answer these in your journal. What is the key of your grouping map, and what is the value? Should the key be the supplier's ID or its name, and what goes wrong with names? Do you need the supplier name during grouping, or only when writing? How will you test "July 1 through September 30" at the edges, and is <code>&lt;= "2026-09-30"</code> right for a date written as text? (If you write the test as two comparisons joined by <code>&amp;&amp;</code>, <a class="term" href="#g-clippy">clippy</a> will suggest a range with <code>contains</code> instead. Week zero shows both.)</p>
 
 <h3>Stuck?</h3>
 <details class="hint"><summary>Hint 1: two maps</summary>
@@ -155,7 +155,7 @@
 </details>
 <details class="hint"><summary>Hint 3: the missing supplier</summary>
   <p>The choices are: skip the invoice (and the total no longer ties to the ledger), keep it under a placeholder name like <code>"(unknown supplier 99)"</code>, or stop the program with an error. Which one would Priya want? <code>names.get(&amp;id)</code> gives you an <code>Option</code> to make that choice with.</p>
-  <p>If you choose the placeholder and write <code>names.get(&amp;id).copied().unwrap_or(&amp;format!(...))</code>, the compiler refuses. Which message you get depends on where the name goes. Used later in the same function, it's "temporary value dropped while borrowed" (E0716). Returned from a function, it's "cannot return value referencing temporary value" (E0515). The cause is the same: <code>format!</code> makes a new <code>String</code> that nothing keeps, so it's freed at the end of the statement, and the <code>&amp;str</code> you borrowed from it can't outlive it. One way out is to make the name owned at the point where you write each output row: one <code>String</code> per supplier row is a couple of dozen small copies at most, which is nothing. Criterion 6 is about the loop over invoices, which runs once per invoice, not about the few rows you write.</p>
+  <p>If you choose the placeholder and write <code>names.get(&amp;id).copied().unwrap_or(&amp;format!(...))</code>, the compiler refuses. Which message you get depends on where the name goes. Used later in the same function, it's "temporary value <a class="term" href="#g-drop">dropped</a> while borrowed" (E0716). Returned from a function, it's "cannot return value referencing temporary value" (E0515). The cause is the same: <code>format!</code> makes a new <code>String</code> that nothing keeps, so it's freed at the end of the statement, and the <code>&amp;str</code> you borrowed from it can't outlive it. One way out is to make the name owned at the point where you write each output row: one <code>String</code> per supplier row is a couple of dozen small copies at most, which is nothing. Criterion 6 is about the loop over invoices, which runs once per invoice, not about the few rows you write.</p>
 </details>
 
 <h3>Sanity checks</h3>
@@ -167,18 +167,18 @@
 </ul>
 
 <h3>Hand it in</h3>
-<p>Commit, tag <code>t2-submitted</code> and ask for a review, adding:</p>
+<p><a class="term" href="#g-commit">Commit</a>, <a class="term" href="#g-tag">tag</a> <code>t2-submitted</code> and ask for a review, adding:</p>
 <pre class="prompt">For this ticket, pay particular attention to: how I moved ticket 1 out
 of main, whether my maps borrow or copy their keys and whether that was
 the right call, and what my program does with a supplier ID it can't find.</pre>
 <p>Reply to Priya with the grand total and the top three suppliers. Priya will ask whether the numbers include duplicates. The honest answer: every invoice row is counted, so any duplicate copies are in the totals, and you don't yet know how many there are.</p>
 
 <h3>Under the hood</h3>
-<h4>How a hash table finds things</h4>
+<h4 id="t2-hash">How a hash table finds things</h4>
 <p>A <code>HashMap</code> is an array of slots called <em>buckets</em>. To store a key, it runs the key through a <em>hash function</em>, which turns any value into a big number that looks random but is always the same for the same key. Then it uses part of that number to pick a bucket. To find the key again, it hashes it again and looks in the same place. No searching, so lookups take about the same time with ten keys or ten million: <em>O(1) on average</em>.</p>
 <pre>{{code:t2_hash#hash}}</pre>
 <pre class="out">{{out:t2_hash}}</pre>
-<p>Two keys can land in the same bucket. That's a <em>collision</em>, and every hash table has a plan for it: look in the next free slot, or keep a little list per bucket. Collisions are why the table keeps spare room. When it gets too full (Rust's table grows when it's seven-eighths full), it allocates a bigger array and moves every key, the same doubling trick as <code>Vec</code>. Rust's <code>HashMap</code> is a port of Google's SwissTable design, which checks sixteen slots at a time with single CPU instructions.</p>
+<p>Two keys can land in the same bucket. That's a <em>collision</em>, and every hash table has a plan for it: look in the next free slot, or keep a little list per bucket. Collisions are why the table keeps spare room. When it gets too full (Rust's table grows when it's seven-eighths full), it <a class="term" href="#g-allocate">allocates</a> a bigger array and moves every key, the same doubling trick as <code>Vec</code>. Rust's <code>HashMap</code> is a port of Google's SwissTable design, which checks sixteen slots at a time with single CPU instructions.</p>
 
 <h4>Why the order changes every run</h4>
 <p>The example above used <code>DefaultHasher::new()</code>, which always hashes the same way, so its output is the same every time. A real <code>HashMap</code> doesn't. Each one gets a hasher with secret random keys, seeded from the operating system. So the same names land in different buckets on different runs, and iterating the map gives a different order.</p>
@@ -196,7 +196,7 @@ the right call, and what my program does with a supplier ID it can't find.</pre>
   <li><a href="https://doc.rust-lang.org/std/option/enum.Option.html">The <code>Option</code> docs</a>. Read the method list once; you'll come back to it.</li>
   <li><a href="https://docs.rs/csv/latest/csv/tutorial/index.html">The csv crate's tutorial</a>, by its author, Andrew Gallant. It's a model of how to document a library.</li>
   <li>Matt Kulukundis, "Designing a Fast, Efficient, Cache-friendly Hash Table, Step by Step", CppCon 2017. The talk that introduced SwissTable. It's about C++, but the ideas are the ones inside Rust's <code>HashMap</code>.</li>
-  <li><em>Introduction to Algorithms</em> (Cormen, Leiserson, Rivest and Stein), chapter 11 on hash tables and chapter 8 on the n log n lower bound for sorting. The standard reference: dense, and worth it in small doses.</li>
+  <li><em>Introduction to Algorithms</em> (Cormen, Leiserson, Rivest and Stein), chapter 11 on <a class="term" href="#g-hash-table">hash tables</a> and chapter 8 on the n log n lower bound for sorting. The standard reference: dense, and worth it in small doses.</li>
 </ul>
 
 <section class="quiz" data-quiz="t2" aria-labelledby="quiz-t2-h">
