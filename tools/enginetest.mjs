@@ -123,6 +123,159 @@ ok(await p.locator("#c-t1-1").isChecked(), "known id restored, unknown ignored")
   await p.evaluate(() => localStorage.removeItem("rust_at_work.theme"));
 }
 // ---- end feat-render ----
+// ---- Navigation and progress (src/nav.js): where-am-I bar, contents panel,
+// pick-up spot, saved quiz answers, progress, retry list, export and import.
+{
+  const S = k => p.evaluate(k => localStorage.getItem(k), k);
+  const rightOf = (id, i) => p.evaluate(([id, i]) => QUIZZES[id].questions[i].options.findIndex(o => o.ok), [id, i]);
+  const wrongOf = (id, i) => p.evaluate(([id, i]) => QUIZZES[id].questions[i].options.findIndex(o => !o.ok), [id, i]);
+  const answer = async (id, i, opt) => {
+    const f = p.locator(`#q-${id}-${i + 1}`);
+    await f.locator("input").nth(opt).check();
+    await f.locator("button.btn").click();
+  };
+  const settle = () => p.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+  // Quiz answers persist: the earlier tests checked every question right, then t1 q1 wrong.
+  await p.reload();
+  ok(await p.locator("#q-t3-4").count() === 1 && await p.locator("#q-exam-1").count() === 1, "quiz fieldsets have stable ids");
+  ok((await p.locator("#q-t2-1 .feedback").innerText()).includes("Correct"), "checked answer and verdict survive reload");
+  ok((await p.locator("#q-t1-1 .feedback").innerText()).includes("Not quite") && await p.locator("#q-t1-1 input").nth(wrong).isChecked(), "a wrong last answer is restored as wrong");
+  ok(await p.locator('[data-quiz="exam"] input:checked').count() === 0, "exam answers are not restored");
+  await p.evaluate(() => localStorage.setItem("rust_at_work.quiz", '{"t1-1":99,"<img src=x onerror=alert(1)>":1,"t1-2":"1","__proto__":2}'));
+  await p.reload();
+  ok(await p.locator('[data-quiz="t1"] input:checked').count() === 0, "garbage quiz answers are dropped");
+  // Progress in the header contents.
+  await p.evaluate(() => {
+    localStorage.setItem("rust_at_work.checks", '["c-t3-1","c-t3-2"]');
+    const a = {}; QUIZZES.t3.questions.forEach((q, i) => { a[`t3-${i + 1}`] = q.options.findIndex(o => o.ok); });
+    a["t2-1"] = QUIZZES.t2.questions[0].options.findIndex(o => !o.ok);
+    localStorage.setItem("rust_at_work.quiz", JSON.stringify(a));
+  });
+  await p.reload();
+  const nT3 = await p.locator("#t3 ~ ul.criteria input.crit-box[id^='c-t3-']").count();
+  const tocProg = id => p.locator(`nav.toc a[href="#${id}"] + .prog`).innerText();
+  ok(await tocProg("t3") === `2 of ${nT3} criteria, quiz all correct`, "toc shows t3 criteria and a full quiz: " + await tocProg("t3"));
+  ok((await tocProg("t2")).endsWith("quiz 0 of 6 correct"), "toc shows a partly answered quiz: " + await tocProg("t2"));
+  ok((await tocProg("t4")).endsWith("quiz not started"), "toc shows an untouched quiz");
+  await p.locator("#c-t3-3").check();
+  ok((await tocProg("t3")).startsWith(`3 of ${nT3}`), "toc progress updates when a criterion is ticked");
+  // The bar: hidden over the header, names the h2 and h3 once scrolled.
+  await p.evaluate(() => scrollTo(0, 0)); await settle();
+  ok(await p.locator(".where-bar").isHidden(), "bar hidden while the header is on screen");
+  await p.evaluate(() => [...document.querySelectorAll("#t3 ~ h3")].find(h => h.textContent === "Warm-up drills").scrollIntoView()); await settle();
+  ok(await p.locator(".where-bar").isVisible(), "bar shows once the header is gone");
+  ok(await p.locator(".where-loc").innerText() === "Ticket 3 › Warm-up drills", "bar names section and part: " + await p.locator(".where-loc").innerText());
+  ok(await S("rust_at_work.spot") === '"t3-warm-up-drills"', "reading spot saved: " + await S("rust_at_work.spot"));
+  // Contents panel: opens, marks the current section, Escape closes and returns focus.
+  await p.locator(".where").click();
+  ok(await p.locator("#where-panel").isVisible() && await p.locator(".where").getAttribute("aria-expanded") === "true", "panel opens");
+  ok(await p.locator('#where-panel a[aria-current]').getAttribute("href") === "#t3", "panel marks the current section");
+  ok(await p.locator("#where-panel .where-list li").count() === await p.locator("main > h2[id]").count(), "panel lists every h2");
+  await p.locator("#where-panel .where-list a").first().focus();
+  await p.keyboard.press("Escape");
+  ok(await p.locator("#where-panel").isHidden() && await p.evaluate(() => document.activeElement.classList.contains("where")), "Escape closes the panel and focus returns");
+  await p.locator(".where").click();
+  await p.locator('#where-panel a[href="#t4"]').click();
+  ok(await p.locator("#where-panel").isHidden() && await p.evaluate(() => document.activeElement.id === "t4"), "panel link closes the panel and focuses the section");
+  const t4top = await p.evaluate(() => document.getElementById("t4").getBoundingClientRect().top);
+  const barBottom = await p.evaluate(() => document.querySelector(".where-bar").getBoundingClientRect().bottom);
+  ok(t4top >= barBottom, `anchor jump lands below the bar (${t4top} >= ${barBottom})`);
+  await p.locator(".where").focus();
+  await p.keyboard.press("Enter");
+  await p.locator('#where-panel a[href="#t5"]').focus();
+  await p.keyboard.press("Enter");
+  ok(await p.evaluate(() => document.activeElement.id === "t5" && getComputedStyle(document.activeElement).outlineStyle !== "none"), "keyboard jump shows a focus ring on the section");
+  // Pick up where you left off, from the spot saved last visit.
+  await settle();
+  await p.evaluate(() => localStorage.setItem("rust_at_work.spot", '"t3-warm-up-drills"'));
+  await p.goto(url);
+  ok(await p.locator("header .pickup a").innerText() === "Pick up where you left off: Ticket 3 › Warm-up drills", "pick-up link in the header");
+  ok(await p.locator("header .pickup a").getAttribute("href") === "#t3-warm-up-drills", "pick-up link target");
+  await p.evaluate(() => localStorage.setItem("rust_at_work.spot", '"<b>nope</b>"'));
+  await p.goto(url);
+  ok(await p.locator("header .pickup").count() === 0, "unknown saved spot shows no pick-up link");
+  // Phone width: the bar stays one line.
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.evaluate(() => document.getElementById("t4").scrollIntoView()); await settle();
+  const barH = await p.evaluate(() => document.querySelector(".where").getBoundingClientRect().height);
+  ok(barH < 50, "bar is one line at phone width: " + barH);
+  ok(await p.evaluate(() => document.documentElement.scrollWidth) <= 390, "no overflow at phone width");
+  await p.setViewportSize({ width: 1280, height: 720 });
+  // Retry list, with a faked date.
+  await p.evaluate(() => { localStorage.removeItem("rust_at_work.quiz"); localStorage.removeItem("rust_at_work.retry"); });
+  await p.goto(url + "?today=2026-10-10");
+  await answer("t2", 1, await wrongOf("t2", 1));          // wrong first: recorded
+  await answer("t2", 2, await rightOf("t2", 2));          // right first, then wrong: not recorded
+  await answer("t2", 2, await wrongOf("t2", 2));
+  await answer("t2", 3, await wrongOf("t2", 3));
+  await answer("t2", 3, await rightOf("t2", 3));          // wrong first, then right: still recorded
+  ok(await S("rust_at_work.retry") === '{"t2-2":"2026-10-10","t2-4":"2026-10-10"}', "only wrong first checks are recorded: " + await S("rust_at_work.retry"));
+  await p.goto(url + "?today=2026-10-11");
+  ok(await p.locator(".retry").count() === 0, "no retry list before two days");
+  ok(await p.locator("#q-t2-2 input:checked").count() === 1, "not-yet-due answer is kept");
+  await p.goto(url + "?today=2026-10-12");
+  ok(await p.locator('.retry a[href="#q-t2-2"]').count() === 1 && await p.locator('.retry a[href="#q-t2-4"]').count() === 1, "due questions listed with links");
+  ok(await p.locator("#q-t2-2 input:checked").count() === 0 && await p.locator("#q-t2-4 input:checked").count() === 0, "due questions are asked cold");
+  ok(await p.locator("#q-t2-3 input:checked").count() === 1, "other answers untouched");
+  await answer("t2", 1, await rightOf("t2", 1));
+  ok(await p.locator('.retry a[href="#q-t2-2"]').count() === 0 && !(await S("rust_at_work.retry")).includes("t2-2"), "right on first check removes it");
+  await p.locator(".retry .retry-dismiss").first().click();
+  ok(await p.locator(".retry").count() === 0 && await S("rust_at_work.retry") === "{}", "dismiss removes an entry");
+  await p.goto(url + "?today=banana");
+  ok(await p.evaluate(() => FAKE_TODAY === null && /^\d{4}-\d{2}-\d{2}$/.test(today())), "a bad ?today is ignored");
+  // A future date (from a faked ?today) is dropped, so it can't hide a retry for years.
+  await p.evaluate(() => localStorage.setItem("rust_at_work.retry", '{"t2-2":"2999-01-01"}'));
+  await p.goto(url + "?today=2026-10-12");
+  ok(await p.evaluate(() => !Object.hasOwn(retry, "t2-2")), "future retry dates are dropped");
+  // A second tab's answers survive this tab's next check.
+  await p.evaluate(() => localStorage.setItem("rust_at_work.quiz", JSON.stringify({ ...JSON.parse(localStorage.getItem("rust_at_work.quiz")), "t5-1": 0 })));
+  await answer("t5", 1, await rightOf("t5", 1));
+  ok(JSON.parse(await S("rust_at_work.quiz"))["t5-1"] === 0, "an answer saved by another tab is kept");
+  // Export and import.
+  await p.evaluate(() => {
+    localStorage.setItem("rust_at_work.theme", "light");
+    localStorage.setItem("rust_at_work.checks", '["c-t1-1"]');
+  });
+  await p.goto(url);
+  await p.evaluate(() => document.getElementById("t1").scrollIntoView()); await settle();
+  await p.locator(".where").click();
+  const [dl] = await Promise.all([p.waitForEvent("download"), p.locator(".carry-save").click()]);
+  const exported = JSON.parse(fs.readFileSync(await dl.path(), "utf8"));
+  ok(JSON.stringify(exported.data["rust_at_work.checks"]) === '["c-t1-1"]' && "rust_at_work.quiz" in exported.data && "rust_at_work.part1.exam" in exported.data, "export has checks, quiz and exam");
+  ok(!Object.keys(exported.data).some(k => k.includes("theme")), "export leaves out the theme");
+  exported.data["rust_at_work.checks"] = ["c-t2-1", "c-t2-2", "bogus"];
+  exported.data["rust_at_work.quiz"] = { "t4-1": 0, "t9-9": 1 };
+  exported.data["rust_at_work.spot"] = "t2";
+  exported.data["rust_at_work.theme"] = "dark";
+  await p.locator(".carry-file").setInputFiles({ name: "progress.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(exported)) });
+  await p.waitForFunction(() => document.querySelector(".carry-msg").textContent.startsWith("Loaded"));
+  const msg = await p.locator(".carry-msg").innerText();
+  ok(msg.includes("2 ticked criteria") && msg.includes("1 quiz answer") && msg.includes("Left out 3 entries"), "import says what it loaded: " + msg);
+  ok(await p.locator("#c-t2-1").isChecked() && !(await p.locator("#c-t1-1").isChecked()), "import applies criteria");
+  ok(await p.locator("#q-t4-1 input").first().isChecked(), "import applies quiz answers");
+  ok(await S("rust_at_work.spot") === '"t2"' && (await p.locator("header .pickup a").getAttribute("href")) === "#t2", "spot imported and shown");
+  ok(await S("rust_at_work.theme") === "light" && (await S("rust_at_work.quiz")) === '{"t4-1":0}', "import stores only valid known data, never the theme");
+  ok((await p.locator('#where-panel a[href="#t2"] ~ .prog').innerText()).startsWith("2 of"), "panel shows progress");
+  ok(await p.locator("#where-panel .pickup a").getAttribute("href") === "#t2", "panel shows the pick-up link");
+  // A parseable file whose entries are all invalid changes nothing, and keeps unchecked selections.
+  await p.keyboard.press("Escape");
+  await p.locator("#q-t6-1 input").first().check();
+  await p.locator(".where").click();
+  await p.locator(".carry-file").setInputFiles({ name: "y.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ data: { "rust_at_work.checks": ["bogus"], "rust_at_work.quiz": { "t1-1": 99 }, "rust_at_work.retry": { "t1-1": "banana" }, "unrelated": 1 } })) });
+  await p.waitForFunction(() => document.querySelector(".carry-msg").textContent.startsWith("Nothing"));
+  ok(await p.locator("#c-t2-1").isChecked() && (await S("rust_at_work.quiz")) === '{"t4-1":0}' && await p.locator("#q-t6-1 input").first().isChecked(), "an all-invalid file keeps existing progress");
+  // An imported retry that is due clears its answer, and the message says so.
+  await p.locator(".carry-file").setInputFiles({ name: "z.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ data: { "rust_at_work.quiz": { "t4-1": 0, "t4-2": 0 }, "rust_at_work.retry": { "t4-1": "2020-01-01" } } })) });
+  await p.waitForFunction(() => document.querySelector(".carry-msg").textContent.startsWith("Loaded"));
+  const msg2 = await p.locator(".carry-msg").innerText();
+  ok(msg2.includes("1 quiz answer ") && msg2.includes("Cleared 1 answer") && await p.locator("#q-t4-1 input:checked").count() === 0, "due import counts only kept answers: " + msg2);
+  await p.locator(".carry-file").setInputFiles({ name: "x.json", mimeType: "application/json", buffer: Buffer.from("not json {") });
+  await p.waitForFunction(() => document.querySelector(".carry-msg").textContent.includes("isn't a progress file"));
+  ok(await p.locator("#c-t2-1").isChecked(), "a bad file changes nothing");
+  await p.reload();
+  ok(await p.locator("#c-t2-1").isChecked() && await p.locator("#q-t4-2 input").first().isChecked(), "imported progress survives reload");
+}
+// ---- end of navigation and progress tests
 ok(errs.length === 0, "no page errors " + errs.join(" | "));
 await b.close(); srv.close();
 process.exit(fails ? 1 : 0);
