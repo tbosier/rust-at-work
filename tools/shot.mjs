@@ -13,7 +13,8 @@ const url = `http://127.0.0.1:${srv.address().port}/`;
 const [prefix, ...anchors] = process.argv.slice(2);
 const b = await chromium.launch({ executablePath: process.env.CHROME ?? "/usr/bin/google-chrome-stable", args: ["--no-sandbox", "--headless=new"] });
 for (const [name, w, h] of [["desk", 1280, 900], ["phone", 390, 844]]) {
-  const p = await b.newPage({ viewport: { width: w, height: h } });
+  // SCHEME=dark emulates a system set to dark, to shoot the dark theme.
+  const p = await b.newPage({ viewport: { width: w, height: h }, colorScheme: process.env.SCHEME === "dark" ? "dark" : "light" });
   const errs = []; p.on("pageerror", e => errs.push(e.message)); p.on("console", m => m.type() === "error" && errs.push(m.text()));
   await p.goto(url, { waitUntil: "load" });
   const sw = await p.evaluate(() => document.documentElement.scrollWidth);

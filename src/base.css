@@ -16,10 +16,88 @@
     --ok-wash: #e4f1e8;
     --bad: #a3271c;
     --bad-wash: #f9e7e4;
+    /* Rust syntax, on --sea: a printed book, not an IDE. No red or green,
+       which the quizzes use for their verdicts. */
+    --sx-kw: #1f4e79;
+    --sx-ty: #175d66;
+    --sx-str: #8a2457;
+    --sx-com: #4a5058;
+    /* Compiler output, colored the way cargo colors a terminal. */
+    --cc-err: #a3271c;
+    --cc-warn: #7d5200;
+    --cc-loc: #2a53b3;
+    --cc-help: #5d3a98;
+    --cc-note: #4a5058;
+    color-scheme: light;
     --measure: 42rem;
     --body: Charter, "Bitstream Charter", "Sitka Text", "Noto Serif", "Liberation Serif", Georgia, serif;
     --head: "Gill Sans", "Gill Sans MT", Seravek, "Noto Sans", "Liberation Sans", sans-serif;
     --mono: "DejaVu Sans Mono", "Liberation Mono", ui-monospace, Menlo, monospace;
+  }
+  /* Dark, for evening reading. The same tokens twice: once for a system
+     set to dark (unless the reader picked light), once for a reader who
+     picked dark. Screen only, so print stays dark ink on white paper. */
+  @media screen and (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #161a1e;
+      --sheet: #1d2227;
+      --ink: #dce1e5;
+      --ink-2: #a9b1b9;
+      --rule: #3c444c;
+      --sea: #1b272e;
+      --sea-edge: #4f6b7c;
+      --depth: #8db6dc;
+      --magenta: #e39cbf;
+      --magenta-wash: #2c1c25;
+      --depth-dark: #aecbe7;
+      --on-depth: #0f1c28;
+      --quiz-bg: #192329;
+      --ok: #84cc9a;
+      --ok-wash: #15271c;
+      --bad: #f29b8f;
+      --bad-wash: #301d1a;
+      --sx-kw: #93bce3;
+      --sx-ty: #7ec4c7;
+      --sx-str: #e5a6c8;
+      --sx-com: #a9b1b9;
+      --cc-err: #f29b8f;
+      --cc-warn: #e3b866;
+      --cc-loc: #95acf7;
+      --cc-help: #c2abef;
+      --cc-note: #a9b1b9;
+      color-scheme: dark;
+    }
+  }
+  @media screen {
+    :root[data-theme="dark"] {
+      --paper: #161a1e;
+      --sheet: #1d2227;
+      --ink: #dce1e5;
+      --ink-2: #a9b1b9;
+      --rule: #3c444c;
+      --sea: #1b272e;
+      --sea-edge: #4f6b7c;
+      --depth: #8db6dc;
+      --magenta: #e39cbf;
+      --magenta-wash: #2c1c25;
+      --depth-dark: #aecbe7;
+      --on-depth: #0f1c28;
+      --quiz-bg: #192329;
+      --ok: #84cc9a;
+      --ok-wash: #15271c;
+      --bad: #f29b8f;
+      --bad-wash: #301d1a;
+      --sx-kw: #93bce3;
+      --sx-ty: #7ec4c7;
+      --sx-str: #e5a6c8;
+      --sx-com: #a9b1b9;
+      --cc-err: #f29b8f;
+      --cc-warn: #e3b866;
+      --cc-loc: #95acf7;
+      --cc-help: #c2abef;
+      --cc-note: #a9b1b9;
+      color-scheme: dark;
+    }
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }

@@ -11,6 +11,10 @@ Placeholders in src/*.html:
     {{failout:t1_move}}            the compiler's message for it
     {{quizzes}}                    every src/quizzes/*.js, in name order
 
+Rust from {{code:}} and {{fail:}}, and hand-written <pre data-file="*.rs">
+blocks, is colored at build time by tools/highlight.py; so is the compiler
+output from {{failout:}}. Each colored <pre> gets class "rs" or "cc".
+
 The build refuses to write if a placeholder is unknown, a region is missing,
 an internal link has no target, an id repeats, or the text has dashes the
 house style bans.
@@ -20,10 +24,15 @@ import re
 import sys
 from pathlib import Path
 
+import highlight
+
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src"
 SNIP = ROOT / "snippets"
 errors = []
+# expand() puts these right after a <pre ...> it colored; tag_pres() turns
+# them into a class on that <pre>.
+MARK_RS, MARK_CC = "\x00rs\x00", "\x00cc\x00"
 
 
 def region(path, name):
@@ -81,13 +90,13 @@ def expand(text):
             if not path.exists():
                 errors.append(f"missing snippet {name}")
                 return ""
-            return html.escape(region(path, reg or None), quote=False)
+            return MARK_RS + highlight.rust(region(path, reg or None))
         if kind == "fail":
             path = SNIP / "fail" / f"{name}.rs"
             if not path.exists():
                 errors.append(f"missing failing snippet {name}")
                 return ""
-            return html.escape(region(path, None), quote=False)
+            return MARK_RS + highlight.rust(region(path, None))
         if kind == "out":
             text = read(SNIP / "out" / f"{name}.txt")
             if reg:
@@ -98,11 +107,38 @@ def expand(text):
                 text = parts[int(reg) - 1]
             return html.escape(text.rstrip("\n"), quote=False)
         if kind == "failout":
-            return html.escape(read(SNIP / "out" / f"fail_{name}.txt").rstrip("\n"), quote=False)
+            return MARK_CC + highlight.compiler(read(SNIP / "out" / f"fail_{name}.txt").rstrip("\n"))
         errors.append(f"unknown placeholder {m.group(0)}")
         return ""
 
     return re.sub(r"\{\{(include|code|out|failout|fail|quizzes)(?::([^}]*))?\}\}", sub, text)
+
+
+def color_handwritten(page):
+    """Color hand-written Rust: a <pre> whose data-file names a .rs file."""
+    def sub(m):
+        attrs, body = m.group(1), m.group(2)
+        if "<" in body:
+            errors.append(f"markup inside hand-written Rust block {attrs.strip()}")
+            return m.group(0)
+        return f"<pre{attrs}>{MARK_RS}{highlight.rust(html.unescape(body))}</pre>"
+    return re.sub(r'<pre(\s[^>]*data-file="[^"]+\.rs"[^>]*)>(.*?)</pre>', sub, page, flags=re.S)
+
+
+def tag_pres(page):
+    """Move each color mark into a class on the <pre> it opens."""
+    def sub(m):
+        attrs, mark = m.group(1), m.group(2)
+        cls = "rs" if mark == MARK_RS else "cc"
+        if 'class="' in attrs:
+            attrs = attrs.replace('class="', f'class="{cls} ', 1)
+        else:
+            attrs = f' class="{cls}"' + attrs
+        return f"<pre{attrs}>"
+    page = re.sub(r"<pre([^>]*)>(%s|%s)" % (re.escape(MARK_RS), re.escape(MARK_CC)), sub, page)
+    if "\x00" in page:
+        errors.append("colored code outside a <pre>")
+    return page
 
 
 def check(page):
@@ -127,7 +163,7 @@ def check(page):
 
 
 def main():
-    page = expand((SRC / "guide.html").read_text())
+    page = tag_pres(color_handwritten(expand((SRC / "guide.html").read_text())))
     check(page)
     if errors:
         print("\n".join(errors))

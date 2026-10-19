@@ -11,11 +11,20 @@
 <style>
 {{include:extra.css}}
 </style>
+<script>
+{{include:theme.js}}
+</script>
 </head>
 <body>
 <main>
 
 <header class="top">
+  <fieldset class="theme" hidden>
+    <legend>Theme</legend>
+    <label><input type="radio" name="theme" value="system"><span>System</span></label>
+    <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+    <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+  </fieldset>
   <p class="kicker">Rust at work, part 1 of 4</p>
   <h1>Your first three weeks at Kettle Creek Supply</h1>
   <p class="lede">You have just started at Kettle Creek Supply, a distributor of bearings, bolts, hoses and other industrial parts. Your title says analyst. The job is writing software. Your manager will email you work, and each request needs a little more Rust than the last. This page teaches exactly that much, just before you need it. You write all the code yourself, in your own editor. When a ticket is done, a senior engineer reviews it the way a pull request is reviewed at a well-run company: what is wrong, what is unclear, and what will hurt in six months.</p>
@@ -71,6 +80,9 @@
 const QUIZZES = {};
 {{quizzes}}
 {{include:engine.js}}
+</script>
+<script>
+{{include:copy.js}}
 </script>
 </body>
 </html>

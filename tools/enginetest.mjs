@@ -58,6 +58,71 @@ ok(!(await p.locator("input.crit-box").first().isChecked()), "garbage in storage
 await p.evaluate(() => localStorage.setItem("rust_at_work.checks", '["c-t1-1","<img src=x onerror=alert(1)>"]'));
 await p.reload();
 ok(await p.locator("#c-t1-1").isChecked(), "known id restored, unknown ignored");
+// ---- feat-render: syntax colors, compiler output, theme switch, copy buttons ----
+{
+  const t = await p.evaluate(() => {
+    const rs = [...document.querySelectorAll("pre.rs")];
+    const cmd = [...document.querySelectorAll("pre.cmd")];
+    return {
+      rs: rs.length, rsAllSpans: rs.every(e => e.querySelector("span[class^=sx-]")),
+      cmdSpans: cmd.some(e => e.querySelector("span")),
+      outSpans: [...document.querySelectorAll("pre.out:not(.cc)")].some(e => e.querySelector("span")),
+      cc: document.querySelectorAll("pre.cc").length,
+      ccErr: [...document.querySelectorAll("pre.cc")].every(e => e.querySelector(".cc-err")),
+      cmds: cmd.length, prompts: document.querySelectorAll("pre.prompt").length,
+      cmdCopy: cmd.every(e => e.nextElementSibling?.matches(".copy-bar") && e.nextElementSibling.querySelector("button.copy")),
+      promptCopy: [...document.querySelectorAll("pre.prompt")].every(e => e.nextElementSibling?.querySelector("button.copy")),
+      rsCopy: rs.some(e => e.nextElementSibling?.matches(".copy-bar")),
+      buttons: document.querySelectorAll("button.copy").length,
+    };
+  });
+  ok(t.rs > 100 && t.rsAllSpans, `every Rust block (${t.rs}) has token spans`);
+  ok(!t.cmdSpans && !t.outSpans, "shell and program output blocks have no token spans");
+  ok(t.cc > 20 && t.ccErr, `compiler output blocks (${t.cc}) color their error lines`);
+  ok(t.cmdCopy && t.promptCopy && t.buttons === t.cmds + t.prompts, `copy buttons on ${t.cmds} shell and ${t.prompts} prompt blocks`);
+  ok(!t.rsCopy, "no copy button on Rust blocks");
+  // Copying: the clipboard gets the commands, and the status line says so.
+  await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const firstCmd = p.locator("pre.cmd").first();
+  await p.locator("pre.cmd + .copy-bar button.copy").first().click();
+  await p.waitForFunction(() => document.querySelector(".copy-status")?.textContent === "Copied.");
+  const clip = await p.evaluate(() => navigator.clipboard.readText());
+  ok(clip === await firstCmd.evaluate(e => e.textContent), "copy puts the commands on the clipboard");
+  const bname = await p.locator("button.copy").first().evaluate(b => b.textContent);
+  ok(/^Copy (command|commands|prompt)$/.test(bname), "copy button names itself with its visible label");
+  // Without a clipboard the button selects the block instead.
+  await p.evaluate(() => { Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true }); });
+  await p.locator("pre.prompt + .copy-bar button.copy").first().click();
+  await p.waitForFunction(() => [...document.querySelectorAll(".copy-status")].some(s => s.textContent.startsWith("Selected.")));
+  const selected = await p.evaluate(() => window.getSelection().toString() === document.querySelector("pre.prompt").textContent);
+  ok(selected, "no clipboard: the block is selected and the reader told to press Ctrl+C");
+  // Theme switch: starts on System, a pick persists, garbage falls back.
+  await p.evaluate(() => localStorage.removeItem("rust_at_work.theme"));
+  await p.reload();
+  ok(await p.locator('fieldset.theme input[value="system"]').isChecked(), "theme starts on System");
+  ok(await p.evaluate(() => !document.documentElement.hasAttribute("data-theme")), "System leaves data-theme unset");
+  await p.locator('fieldset.theme label:has(input[value="dark"])').click();
+  ok(await p.evaluate(() => document.documentElement.dataset.theme === "dark" && localStorage.getItem("rust_at_work.theme") === "dark"), "picking Dark applies and saves it");
+  const darkBg = await p.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  ok(darkBg === "rgb(22, 26, 30)", "Dark paints the dark paper " + darkBg);
+  await p.reload();
+  ok(await p.evaluate(() => document.documentElement.dataset.theme === "dark"), "Dark survives reload");
+  ok(await p.locator('fieldset.theme input[value="dark"]').isChecked(), "Dark radio checked after reload");
+  await p.evaluate(() => localStorage.setItem("rust_at_work.theme", '"><img src=x onerror=alert(1)>'));
+  await p.reload();
+  ok(await p.evaluate(() => !document.documentElement.hasAttribute("data-theme")), "garbage theme falls back to System");
+  ok(await p.locator('fieldset.theme input[value="system"]').isChecked(), "garbage theme checks the System radio");
+  // A system set to dark, with Light picked, stays light.
+  await p.emulateMedia({ colorScheme: "dark" });
+  await p.evaluate(() => localStorage.removeItem("rust_at_work.theme"));
+  await p.reload();
+  ok(await p.evaluate(() => getComputedStyle(document.body).backgroundColor) === "rgb(22, 26, 30)", "System follows a dark system");
+  await p.locator('fieldset.theme label:has(input[value="light"])').click();
+  ok(await p.evaluate(() => getComputedStyle(document.body).backgroundColor) === "rgb(247, 247, 244)", "Light overrides a dark system");
+  await p.emulateMedia({ colorScheme: "light" });
+  await p.evaluate(() => localStorage.removeItem("rust_at_work.theme"));
+}
+// ---- end feat-render ----
 ok(errs.length === 0, "no page errors " + errs.join(" | "));
 await b.close(); srv.close();
 process.exit(fails ? 1 : 0);
