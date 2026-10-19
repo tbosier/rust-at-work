@@ -11,7 +11,7 @@
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-memory">week zero, memory</a></p></dd>
 
   <dt id="g-associated-function">associated function</dt>
-  <dd><p class="g-def">A function in an <code>impl</code> block. Strictly, methods are associated functions too, but the name usually means one that takes no <code>self</code>: it belongs to the type, not to one value, and you call it on the type with <code>::</code>, as in <code>Bin::new(...)</code> or <code>Book::headers()</code>. Python's nearest is a <code>@staticmethod</code>.</p>
+  <dd><p class="g-def">A function defined in an <code>impl</code> block or a trait. Strictly, methods are associated functions too, but the name usually means one that takes no <code>self</code>: it belongs to the type, not to one value, and you call it on the type with <code>::</code>, as in <code>Bin::new(...)</code> or <code>Book::headers()</code>. Python's nearest is a <code>@staticmethod</code>.</p>
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t6-trait">ticket 6, a trait is a promise</a></p></dd>
 
   <dt id="g-big-o">big-O</dt>
@@ -23,7 +23,7 @@
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-compile">week zero, what cargo run does</a></p></dd>
 
   <dt id="g-borrow">borrow</dt>
-  <dd><p class="g-def">To use a value through a reference without taking ownership of it: <code>&amp;x</code> to read it, <code>&amp;mut x</code> to change it. At any moment a value can have any number of <code>&amp;</code> borrows or exactly one <code>&amp;mut</code>, never both, and no borrow may outlive the value. A borrow lasts until its last use, which can be a later trip around a loop, not to the end of the block.</p>
+  <dd><p class="g-def">To use a value through a reference without taking ownership of it: <code>&amp;x</code> to read it, <code>&amp;mut x</code> to change it. At any moment a value can have any number of <code>&amp;</code> borrows or exactly one <code>&amp;mut</code>, never both, and no borrow may outlive the value. A borrow lasts until its last use, not to the end of the block. In a loop, that last use can come on a later pass.</p>
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t1-borrow">ticket 1, borrowing</a></p></dd>
 
   <dt id="g-box"><code>Box</code></dt>
@@ -67,7 +67,7 @@
   <p class="g-where">Where it's taught: <a class="g-taught" href="#setup-crates">set up, the SQLite crate</a></p></dd>
 
   <dt id="g-derive">derive</dt>
-  <dd><p class="g-def"><code>#[derive(...)]</code> above a struct or enum asks the compiler to write a trait's standard code for you: <code>Debug</code> for <code>{:?}</code>, <code>Clone</code>, <code>PartialEq</code> for <code>==</code>, <code>Ord</code> for sorting, and so on. For the standard library's traits it only compiles when every field has the trait too. Crates can add derives of their own, such as clap's <code>Parser</code>.</p>
+  <dd><p class="g-def"><code>#[derive(...)]</code> above a struct or enum asks the compiler to write a trait's standard code for you: <code>Debug</code> for <code>{:?}</code>, <code>Clone</code>, <code>PartialEq</code> for <code>==</code>, <code>Ord</code> for sorting, and so on. For the standard library's traits it usually only compiles when every field has the trait too. Crates can add derives of their own, such as clap's <code>Parser</code>.</p>
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t3-derive">ticket 3, what each derive buys you</a></p></dd>
 
   <dt id="g-drop">drop</dt>
@@ -83,7 +83,7 @@
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-process">week zero, your program is a process</a></p></dd>
 
   <dt id="g-expression">expression</dt>
-  <dd><p class="g-def">Code that produces a value, such as <code>a + b</code>, an <code>if</code>/<code>else</code> or a <code>match</code>. A statement does something and ends in <code>;</code>. A block's value is its last expression when no semicolon follows it, which is how a Rust function usually returns.</p>
+  <dd><p class="g-def">Code that produces a value, such as <code>a + b</code>, an <code>if</code>/<code>else</code> or a <code>match</code>. A statement does something and usually ends in <code>;</code>. A <code>for</code> loop or an <code>if</code> standing on its own line is the common exception. A block's value is its last expression when no semicolon follows it, which is how a Rust function usually returns.</p>
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-anatomy">week zero, the shape of a program</a></p></dd>
 
   <dt id="g-floating-point">floating point</dt>
@@ -143,7 +143,7 @@
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-option">week zero, Option and Result</a></p></dd>
 
   <dt id="g-method">method</dt>
-  <dd><p class="g-def">A function in an <code>impl</code> block whose first parameter is some form of <code>self</code>, called with a dot: <code>bin.put_away(5)</code>. <code>&amp;self</code> reads the value, <code>&amp;mut self</code> may change it, and plain <code>self</code> takes it. Python's <code>self</code> is always the changing kind.</p>
+  <dd><p class="g-def">A function in an <code>impl</code> block or a trait whose first parameter is some form of <code>self</code>, called with a dot: <code>bin.put_away(5)</code>. <code>&amp;self</code> reads the value, <code>&amp;mut self</code> may change it, and plain <code>self</code> takes it. In Python nothing in a method's signature says whether it changes the object.</p>
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-structs">week zero, structs and methods</a></p></dd>
 
   <dt id="g-module">module</dt>

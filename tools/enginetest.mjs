@@ -276,6 +276,41 @@ ok(await p.locator("#c-t1-1").isChecked(), "known id restored, unknown ignored")
   ok(await p.locator("#c-t2-1").isChecked() && await p.locator("#q-t4-2 input").first().isChecked(), "imported progress survives reload");
 }
 // ---- end of navigation and progress tests
+// ---- Storage edge cases: another tab, failed writes, h4 spots ----
+{
+  const settle2 = () => p.waitForTimeout(400);
+  await p.evaluate(() => localStorage.clear());
+  await p.goto(url);
+  // Another tab saves an answer and a tick after this one loaded: export includes them.
+  await p.evaluate(() => {
+    localStorage.setItem("rust_at_work.quiz", '{"t2-1":0}');
+    localStorage.setItem("rust_at_work.checks", '["c-t2-1"]');
+  });
+  await p.evaluate(() => document.getElementById("t1").scrollIntoView()); await settle2();
+  await p.locator(".where").click();
+  const [dl2] = await Promise.all([p.waitForEvent("download"), p.locator(".carry-save").click()]);
+  const ex2 = JSON.parse(fs.readFileSync(await dl2.path(), "utf8"));
+  ok(ex2.data["rust_at_work.quiz"]["t2-1"] === 0 && ex2.data["rust_at_work.checks"].includes("c-t2-1"), "export includes what another tab saved");
+  await p.keyboard.press("Escape");
+  // Another tab's tick survives a tick in this tab.
+  await p.locator("#c-t1-1").check();
+  ok(JSON.parse(await p.evaluate(() => localStorage.getItem("rust_at_work.checks"))).includes("c-t2-1"), "a tick here keeps another tab's tick");
+  // Writes start failing: answers stay in memory instead of being lost.
+  await p.evaluate(() => { Storage.prototype.setItem = () => { throw new Error("quota"); }; });
+  for (const i of [0, 1]) {
+    const f = p.locator(`#q-t0-${i + 1}`);
+    await f.locator("input").nth(0).check();
+    await f.locator("button.btn").click();
+  }
+  ok(await p.evaluate(() => Object.hasOwn(answers, "t0-1") && Object.hasOwn(answers, "t0-2")), "answers kept in memory when storage writes fail");
+  await p.goto(url);
+  // A spot under an h4 is saved as that h4.
+  const h4 = await p.evaluate(() => { const h = document.querySelector("#t0 ~ h4"); h.scrollIntoView(); return h.id; });
+  await settle2();
+  ok(h4 && JSON.parse(await p.evaluate(() => localStorage.getItem("rust_at_work.spot"))) === h4, "reading spot saved at an h4: " + h4);
+  await p.evaluate(() => localStorage.clear());
+}
+// ---- end of storage edge cases
 // ---- Glossary: term links, the popover, and where-it's-taught links ----
 {
   const badTerms = await p.evaluate(() => [...document.querySelectorAll("a.term")]

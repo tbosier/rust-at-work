@@ -53,7 +53,7 @@
       --ink-2: #a9b1b9;
       --rule: #3c444c;
       --sea: #1b272e;
-      --sea-edge: #4f6b7c;
+      --sea-edge: #5e7e91;
       --depth: #8db6dc;
       --magenta: #e39cbf;
       --magenta-wash: #2c1c25;
@@ -84,7 +84,7 @@
       --ink-2: #a9b1b9;
       --rule: #3c444c;
       --sea: #1b272e;
-      --sea-edge: #4f6b7c;
+      --sea-edge: #5e7e91;
       --depth: #8db6dc;
       --magenta: #e39cbf;
       --magenta-wash: #2c1c25;
@@ -790,7 +790,7 @@ shipping costs 1349 cents</pre>
   <li><code>fn boxes_needed(items: i64, per_box: i64) -&gt; i64</code> is the function's <em>signature</em>: its name, each parameter with its type, and after <code>-&gt;</code> the type it gives back. Every parameter must say its type. There are no default values, no keyword arguments, and no two functions with the same name, so <code>boxes_needed(12, 5)</code> always means one thing.</li>
   <li><code>return 0;</code> leaves the function early, as in Python.</li>
 </ul>
-<p>The last line of <code>boxes_needed</code> has no semicolon and no <code>return</code>. This is the rule that trips everyone from Python. Rust code is made of <em>statements</em>, which do something and end in <code>;</code>, and <em>expressions</em>, which produce a value. <code>899 + boxes * 150</code> is an expression. So is <code>if ... { full } else { full + 1 }</code>: each branch produces a value, and the <code>if</code> produces whichever branch ran. A block's value is its last expression, if that expression has no semicolon after it. A function's body is a block, so its last expression is what it returns. Add the semicolon and the expression becomes a statement that throws its value away:</p>
+<p>The last line of <code>boxes_needed</code> has no semicolon and no <code>return</code>. This is the rule that trips everyone from Python. Rust code is made of <em>statements</em>, which do something and usually end in <code>;</code> (a <code>for</code> loop or an <code>if</code> on its own needs none), and <em>expressions</em>, which produce a value. <code>899 + boxes * 150</code> is an expression. So is <code>if ... { full } else { full + 1 }</code>: each branch produces a value, and the <code>if</code> produces whichever branch ran. A block's value is its last expression, if that expression has no semicolon after it. A function's body is a block, so its last expression is what it returns. Add the semicolon and the expression becomes a statement that throws its value away:</p>
 <pre class="rs"><span class="sx-kw">fn</span> shipping_cents(boxes: <span class="sx-ty">i64</span>) -&gt; <span class="sx-ty">i64</span> {
     <span class="sx-num">899</span> + boxes * <span class="sx-num">150</span>;
 }
@@ -1254,7 +1254,7 @@ Bin { location: "A-04-2", capacity: 50, on_hand: 50 }</pre>
   <li><code>Self</code> means "the type this <code>impl</code> is for", here <code>Bin</code>. <code>new</code> is a plain function that builds one. Rust has no constructors and no <code>__init__</code>; <code>new</code> is only a naming habit, and everyone follows it.</li>
   <li><code>location: &amp;str</code> takes borrowed text, and <code>.to_string()</code> makes the bin its own copy, a <code>String</code>, to keep. <a href="#t0-text">Text, briefly</a> explains the two text types.</li>
   <li>In <code>Bin { location: ..., capacity, on_hand: 0 }</code>, a bare <code>capacity</code> is short for <code>capacity: capacity</code>.</li>
-  <li>A function whose first parameter is some form of <code>self</code> is a <em>method</em>. <code>&amp;self</code> borrows the bin to read it. <code>&amp;mut self</code> borrows it to change it. Python's <code>self</code> is always the second kind; Rust makes you say which, so the signature tells you whether a call can change the value. That's why <code>bin</code> must be <code>let mut</code>: <code>put_away</code> takes <code>&amp;mut self</code>.</li>
+  <li>A function whose first parameter is some form of <code>self</code> is a <em>method</em>. <code>&amp;self</code> borrows the bin to read it. <code>&amp;mut self</code> borrows it to change it. In Python nothing in a method's signature says whether it changes the object. Rust makes you say which, so the signature tells you whether a call can change the value. That's why <code>bin</code> must be <code>let mut</code>: <code>put_away</code> takes <code>&amp;mut self</code>.</li>
   <li><code>Bin::new(...)</code> uses <code>::</code>, because <code>new</code> belongs to the type and there's no bin yet. <code>bin.put_away(30)</code> uses a dot, because it's called on a value. In general <code>::</code> walks into a type or a module (a named group of code, <a href="#t0-paths">below</a>), and <code>.</code> reaches into a value.</li>
   <li><code>qty.min(...)</code> is a method too, on <code>u32</code>. Numbers have dozens.</li>
   <li><code>#[derive(Debug)]</code> asks the compiler to write the code that makes <code>{:?}</code> work for <code>Bin</code>. Ticket 3 explains what else <code>derive</code> can write.</li>
@@ -5508,7 +5508,7 @@ Read my code and my review history, then write part 2 of the guide in
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-memory">week zero, memory</a></p></dd>
 
   <dt id="g-associated-function">associated function</dt>
-  <dd><p class="g-def">A function in an <code>impl</code> block. Strictly, methods are associated functions too, but the name usually means one that takes no <code>self</code>: it belongs to the type, not to one value, and you call it on the type with <code>::</code>, as in <code>Bin::new(...)</code> or <code>Book::headers()</code>. Python's nearest is a <code>@staticmethod</code>.</p>
+  <dd><p class="g-def">A function defined in an <code>impl</code> block or a trait. Strictly, methods are associated functions too, but the name usually means one that takes no <code>self</code>: it belongs to the type, not to one value, and you call it on the type with <code>::</code>, as in <code>Bin::new(...)</code> or <code>Book::headers()</code>. Python's nearest is a <code>@staticmethod</code>.</p>
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t6-trait">ticket 6, a trait is a promise</a></p></dd>
 
   <dt id="g-big-o">big-O</dt>
@@ -5520,7 +5520,7 @@ Read my code and my review history, then write part 2 of the guide in
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-compile">week zero, what cargo run does</a></p></dd>
 
   <dt id="g-borrow">borrow</dt>
-  <dd><p class="g-def">To use a value through a reference without taking ownership of it: <code>&amp;x</code> to read it, <code>&amp;mut x</code> to change it. At any moment a value can have any number of <code>&amp;</code> borrows or exactly one <code>&amp;mut</code>, never both, and no borrow may outlive the value. A borrow lasts until its last use, which can be a later trip around a loop, not to the end of the block.</p>
+  <dd><p class="g-def">To use a value through a reference without taking ownership of it: <code>&amp;x</code> to read it, <code>&amp;mut x</code> to change it. At any moment a value can have any number of <code>&amp;</code> borrows or exactly one <code>&amp;mut</code>, never both, and no borrow may outlive the value. A borrow lasts until its last use, not to the end of the block. In a loop, that last use can come on a later pass.</p>
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t1-borrow">ticket 1, borrowing</a></p></dd>
 
   <dt id="g-box"><code>Box</code></dt>
@@ -5564,7 +5564,7 @@ Read my code and my review history, then write part 2 of the guide in
   <p class="g-where">Where it's taught: <a class="g-taught" href="#setup-crates">set up, the SQLite crate</a></p></dd>
 
   <dt id="g-derive">derive</dt>
-  <dd><p class="g-def"><code>#[derive(...)]</code> above a struct or enum asks the compiler to write a trait's standard code for you: <code>Debug</code> for <code>{:?}</code>, <code>Clone</code>, <code>PartialEq</code> for <code>==</code>, <code>Ord</code> for sorting, and so on. For the standard library's traits it only compiles when every field has the trait too. Crates can add derives of their own, such as clap's <code>Parser</code>.</p>
+  <dd><p class="g-def"><code>#[derive(...)]</code> above a struct or enum asks the compiler to write a trait's standard code for you: <code>Debug</code> for <code>{:?}</code>, <code>Clone</code>, <code>PartialEq</code> for <code>==</code>, <code>Ord</code> for sorting, and so on. For the standard library's traits it usually only compiles when every field has the trait too. Crates can add derives of their own, such as clap's <code>Parser</code>.</p>
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t3-derive">ticket 3, what each derive buys you</a></p></dd>
 
   <dt id="g-drop">drop</dt>
@@ -5580,7 +5580,7 @@ Read my code and my review history, then write part 2 of the guide in
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-process">week zero, your program is a process</a></p></dd>
 
   <dt id="g-expression">expression</dt>
-  <dd><p class="g-def">Code that produces a value, such as <code>a + b</code>, an <code>if</code>/<code>else</code> or a <code>match</code>. A statement does something and ends in <code>;</code>. A block's value is its last expression when no semicolon follows it, which is how a Rust function usually returns.</p>
+  <dd><p class="g-def">Code that produces a value, such as <code>a + b</code>, an <code>if</code>/<code>else</code> or a <code>match</code>. A statement does something and usually ends in <code>;</code>. A <code>for</code> loop or an <code>if</code> standing on its own line is the common exception. A block's value is its last expression when no semicolon follows it, which is how a Rust function usually returns.</p>
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-anatomy">week zero, the shape of a program</a></p></dd>
 
   <dt id="g-floating-point">floating point</dt>
@@ -5640,7 +5640,7 @@ Read my code and my review history, then write part 2 of the guide in
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-option">week zero, Option and Result</a></p></dd>
 
   <dt id="g-method">method</dt>
-  <dd><p class="g-def">A function in an <code>impl</code> block whose first parameter is some form of <code>self</code>, called with a dot: <code>bin.put_away(5)</code>. <code>&amp;self</code> reads the value, <code>&amp;mut self</code> may change it, and plain <code>self</code> takes it. Python's <code>self</code> is always the changing kind.</p>
+  <dd><p class="g-def">A function in an <code>impl</code> block or a trait whose first parameter is some form of <code>self</code>, called with a dot: <code>bin.put_away(5)</code>. <code>&amp;self</code> reads the value, <code>&amp;mut self</code> may change it, and plain <code>self</code> takes it. In Python nothing in a method's signature says whether it changes the object.</p>
   <p class="g-where">Where it's taught: <a class="g-taught" href="#t0-structs">week zero, structs and methods</a></p></dd>
 
   <dt id="g-module">module</dt>
@@ -6627,12 +6627,16 @@ function replaceAll(target, fresh) {
   Object.assign(target, fresh);
 }
 // Change one saved map. Start from what storage holds now, not the copy read
-// at load, so a second open tab doesn't wipe this one's answers.
+// at load, so a second open tab doesn't wipe this one's answers. Once a write
+// has failed, storage holds an older copy: from then on, memory is the truth.
+let storageWrites = true;
 function updateStored(key, parse, target, change) {
-  const raw = readStored(key);
+  const raw = storageWrites ? readStored(key) : null;
   if (raw !== null) replaceAll(target, parse(raw));
   change(target);
-  return writeStored(key, target);
+  const saved = writeStored(key, target);
+  if (!saved) storageWrites = false;
+  return saved;
 }
 // A question due for retry is asked cold: forget its saved answer.
 // Returns the ids it cleared.
@@ -6642,6 +6646,14 @@ function askDueCold() {
   return cleared;
 }
 askDueCold();
+// A page left open overnight: when the reader comes back to it, blank the
+// questions that came due meanwhile.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  const cleared = askDueCold().filter(id => questionEls.has(id));
+  cleared.forEach(showSaved);
+  if (cleared.length) document.dispatchEvent(new Event("rw-progress"));
+});
 // Show a question as saved: its checked answer and verdict, or blank.
 function showSaved(qid) {
   const { fs, q, feedback } = questionEls.get(qid);
@@ -6657,6 +6669,7 @@ function showSaved(qid) {
 }
 function recordAnswer(qid, chosen, right) {
   if (!questionIds.has(qid)) return;
+  askDueCold(); // it may have come due since the page loaded
   // Only the first check of a question with no saved answer counts for the retry list.
   if (!Object.hasOwn(answers, qid)) {
     updateStored(RETRY_KEY, parseRetry, retry, r => { if (right) delete r[qid]; else r[qid] = today(); });
@@ -6714,8 +6727,11 @@ const checked = loadChecks();
 checkboxes.forEach(box => {
   box.checked = checked.has(box.id);
   box.addEventListener("change", () => {
+    // Start from storage, as updateStored does, so another tab's ticks survive.
+    const raw = storageWrites ? readStored(CHECKS_KEY) : null;
+    if (raw !== null) { checked.clear(); parseChecks(raw).forEach(id => checked.add(id)); }
     if (box.checked) checked.add(box.id); else checked.delete(box.id);
-    try { localStorage.setItem(CHECKS_KEY, JSON.stringify([...checked])); } catch (e) { /* storage blocked: still works for this visit */ }
+    if (!writeStored(CHECKS_KEY, [...checked])) storageWrites = false; // still works for this visit
   });
 });
 
@@ -6738,11 +6754,11 @@ checkboxes.forEach(box => {
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   const listText = items => items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 
-  // Sections (h2) and their parts (h3), in page order. A part without an id
+  // Sections (h2) and their parts (h3 and h4), in page order. A part without an id
   // gets one made from its section and its text, so a saved spot can name it.
   const sections = [];
   const marks = [];
-  for (const h of main.querySelectorAll("h2, h3")) {
+  for (const h of main.querySelectorAll("h2, h3, h4")) {
     if (header.contains(h)) continue;
     const isSection = h.tagName === "H2";
     const sec = sections[sections.length - 1];
@@ -7040,7 +7056,16 @@ checkboxes.forEach(box => {
   const fileInput = panel.querySelector(".carry-file");
   const KEYS = [CHECKS_KEY, EXAM_KEY, QUIZ_KEY, RETRY_KEY, SPOT_KEY];
   panel.querySelector(".carry-save").addEventListener("click", () => {
-    const data = { [CHECKS_KEY]: [...checked], [QUIZ_KEY]: { ...answers }, [RETRY_KEY]: { ...retry } };
+    // Read storage again: another open tab may have saved since this one loaded.
+    const fresh = (key, parse, mem) => {
+      const raw = storageWrites ? readStored(key) : null;
+      return raw !== null ? parse(raw) : mem;
+    };
+    const data = {
+      [CHECKS_KEY]: [...fresh(CHECKS_KEY, parseChecks, checked)],
+      [QUIZ_KEY]: { ...fresh(QUIZ_KEY, parseAnswers, answers) },
+      [RETRY_KEY]: { ...fresh(RETRY_KEY, parseRetry, retry) },
+    };
     const exam = loadExam();
     if (exam) data[EXAM_KEY] = exam;
     if (spot) data[SPOT_KEY] = spot;
@@ -7196,7 +7221,8 @@ checkboxes.forEach(box => {
       say(status, "Copied.");
     } catch (e) {
       selectBlock(pre);
-      say(status, "Selected. Press Ctrl+C to copy.");
+      const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+      say(status, `Selected. Press ${mac ? "Command+C" : "Ctrl+C"} to copy.`);
     }
   }
   document.querySelectorAll("pre.cmd, pre.prompt").forEach(pre => {

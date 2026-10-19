@@ -17,11 +17,11 @@
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   const listText = items => items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 
-  // Sections (h2) and their parts (h3), in page order. A part without an id
+  // Sections (h2) and their parts (h3 and h4), in page order. A part without an id
   // gets one made from its section and its text, so a saved spot can name it.
   const sections = [];
   const marks = [];
-  for (const h of main.querySelectorAll("h2, h3")) {
+  for (const h of main.querySelectorAll("h2, h3, h4")) {
     if (header.contains(h)) continue;
     const isSection = h.tagName === "H2";
     const sec = sections[sections.length - 1];
@@ -319,7 +319,16 @@
   const fileInput = panel.querySelector(".carry-file");
   const KEYS = [CHECKS_KEY, EXAM_KEY, QUIZ_KEY, RETRY_KEY, SPOT_KEY];
   panel.querySelector(".carry-save").addEventListener("click", () => {
-    const data = { [CHECKS_KEY]: [...checked], [QUIZ_KEY]: { ...answers }, [RETRY_KEY]: { ...retry } };
+    // Read storage again: another open tab may have saved since this one loaded.
+    const fresh = (key, parse, mem) => {
+      const raw = storageWrites ? readStored(key) : null;
+      return raw !== null ? parse(raw) : mem;
+    };
+    const data = {
+      [CHECKS_KEY]: [...fresh(CHECKS_KEY, parseChecks, checked)],
+      [QUIZ_KEY]: { ...fresh(QUIZ_KEY, parseAnswers, answers) },
+      [RETRY_KEY]: { ...fresh(RETRY_KEY, parseRetry, retry) },
+    };
     const exam = loadExam();
     if (exam) data[EXAM_KEY] = exam;
     if (spot) data[SPOT_KEY] = spot;

@@ -251,12 +251,16 @@ function replaceAll(target, fresh) {
   Object.assign(target, fresh);
 }
 // Change one saved map. Start from what storage holds now, not the copy read
-// at load, so a second open tab doesn't wipe this one's answers.
+// at load, so a second open tab doesn't wipe this one's answers. Once a write
+// has failed, storage holds an older copy: from then on, memory is the truth.
+let storageWrites = true;
 function updateStored(key, parse, target, change) {
-  const raw = readStored(key);
+  const raw = storageWrites ? readStored(key) : null;
   if (raw !== null) replaceAll(target, parse(raw));
   change(target);
-  return writeStored(key, target);
+  const saved = writeStored(key, target);
+  if (!saved) storageWrites = false;
+  return saved;
 }
 // A question due for retry is asked cold: forget its saved answer.
 // Returns the ids it cleared.
@@ -266,6 +270,14 @@ function askDueCold() {
   return cleared;
 }
 askDueCold();
+// A page left open overnight: when the reader comes back to it, blank the
+// questions that came due meanwhile.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  const cleared = askDueCold().filter(id => questionEls.has(id));
+  cleared.forEach(showSaved);
+  if (cleared.length) document.dispatchEvent(new Event("rw-progress"));
+});
 // Show a question as saved: its checked answer and verdict, or blank.
 function showSaved(qid) {
   const { fs, q, feedback } = questionEls.get(qid);
@@ -281,6 +293,7 @@ function showSaved(qid) {
 }
 function recordAnswer(qid, chosen, right) {
   if (!questionIds.has(qid)) return;
+  askDueCold(); // it may have come due since the page loaded
   // Only the first check of a question with no saved answer counts for the retry list.
   if (!Object.hasOwn(answers, qid)) {
     updateStored(RETRY_KEY, parseRetry, retry, r => { if (right) delete r[qid]; else r[qid] = today(); });
@@ -338,7 +351,10 @@ const checked = loadChecks();
 checkboxes.forEach(box => {
   box.checked = checked.has(box.id);
   box.addEventListener("change", () => {
+    // Start from storage, as updateStored does, so another tab's ticks survive.
+    const raw = storageWrites ? readStored(CHECKS_KEY) : null;
+    if (raw !== null) { checked.clear(); parseChecks(raw).forEach(id => checked.add(id)); }
     if (box.checked) checked.add(box.id); else checked.delete(box.id);
-    try { localStorage.setItem(CHECKS_KEY, JSON.stringify([...checked])); } catch (e) { /* storage blocked: still works for this visit */ }
+    if (!writeStored(CHECKS_KEY, [...checked])) storageWrites = false; // still works for this visit
   });
 });

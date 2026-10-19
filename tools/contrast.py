@@ -64,7 +64,8 @@ PAIRS += [("focus ring", "depth", bg, UI) for bg in ("paper", "sheet", "sea", "q
 PAIRS += [("answer border", "ok", "quiz-bg", UI), ("answer border", "bad", "quiz-bg", UI),
           ("feedback border", "ok", "ok-wash", UI), ("feedback border", "bad", "bad-wash", UI),
           ("flag rule", "magenta", "magenta-wash", UI),
-          ("control border", "sea-edge", "paper", UI), ("control border", "depth", "paper", UI)]
+          ("control border", "sea-edge", "paper", UI), ("diagram lines, panel borders", "sea-edge", "sea", UI),
+          ("panel border", "sea-edge", "sheet", UI), ("panel border", "sea-edge", "quiz-bg", UI), ("control border", "depth", "paper", UI)]
 
 
 def main():

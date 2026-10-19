@@ -36,7 +36,8 @@
       say(status, "Copied.");
     } catch (e) {
       selectBlock(pre);
-      say(status, "Selected. Press Ctrl+C to copy.");
+      const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+      say(status, `Selected. Press ${mac ? "Command+C" : "Ctrl+C"} to copy.`);
     }
   }
   document.querySelectorAll("pre.cmd, pre.prompt").forEach(pre => {
